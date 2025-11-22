@@ -104,6 +104,11 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
     XLSX.writeFile(wb, 'employee_upload_template.xlsx', { bookType: 'xlsx', type: 'binary' });
   };
 
+  const normalizeValue = (value: any): string => {
+    if (!value) return '';
+    return value.toString().trim().toLowerCase();
+  };
+
   const validateRow = (row: EmployeeRow, index: number): ValidationError[] => {
     const rowErrors: ValidationError[] = [];
     const rowNum = index + 2;
@@ -124,17 +129,28 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
       rowErrors.push({ row: rowNum, field: 'Position/Job Title', message: 'Required' });
     }
 
-    if (row.Gender && !['male', 'female'].includes(row.Gender.toLowerCase())) {
-      rowErrors.push({ row: rowNum, field: 'Gender', message: 'Must be "male" or "female"' });
+    if (row.Gender) {
+      const gender = normalizeValue(row.Gender);
+      const validGenders = ['male', 'female', 'm', 'f', 'ذكر', 'أنثى'];
+      if (!validGenders.includes(gender)) {
+        rowErrors.push({ row: rowNum, field: 'Gender', message: 'Must be "male", "female", "M", "F", "ذكر", or "أنثى"' });
+      }
     }
 
-    const validContractTypes = ['indefinite', 'fixed_term', 'temporary', 'part_time', 'seasonal'];
-    if (row['Contract Type'] && !validContractTypes.includes(row['Contract Type'].toLowerCase().replace(/[\s-_]/g, '_'))) {
-      rowErrors.push({ row: rowNum, field: 'Contract Type', message: 'Must be "indefinite", "fixed_term", "temporary", "part_time", or "seasonal"' });
+    if (row['Contract Type']) {
+      const contractType = normalizeValue(row['Contract Type']).replace(/[\s-]/g, '_');
+      const validContractTypes = ['indefinite', 'fixed_term', 'temporary', 'part_time', 'seasonal', 'full_time', 'contract'];
+      if (!validContractTypes.includes(contractType)) {
+        rowErrors.push({ row: rowNum, field: 'Contract Type', message: 'Must be "indefinite", "fixed_term", "temporary", "part_time", "seasonal", "full_time", or "contract"' });
+      }
     }
 
-    if (row.Status && !['active', 'on_leave', 'terminated'].includes(row.Status.toLowerCase())) {
-      rowErrors.push({ row: rowNum, field: 'Status', message: 'Must be "active", "on_leave", or "terminated"' });
+    if (row.Status) {
+      const status = normalizeValue(row.Status).replace(/[\s-]/g, '_');
+      const validStatuses = ['active', 'on_leave', 'terminated', 'onleave'];
+      if (!validStatuses.includes(status)) {
+        rowErrors.push({ row: rowNum, field: 'Status', message: 'Must be "active", "on_leave", or "terminated"' });
+      }
     }
 
     return rowErrors;
@@ -183,6 +199,33 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         return;
       }
 
+      const normalizeGender = (value: any): 'male' | 'female' | undefined => {
+        if (!value) return undefined;
+        const normalized = normalizeValue(value);
+        if (['male', 'm', 'ذكر'].includes(normalized)) return 'male';
+        if (['female', 'f', 'أنثى'].includes(normalized)) return 'female';
+        return undefined;
+      };
+
+      const normalizeContractType = (value: any): 'indefinite' | 'fixed_term' | 'temporary' | 'part_time' | 'seasonal' => {
+        if (!value) return 'indefinite';
+        const normalized = normalizeValue(value).replace(/[\s-]/g, '_');
+        if (['full_time', 'fulltime'].includes(normalized)) return 'indefinite';
+        if (['contract', 'fixed_term', 'fixedterm', 'fixed'].includes(normalized)) return 'fixed_term';
+        if (['temporary', 'temp'].includes(normalized)) return 'temporary';
+        if (['part_time', 'parttime', 'part'].includes(normalized)) return 'part_time';
+        if (['seasonal', 'season'].includes(normalized)) return 'seasonal';
+        return 'indefinite';
+      };
+
+      const normalizeStatus = (value: any): 'active' | 'on_leave' | 'terminated' => {
+        if (!value) return 'active';
+        const normalized = normalizeValue(value).replace(/[\s-]/g, '_');
+        if (['on_leave', 'onleave', 'leave'].includes(normalized)) return 'on_leave';
+        if (['terminated', 'inactive', 'ended'].includes(normalized)) return 'terminated';
+        return 'active';
+      };
+
       const employees = jsonData.map((row) => {
         const englishName = (row['Employee Name (English)'] || '').toString().trim();
         const englishNameParts = englishName.split(/\s+/).filter(part => part.length > 0);
@@ -212,13 +255,13 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           phone: row['Mobile Number'] ? row['Mobile Number'].toString() : null,
           nationality: (row.Nationality || '').toString(),
           is_saudi: (row.Nationality || '').toString().toLowerCase().includes('saudi') || false,
-          gender: row.Gender ? (row.Gender.toString().toLowerCase() as 'male' | 'female') : undefined,
+          gender: normalizeGender(row.Gender),
           date_of_birth: row['Birth Date'] ? row['Birth Date'].toString() : null,
           hire_date: (row['Date of Joining'] || '').toString(),
           job_title_en: (row['Position/Job Title'] || '').toString(),
           job_title_ar: null,
-          employment_type: (row['Contract Type']?.toString().toLowerCase().replace(/[\s-_]/g, '_') || 'indefinite') as 'indefinite' | 'fixed_term' | 'temporary' | 'part_time' | 'seasonal',
-          status: (row.Status?.toString().toLowerCase() || 'active') as 'active' | 'on_leave' | 'terminated',
+          employment_type: normalizeContractType(row['Contract Type']),
+          status: normalizeStatus(row.Status),
           iqama_number: row['IQAMA/ID Number'] ? row['IQAMA/ID Number'].toString() : null,
           iqama_expiry: row['EIQAMA Expiry Date'] ? row['EIQAMA Expiry Date'].toString() : null,
           passport_number: row['Passport Number'] ? row['Passport Number'].toString() : null,
