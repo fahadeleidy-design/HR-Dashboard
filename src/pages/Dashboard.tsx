@@ -1,18 +1,39 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
-import { Users, UserCheck, UserX, TrendingUp, Calendar, AlertCircle } from 'lucide-react';
+import {
+  Users, UserCheck, UserX, TrendingUp, Calendar, AlertCircle,
+  DollarSign, Clock, FileText, Car, Home, Shield, Plane,
+  CreditCard, Briefcase, Award, UserCog, TrendingDown
+} from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 
 interface DashboardStats {
   totalEmployees: number;
   activeEmployees: number;
+  onLeaveEmployees: number;
+  terminatedEmployees: number;
   saudiEmployees: number;
   nonSaudiEmployees: number;
   saudizationPercentage: number;
   nitaqatColor: string;
+  maleEmployees: number;
+  femaleEmployees: number;
   pendingLeaveRequests: number;
+  approvedLeaveToday: number;
   expiringDocuments: number;
+  expiringIqamas: number;
+  expiringPassports: number;
+  totalPayroll: number;
+  averageSalary: number;
+  totalVehicles: number;
+  totalProperties: number;
+  activeContracts: number;
+  expiringContracts: number;
+  activeInsurancePolicies: number;
+  pendingTravelRequests: number;
+  totalDepartments: number;
+  avgEmployeesPerDept: number;
 }
 
 export function Dashboard() {
@@ -20,14 +41,33 @@ export function Dashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
     activeEmployees: 0,
+    onLeaveEmployees: 0,
+    terminatedEmployees: 0,
     saudiEmployees: 0,
     nonSaudiEmployees: 0,
     saudizationPercentage: 0,
     nitaqatColor: 'green',
+    maleEmployees: 0,
+    femaleEmployees: 0,
     pendingLeaveRequests: 0,
+    approvedLeaveToday: 0,
     expiringDocuments: 0,
+    expiringIqamas: 0,
+    expiringPassports: 0,
+    totalPayroll: 0,
+    averageSalary: 0,
+    totalVehicles: 0,
+    totalProperties: 0,
+    activeContracts: 0,
+    expiringContracts: 0,
+    activeInsurancePolicies: 0,
+    pendingTravelRequests: 0,
+    totalDepartments: 0,
+    avgEmployeesPerDept: 0,
   });
   const [departmentData, setDepartmentData] = useState<any[]>([]);
+  const [genderData, setGenderData] = useState<any[]>([]);
+  const [employmentTypeData, setEmploymentTypeData] = useState<any[]>([]);
   const [monthlyHiresData, setMonthlyHiresData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -45,30 +85,82 @@ export function Dashboard() {
     setLoading(true);
 
     try {
-      const [employeesResult, leaveRequestsResult, documentsResult] = await Promise.all([
+      const [
+        employeesResult,
+        leaveRequestsResult,
+        documentsResult,
+        payrollResult,
+        vehiclesResult,
+        propertiesResult,
+        contractsResult,
+        insuranceResult,
+        travelResult,
+        departmentsResult
+      ] = await Promise.all([
         supabase
           .from('employees')
-          .select('status, is_saudi')
+          .select('status, is_saudi, gender, employment_type, iqama_expiry, passport_expiry')
           .eq('company_id', currentCompany.id),
         supabase
           .from('leave_requests')
-          .select('id')
-          .eq('company_id', currentCompany.id)
-          .eq('status', 'pending'),
+          .select('status, start_date, end_date')
+          .eq('company_id', currentCompany.id),
         supabase
           .from('documents')
-          .select('id')
+          .select('expiry_date')
           .eq('company_id', currentCompany.id)
           .eq('status', 'active')
-          .lte('expiry_date', new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString())
           .gte('expiry_date', new Date().toISOString()),
+        supabase
+          .from('payroll')
+          .select('gross_salary, employee_id')
+          .eq('company_id', currentCompany.id),
+        supabase
+          .from('vehicles')
+          .select('id, status')
+          .eq('company_id', currentCompany.id),
+        supabase
+          .from('real_estate_properties')
+          .select('id')
+          .eq('company_id', currentCompany.id),
+        supabase
+          .from('contracts')
+          .select('status, end_date')
+          .eq('company_id', currentCompany.id),
+        supabase
+          .from('insurance_policies')
+          .select('status')
+          .eq('company_id', currentCompany.id),
+        supabase
+          .from('business_travel')
+          .select('approval_status')
+          .eq('company_id', currentCompany.id),
+        supabase
+          .from('departments')
+          .select('id')
+          .eq('company_id', currentCompany.id),
       ]);
 
       const employees = employeesResult.data || [];
+      const leaveRequests = leaveRequestsResult.data || [];
+      const documents = documentsResult.data || [];
+      const payrollRecords = payrollResult.data || [];
+      const vehicles = vehiclesResult.data || [];
+      const properties = propertiesResult.data || [];
+      const contracts = contractsResult.data || [];
+      const insurance = insuranceResult.data || [];
+      const travel = travelResult.data || [];
+      const departments = departmentsResult.data || [];
+
       const totalEmployees = employees.length;
       const activeEmployees = employees.filter(e => e.status === 'active').length;
+      const onLeaveEmployees = employees.filter(e => e.status === 'on_leave').length;
+      const terminatedEmployees = employees.filter(e => e.status === 'terminated').length;
       const saudiEmployees = employees.filter(e => e.is_saudi && e.status === 'active').length;
       const nonSaudiEmployees = activeEmployees - saudiEmployees;
+      const maleEmployees = employees.filter(e => e.gender === 'male' && e.status === 'active').length;
+      const femaleEmployees = employees.filter(e => e.gender === 'female' && e.status === 'active').length;
+
       const saudizationPercentage = activeEmployees > 0
         ? Math.round((saudiEmployees / activeEmployees) * 100)
         : 0;
@@ -78,21 +170,94 @@ export function Dashboard() {
       else if (saudizationPercentage >= 30) nitaqatColor = 'green';
       else if (saudizationPercentage >= 20) nitaqatColor = 'yellow';
 
+      const pendingLeaveRequests = leaveRequests.filter(lr => lr.status === 'pending').length;
+      const today = new Date().toISOString().split('T')[0];
+      const approvedLeaveToday = leaveRequests.filter(lr =>
+        lr.status === 'approved' &&
+        lr.start_date <= today &&
+        lr.end_date >= today
+      ).length;
+
+      const in90Days = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+      const expiringDocuments = documents.filter(d => d.expiry_date && d.expiry_date <= in90Days).length;
+
+      const expiringIqamas = employees.filter(e =>
+        e.iqama_expiry && e.iqama_expiry <= in90Days && e.status === 'active'
+      ).length;
+
+      const expiringPassports = employees.filter(e =>
+        e.passport_expiry && e.passport_expiry <= in90Days && e.status === 'active'
+      ).length;
+
+      const uniqueEmployeeIds = new Set(payrollRecords.map(p => p.employee_id));
+      const totalPayroll = payrollRecords.reduce((sum, p) => sum + (parseFloat(p.gross_salary) || 0), 0);
+      const averageSalary = uniqueEmployeeIds.size > 0 ? Math.round(totalPayroll / uniqueEmployeeIds.size) : 0;
+
+      const totalVehicles = vehicles.length;
+      const totalProperties = properties.length;
+      const activeContracts = contracts.filter(c => c.status === 'active').length;
+      const expiringContracts = contracts.filter(c =>
+        c.status === 'active' && c.end_date && c.end_date <= in90Days
+      ).length;
+      const activeInsurancePolicies = insurance.filter(i => i.status === 'active').length;
+      const pendingTravelRequests = travel.filter(t => t.approval_status === 'pending').length;
+
+      const totalDepartments = departments.length;
+      const avgEmployeesPerDept = totalDepartments > 0 ? Math.round(activeEmployees / totalDepartments) : 0;
+
       setStats({
         totalEmployees,
         activeEmployees,
+        onLeaveEmployees,
+        terminatedEmployees,
         saudiEmployees,
         nonSaudiEmployees,
         saudizationPercentage,
         nitaqatColor,
-        pendingLeaveRequests: leaveRequestsResult.data?.length || 0,
-        expiringDocuments: documentsResult.data?.length || 0,
+        maleEmployees,
+        femaleEmployees,
+        pendingLeaveRequests,
+        approvedLeaveToday,
+        expiringDocuments,
+        expiringIqamas,
+        expiringPassports,
+        totalPayroll,
+        averageSalary,
+        totalVehicles,
+        totalProperties,
+        activeContracts,
+        expiringContracts,
+        activeInsurancePolicies,
+        pendingTravelRequests,
+        totalDepartments,
+        avgEmployeesPerDept,
       });
+
+      setGenderData([
+        { name: 'Male', value: maleEmployees },
+        { name: 'Female', value: femaleEmployees },
+      ]);
+
+      const employmentTypeCounts = employees.reduce((acc: any, emp: any) => {
+        if (emp.status === 'active') {
+          const type = emp.employment_type || 'indefinite';
+          acc[type] = (acc[type] || 0) + 1;
+        }
+        return acc;
+      }, {});
+
+      setEmploymentTypeData(
+        Object.entries(employmentTypeCounts).map(([name, value]) => ({
+          name: name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+          value
+        }))
+      );
 
       const { data: deptData } = await supabase
         .from('employees')
         .select('department_id, departments(name_en)')
-        .eq('company_id', currentCompany.id);
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'active');
 
       const deptCounts = (deptData || []).reduce((acc: any, emp: any) => {
         const deptName = emp.departments?.name_en || 'Unassigned';
@@ -143,6 +308,15 @@ export function Dashboard() {
     }
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-SA', {
+      style: 'currency',
+      currency: 'SAR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -155,47 +329,304 @@ export function Dashboard() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Welcome to Saudi HR Management System</p>
+        <p className="text-gray-600 mt-1">Welcome to {currentCompany?.name_en || 'Saudi HR Management System'}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Employees</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalEmployees}</p>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Employee Overview</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Employees</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalEmployees}</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-full">
+                <Users className="h-8 w-8 text-blue-600" />
+              </div>
             </div>
-            <Users className="h-12 w-12 text-primary-600" />
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Employees</p>
+                <p className="text-3xl font-bold text-green-600 mt-1">{stats.activeEmployees}</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-full">
+                <UserCheck className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">On Leave</p>
+                <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.onLeaveEmployees}</p>
+              </div>
+              <div className="p-3 bg-yellow-50 rounded-full">
+                <Calendar className="h-8 w-8 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Terminated</p>
+                <p className="text-3xl font-bold text-red-600 mt-1">{stats.terminatedEmployees}</p>
+              </div>
+              <div className="p-3 bg-red-50 rounded-full">
+                <TrendingDown className="h-8 w-8 text-red-600" />
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Active Employees</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.activeEmployees}</p>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Workforce Composition</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Saudi Employees</p>
+                <p className="text-3xl font-bold text-blue-600 mt-1">{stats.saudiEmployees}</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-full">
+                <UserCheck className="h-8 w-8 text-blue-600" />
+              </div>
             </div>
-            <UserCheck className="h-12 w-12 text-green-600" />
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Non-Saudi</p>
+                <p className="text-3xl font-bold text-orange-600 mt-1">{stats.nonSaudiEmployees}</p>
+              </div>
+              <div className="p-3 bg-orange-50 rounded-full">
+                <UserX className="h-8 w-8 text-orange-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Male</p>
+                <p className="text-3xl font-bold text-indigo-600 mt-1">{stats.maleEmployees}</p>
+              </div>
+              <div className="p-3 bg-indigo-50 rounded-full">
+                <Users className="h-8 w-8 text-indigo-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Female</p>
+                <p className="text-3xl font-bold text-pink-600 mt-1">{stats.femaleEmployees}</p>
+              </div>
+              <div className="p-3 bg-pink-50 rounded-full">
+                <Users className="h-8 w-8 text-pink-600" />
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Saudi Employees</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.saudiEmployees}</p>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Payroll & Finance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Monthly Payroll</p>
+                <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalPayroll)}</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-full">
+                <DollarSign className="h-8 w-8 text-green-600" />
+              </div>
             </div>
-            <UserCheck className="h-12 w-12 text-blue-600" />
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Average Salary</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">{formatCurrency(stats.averageSalary)}</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-full">
+                <TrendingUp className="h-8 w-8 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Departments</p>
+                <p className="text-3xl font-bold text-purple-600 mt-1">{stats.totalDepartments}</p>
+                <p className="text-xs text-gray-500 mt-1">Avg: {stats.avgEmployeesPerDept} emp/dept</p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-full">
+                <UserCog className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Non-Saudi Employees</p>
-              <p className="text-3xl font-bold text-gray-900 mt-1">{stats.nonSaudiEmployees}</p>
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Leave & Attendance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending Leave Requests</p>
+                <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.pendingLeaveRequests}</p>
+              </div>
+              <div className="p-3 bg-yellow-50 rounded-full">
+                <Calendar className="h-8 w-8 text-yellow-600" />
+              </div>
             </div>
-            <UserX className="h-12 w-12 text-orange-600" />
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">On Leave Today</p>
+                <p className="text-3xl font-bold text-blue-600 mt-1">{stats.approvedLeaveToday}</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-full">
+                <Clock className="h-8 w-8 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending Travel</p>
+                <p className="text-3xl font-bold text-indigo-600 mt-1">{stats.pendingTravelRequests}</p>
+              </div>
+              <div className="p-3 bg-indigo-50 rounded-full">
+                <Plane className="h-8 w-8 text-indigo-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Compliance</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Expiring Documents</p>
+                <p className="text-xs text-gray-500">Next 90 days</p>
+                <p className="text-3xl font-bold text-red-600 mt-1">{stats.expiringDocuments}</p>
+              </div>
+              <div className="p-3 bg-red-50 rounded-full">
+                <FileText className="h-8 w-8 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Expiring Iqamas</p>
+                <p className="text-xs text-gray-500">Next 90 days</p>
+                <p className="text-3xl font-bold text-orange-600 mt-1">{stats.expiringIqamas}</p>
+              </div>
+              <div className="p-3 bg-orange-50 rounded-full">
+                <CreditCard className="h-8 w-8 text-orange-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Expiring Passports</p>
+                <p className="text-xs text-gray-500">Next 90 days</p>
+                <p className="text-3xl font-bold text-purple-600 mt-1">{stats.expiringPassports}</p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-full">
+                <FileText className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Expiring Contracts</p>
+                <p className="text-xs text-gray-500">Next 90 days</p>
+                <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.expiringContracts}</p>
+              </div>
+              <div className="p-3 bg-yellow-50 rounded-full">
+                <Briefcase className="h-8 w-8 text-yellow-600" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Assets & Resources</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Vehicles</p>
+                <p className="text-3xl font-bold text-blue-600 mt-1">{stats.totalVehicles}</p>
+              </div>
+              <div className="p-3 bg-blue-50 rounded-full">
+                <Car className="h-8 w-8 text-blue-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Properties</p>
+                <p className="text-3xl font-bold text-green-600 mt-1">{stats.totalProperties}</p>
+              </div>
+              <div className="p-3 bg-green-50 rounded-full">
+                <Home className="h-8 w-8 text-green-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Contracts</p>
+                <p className="text-3xl font-bold text-indigo-600 mt-1">{stats.activeContracts}</p>
+              </div>
+              <div className="p-3 bg-indigo-50 rounded-full">
+                <Briefcase className="h-8 w-8 text-indigo-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Insurance Policies</p>
+                <p className="text-3xl font-bold text-purple-600 mt-1">{stats.activeInsurancePolicies}</p>
+              </div>
+              <div className="p-3 bg-purple-50 rounded-full">
+                <Shield className="h-8 w-8 text-purple-600" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -220,7 +651,7 @@ export function Dashboard() {
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-600">Status</span>
+              <span className="text-sm text-gray-600">Nitaqat Status</span>
               <span
                 className={`px-3 py-1 rounded-full text-sm font-medium border ${getNitaqatColorClass(
                   stats.nitaqatColor
@@ -229,38 +660,128 @@ export function Dashboard() {
                 {stats.nitaqatColor.toUpperCase()}
               </span>
             </div>
+            <div className="pt-4 border-t border-gray-200">
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-600">Saudi: {stats.saudiEmployees}</span>
+                <span className="text-gray-600">Non-Saudi: {stats.nonSaudiEmployees}</span>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center space-x-3 mb-4">
             <AlertCircle className="h-6 w-6 text-orange-600" />
-            <h2 className="text-lg font-semibold text-gray-900">Alerts</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Quick Alerts</h2>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <Calendar className="h-5 w-5 text-yellow-600" />
-                <span className="text-sm text-gray-700">Pending Leave Requests</span>
+            {stats.expiringIqamas > 0 && (
+              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+                <div className="flex items-center space-x-3">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <span className="text-sm font-medium text-red-900">Iqamas Expiring Soon</span>
+                </div>
+                <span className="text-lg font-bold text-red-700">{stats.expiringIqamas}</span>
               </div>
-              <span className="text-lg font-bold text-yellow-700">{stats.pendingLeaveRequests}</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-              <div className="flex items-center space-x-3">
-                <AlertCircle className="h-5 w-5 text-red-600" />
-                <span className="text-sm text-gray-700">Expiring Documents (90 days)</span>
+            )}
+            {stats.pendingLeaveRequests > 0 && (
+              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                <div className="flex items-center space-x-3">
+                  <Calendar className="h-5 w-5 text-yellow-600" />
+                  <span className="text-sm font-medium text-yellow-900">Pending Leave Requests</span>
+                </div>
+                <span className="text-lg font-bold text-yellow-700">{stats.pendingLeaveRequests}</span>
               </div>
-              <span className="text-lg font-bold text-red-700">{stats.expiringDocuments}</span>
-            </div>
+            )}
+            {stats.expiringContracts > 0 && (
+              <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <div className="flex items-center space-x-3">
+                  <Briefcase className="h-5 w-5 text-orange-600" />
+                  <span className="text-sm font-medium text-orange-900">Contracts Expiring</span>
+                </div>
+                <span className="text-lg font-bold text-orange-700">{stats.expiringContracts}</span>
+              </div>
+            )}
+            {stats.pendingTravelRequests > 0 && (
+              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <div className="flex items-center space-x-3">
+                  <Plane className="h-5 w-5 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-900">Travel Approvals Needed</span>
+                </div>
+                <span className="text-lg font-bold text-blue-700">{stats.pendingTravelRequests}</span>
+              </div>
+            )}
+            {stats.expiringIqamas === 0 && stats.pendingLeaveRequests === 0 && stats.expiringContracts === 0 && stats.pendingTravelRequests === 0 && (
+              <div className="flex items-center justify-center p-6 bg-green-50 rounded-lg">
+                <div className="text-center">
+                  <Award className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-green-900">All Clear!</p>
+                  <p className="text-xs text-green-700 mt-1">No urgent items requiring attention</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Employee Distribution by Department</h2>
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Gender Distribution</h2>
+          {genderData.some(d => d.value > 0) ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={genderData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  <Cell fill="#3B82F6" />
+                  <Cell fill="#EC4899" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-center text-gray-500 py-12">No data available</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Employment Types</h2>
+          {employmentTypeData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie
+                  data={employmentTypeData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {employmentTypeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-center text-gray-500 py-12">No data available</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Departments</h2>
           {departmentData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={300}>
+            <ResponsiveContainer width="100%" height={250}>
               <PieChart>
                 <Pie
                   data={departmentData}
@@ -280,24 +801,8 @@ export function Dashboard() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <p className="text-center text-gray-500 py-12">No department data available</p>
+            <p className="text-center text-gray-500 py-12">No department data</p>
           )}
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Employee Composition</h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={[
-              { name: 'Saudi', value: stats.saudiEmployees },
-              { name: 'Non-Saudi', value: stats.nonSaudiEmployees }
-            ]}>
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="value" fill="#0088FE" name="Employees" />
-            </BarChart>
-          </ResponsiveContainer>
         </div>
       </div>
 
