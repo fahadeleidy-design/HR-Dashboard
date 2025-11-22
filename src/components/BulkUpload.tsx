@@ -270,6 +270,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
 
         return {
           row,
+          company_name: getFieldValue(row, 'Company Name', 'CompanyName', 'Company_Name', 'Company') ? getFieldValue(row, 'Company Name', 'CompanyName', 'Company_Name', 'Company').toString().trim() : null,
           company_id: currentCompany.id,
           employee_number: (getFieldValue(row, 'Employee ID', 'EmployeeID', 'Employee_ID') || '').toString(),
           first_name_en: firstName,
@@ -306,71 +307,123 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         };
       });
 
-      const { data: existingDepts } = await supabase
-        .from('departments')
-        .select('id, name_en, code')
-        .eq('company_id', currentCompany.id);
+      const { data: allCompanies } = await supabase
+        .from('companies')
+        .select('id, name_en, name_ar');
 
-      const deptMap = new Map<string, string>();
-      if (existingDepts) {
-        existingDepts.forEach(dept => {
-          deptMap.set(dept.name_en.toLowerCase(), dept.id);
-          deptMap.set(dept.code.toLowerCase(), dept.id);
+      const companyMap = new Map<string, string>();
+      if (allCompanies) {
+        allCompanies.forEach(company => {
+          if (company.name_en) companyMap.set(company.name_en.toLowerCase().trim(), company.id);
+          if (company.name_ar) companyMap.set(company.name_ar.toLowerCase().trim(), company.id);
         });
       }
 
-      const newDepartments = new Set<string>();
-      employees.forEach(emp => {
-        if (emp.department_name && !deptMap.has(emp.department_name.toLowerCase())) {
-          newDepartments.add(emp.department_name);
+      const employeesWithCompanyIds = employees.map(emp => {
+        let finalCompanyId = currentCompany.id;
+
+        if (emp.company_name) {
+          const companyId = companyMap.get(emp.company_name.toLowerCase().trim());
+          if (companyId) {
+            finalCompanyId = companyId;
+          }
+        }
+
+        return { ...emp, company_id: finalCompanyId };
+      });
+
+      const companiesNeeded = new Set(employeesWithCompanyIds.map(e => e.company_id));
+      const deptsByCompany = new Map<string, Map<string, string>>();
+
+      for (const companyId of companiesNeeded) {
+        const { data: existingDepts } = await supabase
+          .from('departments')
+          .select('id, name_en, code')
+          .eq('company_id', companyId);
+
+        const deptMap = new Map<string, string>();
+        if (existingDepts) {
+          existingDepts.forEach(dept => {
+            deptMap.set(dept.name_en.toLowerCase(), dept.id);
+            deptMap.set(dept.code.toLowerCase(), dept.id);
+          });
+        }
+        deptsByCompany.set(companyId, deptMap);
+      }
+
+      const newDepartmentsByCompany = new Map<string, Set<string>>();
+      employeesWithCompanyIds.forEach(emp => {
+        if (emp.department_name) {
+          const deptMap = deptsByCompany.get(emp.company_id);
+          if (!deptMap || !deptMap.has(emp.department_name.toLowerCase())) {
+            if (!newDepartmentsByCompany.has(emp.company_id)) {
+              newDepartmentsByCompany.set(emp.company_id, new Set());
+            }
+            newDepartmentsByCompany.get(emp.company_id)!.add(emp.department_name);
+          }
         }
       });
 
-      if (newDepartments.size > 0) {
-        const deptsToCreate = Array.from(newDepartments).map(name => ({
-          company_id: currentCompany.id,
-          name_en: name,
-          code: name.substring(0, 10).toUpperCase().replace(/\s+/g, '_'),
-        }));
+      for (const [companyId, deptNames] of newDepartmentsByCompany) {
+        if (deptNames.size > 0) {
+          const deptsToCreate = Array.from(deptNames).map(name => ({
+            company_id: companyId,
+            name_en: name,
+            code: name.substring(0, 10).toUpperCase().replace(/\s+/g, '_'),
+          }));
 
-        const { data: createdDepts } = await supabase
-          .from('departments')
-          .insert(deptsToCreate)
-          .select('id, name_en');
+          const { data: createdDepts } = await supabase
+            .from('departments')
+            .insert(deptsToCreate)
+            .select('id, name_en, company_id');
 
-        if (createdDepts) {
-          createdDepts.forEach(dept => {
-            deptMap.set(dept.name_en.toLowerCase(), dept.id);
-          });
+          if (createdDepts) {
+            createdDepts.forEach(dept => {
+              let deptMap = deptsByCompany.get(dept.company_id);
+              if (!deptMap) {
+                deptMap = new Map();
+                deptsByCompany.set(dept.company_id, deptMap);
+              }
+              deptMap.set(dept.name_en.toLowerCase(), dept.id);
+            });
+          }
         }
       }
 
-      const { data: existingEmployees } = await supabase
-        .from('employees')
-        .select('employee_number')
-        .eq('company_id', currentCompany.id);
+      const existingEmployeesByCompany = new Map<string, Set<string>>();
+      for (const companyId of companiesNeeded) {
+        const { data: existingEmployees } = await supabase
+          .from('employees')
+          .select('employee_number')
+          .eq('company_id', companyId);
 
-      const existingNumbers = new Set(existingEmployees?.map(e => e.employee_number) || []);
+        existingEmployeesByCompany.set(companyId, new Set(existingEmployees?.map(e => e.employee_number) || []));
+      }
 
-      const employeesToInsert = employees.map(({ row, department_name, payroll, ...emp }) => ({
-        employee: {
-          ...emp,
-          department_id: department_name ? deptMap.get(department_name.toLowerCase()) || null : null,
-        },
-        payroll
-      }));
+      const employeesToInsert = employeesWithCompanyIds.map(({ row, department_name, payroll, company_name, ...emp }) => {
+        const deptMap = deptsByCompany.get(emp.company_id);
+        return {
+          employee: {
+            ...emp,
+            department_id: department_name && deptMap ? deptMap.get(department_name.toLowerCase()) || null : null,
+          },
+          payroll,
+          companyId: emp.company_id
+        };
+      });
 
       let insertedData;
       let error;
 
       if (updateMode) {
         const results = await Promise.all(
-          employeesToInsert.map(async ({ employee: emp, payroll }) => {
+          employeesToInsert.map(async ({ employee: emp, payroll, companyId }) => {
+            const existingNumbers = existingEmployeesByCompany.get(companyId) || new Set();
             if (existingNumbers.has(emp.employee_number)) {
               const { data: existingEmp } = await supabase
                 .from('employees')
                 .select('*')
-                .eq('company_id', currentCompany.id)
+                .eq('company_id', companyId)
                 .eq('employee_number', emp.employee_number)
                 .single();
 
@@ -391,7 +444,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
               const empResult = await supabase
                 .from('employees')
                 .update(mergedData)
-                .eq('company_id', currentCompany.id)
+                .eq('company_id', companyId)
                 .eq('employee_number', emp.employee_number)
                 .select();
 
@@ -400,7 +453,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
                   .from('payroll')
                   .select('*')
                   .eq('employee_id', empResult.data[0].id)
-                  .eq('company_id', currentCompany.id)
+                  .eq('company_id', companyId)
                   .order('effective_from', { ascending: false })
                   .limit(1)
                   .maybeSingle();
@@ -423,7 +476,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
                     .from('payroll')
                     .upsert({
                       employee_id: empResult.data[0].id,
-                      company_id: currentCompany.id,
+                      company_id: companyId,
                       basic_salary: mergedPayroll.basic_salary,
                       housing_allowance: mergedPayroll.housing_allowance,
                       transportation_allowance: mergedPayroll.transportation_allowance,
@@ -457,7 +510,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
                   .from('payroll')
                   .insert({
                     employee_id: empResult.data[0].id,
-                    company_id: currentCompany.id,
+                    company_id: companyId,
                     basic_salary: payroll.basic_salary,
                     housing_allowance: payroll.housing_allowance,
                     transportation_allowance: payroll.transportation_allowance,
@@ -486,8 +539,14 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           insertedData = allData;
         }
       } else {
-        const newEmployees = employeesToInsert.filter(({ employee: emp }) => !existingNumbers.has(emp.employee_number));
-        const duplicates = employeesToInsert.filter(({ employee: emp }) => existingNumbers.has(emp.employee_number));
+        const newEmployees = employeesToInsert.filter(({ employee: emp, companyId }) => {
+          const existingNumbers = existingEmployeesByCompany.get(companyId) || new Set();
+          return !existingNumbers.has(emp.employee_number);
+        });
+        const duplicates = employeesToInsert.filter(({ employee: emp, companyId }) => {
+          const existingNumbers = existingEmployeesByCompany.get(companyId) || new Set();
+          return existingNumbers.has(emp.employee_number);
+        });
 
         if (duplicates.length > 0) {
           const duplicateIds = duplicates.map(({ employee: emp }) => emp.employee_number).join(', ');
@@ -509,6 +568,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           await Promise.all(
             result.data.map(async (emp, index) => {
               const payroll = newEmployees[index].payroll;
+              const companyId = newEmployees[index].companyId;
               if (payroll.basic_salary > 0) {
                 const grossSalary = payroll.basic_salary + payroll.housing_allowance + payroll.transportation_allowance + payroll.other_allowances;
                 const gosiEmployee = newEmployees[index].employee.is_saudi ? grossSalary * 0.1 : 0;
@@ -518,7 +578,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
                   .from('payroll')
                   .insert({
                     employee_id: emp.id,
-                    company_id: currentCompany.id,
+                    company_id: companyId,
                     basic_salary: payroll.basic_salary,
                     housing_allowance: payroll.housing_allowance,
                     transportation_allowance: payroll.transportation_allowance,
