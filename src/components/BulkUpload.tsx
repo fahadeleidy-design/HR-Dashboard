@@ -101,7 +101,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
     const ws = XLSX.utils.json_to_sheet(template);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Employees');
-    XLSX.writeFile(wb, 'employee_upload_template.xlsx');
+    XLSX.writeFile(wb, 'employee_upload_template.xlsx', { bookType: 'xlsx', type: 'binary' });
   };
 
   const validateRow = (row: EmployeeRow, index: number): ValidationError[] => {
@@ -157,9 +157,12 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
 
     try {
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data);
+      const workbook = XLSX.read(data, { type: 'array', codepage: 65001 });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json<EmployeeRow>(worksheet);
+      const jsonData = XLSX.utils.sheet_to_json<EmployeeRow>(worksheet, {
+        raw: false,
+        defval: ''
+      });
 
       if (jsonData.length === 0) {
         setErrors([{ row: 0, field: 'File', message: 'No data found in file' }]);
@@ -180,39 +183,46 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
       }
 
       const employees = jsonData.map((row) => {
-        const englishName = row['Employee Name (English)'] || '';
-        const englishNameParts = englishName.trim().split(/\s+/);
+        const englishName = (row['Employee Name (English)'] || '').toString().trim();
+        const englishNameParts = englishName.split(/\s+/).filter(part => part.length > 0);
         const firstName = englishNameParts[0] || '';
         const lastName = englishNameParts.slice(1).join(' ') || englishNameParts[0] || '';
 
-        const arabicName = row['Employee Name (Arabic)'] || '';
-        const arabicNameParts = arabicName.trim().split(/\s+/);
-        const firstNameAr = arabicNameParts[0] || null;
-        const lastNameAr = arabicNameParts.slice(1).join(' ') || arabicNameParts[0] || null;
+        const arabicName = (row['Employee Name (Arabic)'] || '').toString().trim();
+        let firstNameAr = null;
+        let lastNameAr = null;
+
+        if (arabicName && arabicName.length > 0) {
+          const arabicNameParts = arabicName.split(/\s+/).filter(part => part.length > 0);
+          if (arabicNameParts.length > 0) {
+            firstNameAr = arabicNameParts[0];
+            lastNameAr = arabicNameParts.slice(1).join(' ') || arabicNameParts[0];
+          }
+        }
 
         return {
           company_id: currentCompany.id,
-          employee_number: row['Employee ID'],
+          employee_number: (row['Employee ID'] || '').toString(),
           first_name_en: firstName,
           last_name_en: lastName,
           first_name_ar: firstNameAr,
           last_name_ar: lastNameAr,
-          email: row['Email Address'] || null,
-          phone: row['Mobile Number'] || null,
-          nationality: row.Nationality,
-          is_saudi: row.Nationality?.toLowerCase().includes('saudi') || false,
-          gender: row.Gender?.toLowerCase() as 'male' | 'female' | undefined,
-          date_of_birth: row['Birth Date'] || null,
-          hire_date: row['Date of Joining'],
-          job_title_en: row['Position/Job Title'],
+          email: row['Email Address'] ? row['Email Address'].toString() : null,
+          phone: row['Mobile Number'] ? row['Mobile Number'].toString() : null,
+          nationality: (row.Nationality || '').toString(),
+          is_saudi: (row.Nationality || '').toString().toLowerCase().includes('saudi') || false,
+          gender: row.Gender ? (row.Gender.toString().toLowerCase() as 'male' | 'female') : undefined,
+          date_of_birth: row['Birth Date'] ? row['Birth Date'].toString() : null,
+          hire_date: (row['Date of Joining'] || '').toString(),
+          job_title_en: (row['Position/Job Title'] || '').toString(),
           job_title_ar: null,
-          employment_type: (row['Contract Type']?.toLowerCase() || 'full_time') as 'full_time' | 'part_time' | 'contract',
-          status: (row.Status?.toLowerCase() || 'active') as 'active' | 'on_leave' | 'terminated',
-          iqama_number: row['IQAMA/ID Number'] || null,
-          iqama_expiry: row['EIQAMA Expiry Date'] || null,
-          passport_number: row['Passport Number'] || null,
-          passport_expiry: row['Passport Expiry Date'] || null,
-          department_id: row.Department || null,
+          employment_type: (row['Contract Type']?.toString().toLowerCase() || 'full_time') as 'full_time' | 'part_time' | 'contract',
+          status: (row.Status?.toString().toLowerCase() || 'active') as 'active' | 'on_leave' | 'terminated',
+          iqama_number: row['IQAMA/ID Number'] ? row['IQAMA/ID Number'].toString() : null,
+          iqama_expiry: row['EIQAMA Expiry Date'] ? row['EIQAMA Expiry Date'].toString() : null,
+          passport_number: row['Passport Number'] ? row['Passport Number'].toString() : null,
+          passport_expiry: row['Passport Expiry Date'] ? row['Passport Expiry Date'].toString() : null,
+          department_id: row.Department ? row.Department.toString() : null,
         };
       });
 
