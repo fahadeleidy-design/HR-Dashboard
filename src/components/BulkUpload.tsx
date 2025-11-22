@@ -57,6 +57,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [successCount, setSuccessCount] = useState(0);
+  const [updateMode, setUpdateMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
@@ -307,15 +308,71 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         }
       }
 
+      const { data: existingEmployees } = await supabase
+        .from('employees')
+        .select('employee_number')
+        .eq('company_id', currentCompany.id);
+
+      const existingNumbers = new Set(existingEmployees?.map(e => e.employee_number) || []);
+
       const employeesToInsert = employees.map(({ row, department_name, ...emp }) => ({
         ...emp,
         department_id: department_name ? deptMap.get(department_name.toLowerCase()) || null : null,
       }));
 
-      const { data: insertedData, error } = await supabase
-        .from('employees')
-        .insert(employeesToInsert)
-        .select();
+      let insertedData;
+      let error;
+
+      if (updateMode) {
+        const results = await Promise.all(
+          employeesToInsert.map(async (emp) => {
+            if (existingNumbers.has(emp.employee_number)) {
+              return await supabase
+                .from('employees')
+                .update(emp)
+                .eq('company_id', currentCompany.id)
+                .eq('employee_number', emp.employee_number)
+                .select();
+            } else {
+              return await supabase
+                .from('employees')
+                .insert(emp)
+                .select();
+            }
+          })
+        );
+
+        const allData = results.map(r => r.data).flat().filter(Boolean);
+        const allErrors = results.filter(r => r.error);
+
+        if (allErrors.length > 0) {
+          error = allErrors[0].error;
+        } else {
+          insertedData = allData;
+        }
+      } else {
+        const newEmployees = employeesToInsert.filter(emp => !existingNumbers.has(emp.employee_number));
+        const duplicates = employeesToInsert.filter(emp => existingNumbers.has(emp.employee_number));
+
+        if (duplicates.length > 0) {
+          const duplicateIds = duplicates.map(emp => emp.employee_number).join(', ');
+          setErrors([{
+            row: 0,
+            field: 'Duplicate',
+            message: `Found ${duplicates.length} existing employee(s): ${duplicateIds}. Enable "Update existing employees" to update them.`
+          }]);
+          setUploading(false);
+          return;
+        }
+
+        const result = await supabase
+          .from('employees')
+          .insert(newEmployees)
+          .select();
+
+        insertedData = result.data;
+        error = result.error;
+      }
 
       if (error) {
         setErrors([{ row: 0, field: 'Database', message: error.message }]);
@@ -386,6 +443,19 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
               <Upload className="h-5 w-5" />
               <span className="font-medium">{file ? `✓ ${file.name}` : 'Click to Choose Excel File (.xlsx, .xls)'}</span>
             </button>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="updateMode"
+              checked={updateMode}
+              onChange={(e) => setUpdateMode(e.target.checked)}
+              className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+            />
+            <label htmlFor="updateMode" className="text-sm text-gray-700">
+              Update existing employees (overwrite data for duplicate Employee IDs)
+            </label>
           </div>
 
           {successCount > 0 && (
