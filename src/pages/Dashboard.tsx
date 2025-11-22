@@ -255,7 +255,7 @@ export function Dashboard() {
 
       const { data: deptData } = await supabase
         .from('employees')
-        .select('department_id, departments(name_en)')
+        .select('department_id, departments!employees_department_id_fkey(name_en)')
         .eq('company_id', currentCompany.id)
         .eq('status', 'active');
 

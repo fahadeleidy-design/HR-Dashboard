@@ -474,30 +474,35 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
                   bank_name: payroll.bank_name || existingPayroll?.bank_name || null,
                 };
 
-                if (mergedPayroll.basic_salary > 0) {
-                  const grossSalary = mergedPayroll.basic_salary + mergedPayroll.housing_allowance + mergedPayroll.transportation_allowance + mergedPayroll.other_allowances;
-                  const gosiEmployee = mergedData.is_saudi ? grossSalary * 0.1 : 0;
-                  const gosiEmployer = mergedData.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
+                const grossSalary = mergedPayroll.basic_salary + mergedPayroll.housing_allowance + mergedPayroll.transportation_allowance + mergedPayroll.other_allowances;
+                const gosiEmployee = mergedData.is_saudi ? grossSalary * 0.1 : 0;
+                const gosiEmployer = mergedData.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
 
+                const payrollData = {
+                  employee_id: empResult.data[0].id,
+                  company_id: companyId,
+                  basic_salary: mergedPayroll.basic_salary,
+                  housing_allowance: mergedPayroll.housing_allowance,
+                  transportation_allowance: mergedPayroll.transportation_allowance,
+                  other_allowances: mergedPayroll.other_allowances,
+                  gross_salary: grossSalary,
+                  gosi_employee: gosiEmployee,
+                  gosi_employer: gosiEmployer,
+                  net_salary: grossSalary - gosiEmployee,
+                  iban: mergedPayroll.iban,
+                  bank_name: mergedPayroll.bank_name,
+                  effective_from: mergedData.hire_date,
+                };
+
+                if (existingPayroll) {
                   await supabase
                     .from('payroll')
-                    .upsert({
-                      employee_id: empResult.data[0].id,
-                      company_id: companyId,
-                      basic_salary: mergedPayroll.basic_salary,
-                      housing_allowance: mergedPayroll.housing_allowance,
-                      transportation_allowance: mergedPayroll.transportation_allowance,
-                      other_allowances: mergedPayroll.other_allowances,
-                      gross_salary: grossSalary,
-                      gosi_employee: gosiEmployee,
-                      gosi_employer: gosiEmployer,
-                      net_salary: grossSalary - gosiEmployee,
-                      iban: mergedPayroll.iban,
-                      bank_name: mergedPayroll.bank_name,
-                      effective_from: mergedData.hire_date,
-                    }, {
-                      onConflict: 'employee_id,effective_from'
-                    });
+                    .update(payrollData)
+                    .eq('id', existingPayroll.id);
+                } else {
+                  await supabase
+                    .from('payroll')
+                    .insert(payrollData);
                 }
               }
 
