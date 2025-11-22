@@ -475,8 +475,20 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
                 };
 
                 const grossSalary = mergedPayroll.basic_salary + mergedPayroll.housing_allowance + mergedPayroll.transportation_allowance + mergedPayroll.other_allowances;
-                const gosiEmployee = mergedData.is_saudi ? grossSalary * 0.1 : 0;
-                const gosiEmployer = mergedData.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
+
+                const gosiWageCeiling = 45000;
+                const gosiWage = Math.min(grossSalary, gosiWageCeiling);
+
+                let gosiEmployee = 0;
+                let gosiEmployer = 0;
+
+                if (mergedData.is_saudi) {
+                  gosiEmployee = gosiWage * 0.10;
+                  gosiEmployer = gosiWage * 0.12;
+                } else {
+                  gosiEmployee = gosiWage * 0.02;
+                  gosiEmployer = gosiWage * 0.02;
+                }
 
                 const payrollData = {
                   employee_id: empResult.data[0].id,
