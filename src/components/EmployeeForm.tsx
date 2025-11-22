@@ -306,6 +306,33 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Employee Name (English) *
+              </label>
+              <input
+                type="text"
+                value={`${formData.first_name_en} ${formData.last_name_en}`.trim()}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 cursor-not-allowed"
+                placeholder="Auto-generated from first and last name"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Employee Name (Arabic)
+              </label>
+              <input
+                type="text"
+                value={`${formData.first_name_ar} ${formData.last_name_ar}`.trim()}
+                readOnly
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 cursor-not-allowed"
+                placeholder="Auto-generated from first and last name"
+                dir="rtl"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 First Name (English) *
               </label>
               <input
