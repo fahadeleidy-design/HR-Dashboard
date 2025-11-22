@@ -29,7 +29,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     hire_date: employee?.hire_date || new Date().toISOString().split('T')[0],
     job_title_en: employee?.job_title_en || '',
     job_title_ar: employee?.job_title_ar || '',
-    employment_type: employee?.employment_type || 'full_time',
+    employment_type: employee?.employment_type || 'indefinite',
     status: employee?.status || 'active',
     iqama_number: employee?.iqama_number || '',
     iqama_expiry: employee?.iqama_expiry || '',
@@ -355,9 +355,11 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="full_time">Full Time</option>
-                <option value="part_time">Part Time</option>
-                <option value="contract">Contract</option>
+                <option value="indefinite">Indefinite Contract (عقد غير محدد المدة)</option>
+                <option value="fixed_term">Fixed-Term Contract (عقد محدد المدة)</option>
+                <option value="temporary">Temporary Contract (عقد مؤقت)</option>
+                <option value="part_time">Part-Time Contract (عقد دوام جزئي)</option>
+                <option value="seasonal">Seasonal Contract (عقد موسمي)</option>
               </select>
             </div>
 

@@ -43,7 +43,7 @@ export interface Employee {
   probation_end_date?: string;
   job_title_en: string;
   job_title_ar?: string;
-  employment_type: 'full_time' | 'part_time' | 'contract';
+  employment_type: 'indefinite' | 'fixed_term' | 'temporary' | 'part_time' | 'seasonal';
   status: 'active' | 'on_leave' | 'terminated';
   termination_date?: string;
   termination_reason?: string;

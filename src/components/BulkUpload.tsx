@@ -76,7 +76,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         'Passport Number': 'A12345678',
         'Passport Issue Date': '2018-06-01',
         'Passport Expiry Date': '2028-05-31',
-        'Contract Type': 'full_time',
+        'Contract Type': 'indefinite',
         'Contract Number': 'CNT-2024-001',
         'Contract Start Date': '2024-01-01',
         'Contract End Date': '2026-12-31',
@@ -128,8 +128,9 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
       rowErrors.push({ row: rowNum, field: 'Gender', message: 'Must be "male" or "female"' });
     }
 
-    if (row['Contract Type'] && !['full_time', 'part_time', 'contract'].includes(row['Contract Type'].toLowerCase())) {
-      rowErrors.push({ row: rowNum, field: 'Contract Type', message: 'Must be "full_time", "part_time", or "contract"' });
+    const validContractTypes = ['indefinite', 'fixed_term', 'temporary', 'part_time', 'seasonal'];
+    if (row['Contract Type'] && !validContractTypes.includes(row['Contract Type'].toLowerCase().replace(/[\s-_]/g, '_'))) {
+      rowErrors.push({ row: rowNum, field: 'Contract Type', message: 'Must be "indefinite", "fixed_term", "temporary", "part_time", or "seasonal"' });
     }
 
     if (row.Status && !['active', 'on_leave', 'terminated'].includes(row.Status.toLowerCase())) {
@@ -216,7 +217,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           hire_date: (row['Date of Joining'] || '').toString(),
           job_title_en: (row['Position/Job Title'] || '').toString(),
           job_title_ar: null,
-          employment_type: (row['Contract Type']?.toString().toLowerCase() || 'full_time') as 'full_time' | 'part_time' | 'contract',
+          employment_type: (row['Contract Type']?.toString().toLowerCase().replace(/[\s-_]/g, '_') || 'indefinite') as 'indefinite' | 'fixed_term' | 'temporary' | 'part_time' | 'seasonal',
           status: (row.Status?.toString().toLowerCase() || 'active') as 'active' | 'on_leave' | 'terminated',
           iqama_number: row['IQAMA/ID Number'] ? row['IQAMA/ID Number'].toString() : null,
           iqama_expiry: row['EIQAMA Expiry Date'] ? row['EIQAMA Expiry Date'].toString() : null,
