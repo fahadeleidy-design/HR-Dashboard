@@ -1,10 +1,17 @@
-# Saudi HR Management System
+# Complete Enterprise Management System (EMS) for Saudi Arabia
 
-A comprehensive HR Management System built for Saudi Arabia, compliant with Saudi Labor Law, Nitaqat regulations, GOSI, and WPS requirements.
+A comprehensive **17-module** Enterprise Management System built for Saudi Arabia, fully compliant with Saudi Labor Law, Nitaqat, GOSI, WPS, Muqeem, and Absher.
 
-## Features
+## 🎯 System Overview
 
-### ✅ Core Features
+**Total Modules**: 17 Fully Integrated Modules
+**Database Tables**: 40+ Tables with Complete RLS Security
+**Real-time**: All modules support real-time data synchronization
+**Saudi Compliant**: Built-in Saudi regulations and governmental integrations
+
+## ✅ All Modules
+
+### 📊 Core HR Modules (9 Modules)
 
 #### 1. Employee Management (Full CRUD with Real-time Sync)
 - **View Employees**: Searchable data table showing all employee information
@@ -190,46 +197,100 @@ No page refresh needed! Changes are pushed via WebSocket.
 ✅ **Flexible**: Add, edit, delete, export, or bulk upload as needed
 ✅ **User-Friendly**: Clean interface with search, validation, and error handling
 
-## All Modules Completed
+## 🎉 All 17 Modules Completed
 
-### Core Modules
+### Core HR Modules (9)
 
-✅ **Employee Management** - Full CRUD, bulk upload, real-time sync, Excel export, **detailed employee profiles**
-✅ **Payroll Management** - Salary calculation, GOSI computation (10% employee, 12%+2% employer), allowances
-✅ **Leave Management** - Request submission, approval/rejection workflow, leave type tracking
-✅ **Attendance Tracking** - Daily attendance, check-in/out times, overtime calculation, monthly reports
-✅ **Performance Management** - Employee reviews, ratings, performance tracking
-✅ **Training Management** - Training programs, enrollments, duration tracking, status management
-✅ **Document Management** - Document tracking, expiry alerts (90-day), status monitoring
-✅ **Compliance & Reporting** - Nitaqat status, GOSI contributions, WPS reporting, saudization metrics
-✅ **Settings** - Company information, department management
+1. ✅ **Employee Management** - Full CRUD, bulk upload, real-time sync, detailed profiles, leave balance
+2. ✅ **Payroll Management** - GOSI calculations (10%/12%/2%), salary components, net pay
+3. ✅ **Leave Management** - Request/approval workflow, balance tracking, Saudi leave types
+4. ✅ **Attendance Tracking** - Check-in/out, overtime, monthly reports, status monitoring
+5. ✅ **Performance Management** - Reviews, ratings, goals, performance tracking
+6. ✅ **Training Management** - Programs, enrollments, certifications, duration tracking
+7. ✅ **Document Management** - Expiry alerts, status tracking, document repository
+8. ✅ **Compliance & Reporting** - Nitaqat, GOSI, WPS, saudization metrics
+9. ✅ **Settings** - Company info, departments, user management
 
-### Advanced Features
+### Advanced Enterprise Modules (8)
 
-✅ **Employee Detail View** - Comprehensive employee profile with:
-  - Complete personal and employment information
-  - Current salary breakdown with GOSI details
-  - Leave balance tracking for all leave types
-  - Document status (Iqama, Passport, additional docs)
-  - Years of service calculation
-  - Quick stats and status overview
+10. ✅ **Vehicle Management** ⭐ NEW
+    - Fleet tracking with make, model, year
+    - Vehicle assignments to employees
+    - Maintenance schedules and history
+    - **Absher traffic violations integration ready**
+    - Insurance and registration expiry tracking
+    - Mileage tracking and fuel management
 
-✅ **Enhanced Dashboard with Analytics**
-  - **Interactive Charts**: Pie charts, bar charts, and line graphs using Recharts
-  - **Department Distribution**: Visual breakdown of employees by department
-  - **Employee Composition**: Saudi vs Non-Saudi visualization
-  - **Hiring Trends**: 6-month hiring trend analysis
-  - Real-time KPI cards with color-coded status
-  - Nitaqat compliance tracking with visual indicators
-  - Pending actions and expiring documents alerts
+11. ✅ **Governmental Documents** ⭐ NEW
+    - Commercial Registration (CR) tracking
+    - Ministry licenses and permits
+    - Municipality licenses
+    - Civil Defense certificates
+    - Chamber of Commerce membership
+    - Zakat & VAT certificates
+    - Renewal reminders and cost tracking
 
-### Features Common to All Modules
-- Real-time data synchronization across all users
-- Export to Excel functionality
-- Comprehensive filtering and search
-- Responsive design for all devices
-- Saudi Labor Law compliance built-in
-- Clean, modern UI with intuitive navigation
+12. ✅ **Real Estate & Assets** ⭐ NEW
+    - Property management (owned/leased)
+    - Office, warehouse, factory tracking
+    - Asset inventory (IT, furniture, equipment)
+    - Depreciation tracking
+    - Asset assignments to employees
+    - Maintenance schedules
+
+13. ✅ **Contract Management** ⭐ NEW
+    - Vendor and client contracts
+    - Lease agreements
+    - Service contracts
+    - Auto-renewal tracking
+    - Contract value and payment terms
+    - Expiry alerts
+
+14. ✅ **Insurance Management** ⭐ NEW
+    - Health insurance policies
+    - Vehicle insurance
+    - Property and liability insurance
+    - Claims management
+    - Premium tracking
+    - Coverage and deductible management
+
+15. ✅ **Business Travel** ⭐ NEW
+    - Travel requests and approvals
+    - Domestic and international trips
+    - Cost tracking and advance payments
+    - Flight and hotel booking status
+    - Travel expense integration
+
+16. ✅ **Expense Management** ⭐ NEW
+    - Employee expense claims
+    - Approval workflow
+    - Receipt management
+    - Reimbursement tracking
+    - Multi-currency support
+    - Travel expense linking
+
+17. ✅ **Visa & Work Permits** ⭐ NEW (Muqeem Integration Ready)
+    - Work visa quota management
+    - Iqama (residence permit) tracking
+    - Visa transfers (in/out)
+    - Exit re-entry permits
+    - **Muqeem system integration ready**
+    - Final exit processing
+    - Visa request workflow
+
+## 🌟 Key Features Across All Modules
+
+✅ **Real-time Synchronization** - All changes appear instantly for all users
+✅ **Excel Export** - Export data from any module to Excel
+✅ **Advanced Search & Filter** - Find anything quickly
+✅ **Saudi Compliant** - Built-in Saudi regulations
+✅ **Bilingual** - Full English and Arabic support
+✅ **Mobile Responsive** - Works on all devices
+✅ **Secure** - Row-level security with company isolation
+✅ **Analytics** - Interactive charts and dashboards
+✅ **Expiry Alerts** - Automated alerts for expiring documents
+✅ **Approval Workflows** - Multi-level approvals
+✅ **Audit Trail** - Complete history tracking
 
 ## License
 

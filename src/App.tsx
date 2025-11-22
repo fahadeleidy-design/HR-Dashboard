@@ -14,6 +14,14 @@ import { Performance } from './pages/Performance';
 import { Training } from './pages/Training';
 import { Documents } from './pages/Documents';
 import { Compliance } from './pages/Compliance';
+import { Vehicles } from './pages/Vehicles';
+import { GovernmentalDocs } from './pages/GovernmentalDocs';
+import { RealEstate } from './pages/RealEstate';
+import { Contracts } from './pages/Contracts';
+import { Insurance } from './pages/Insurance';
+import { Travel } from './pages/Travel';
+import { Expenses } from './pages/Expenses';
+import { Visas } from './pages/Visas';
 import { Settings } from './pages/Settings';
 
 function App() {
@@ -114,16 +122,15 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Settings />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/vehicles" element={<ProtectedRoute><Layout><Vehicles /></Layout></ProtectedRoute>} />
+            <Route path="/gov-docs" element={<ProtectedRoute><Layout><GovernmentalDocs /></Layout></ProtectedRoute>} />
+            <Route path="/real-estate" element={<ProtectedRoute><Layout><RealEstate /></Layout></ProtectedRoute>} />
+            <Route path="/contracts" element={<ProtectedRoute><Layout><Contracts /></Layout></ProtectedRoute>} />
+            <Route path="/insurance" element={<ProtectedRoute><Layout><Insurance /></Layout></ProtectedRoute>} />
+            <Route path="/travel" element={<ProtectedRoute><Layout><Travel /></Layout></ProtectedRoute>} />
+            <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
+            <Route path="/visas" element={<ProtectedRoute><Layout><Visas /></Layout></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </CompanyProvider>

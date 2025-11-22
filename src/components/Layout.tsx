@@ -16,6 +16,13 @@ import {
   LogOut,
   Building2,
   ChevronDown,
+  Car,
+  Briefcase,
+  Home,
+  Shield,
+  Plane,
+  Receipt,
+  CreditCard,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -45,6 +52,14 @@ export function Layout({ children }: LayoutProps) {
     { path: '/training', icon: GraduationCap, label: 'Training' },
     { path: '/documents', icon: FileText, label: 'Documents' },
     { path: '/compliance', icon: BarChart3, label: 'Compliance' },
+    { path: '/vehicles', icon: Car, label: 'Vehicles' },
+    { path: '/gov-docs', icon: Briefcase, label: 'Gov Docs' },
+    { path: '/real-estate', icon: Home, label: 'Real Estate' },
+    { path: '/contracts', icon: Briefcase, label: 'Contracts' },
+    { path: '/insurance', icon: Shield, label: 'Insurance' },
+    { path: '/travel', icon: Plane, label: 'Travel' },
+    { path: '/expenses', icon: Receipt, label: 'Expenses' },
+    { path: '/visas', icon: CreditCard, label: 'Visas' },
     { path: '/settings', icon: Settings, label: 'Settings' },
   ];
 
