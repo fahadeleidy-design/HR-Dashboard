@@ -20,7 +20,7 @@ interface EmployeeRow {
   'Date of Joining': string;
   'IQAMA/ID Number'?: string;
   'IQAMA Issue Date'?: string;
-  'EIQAMA Expiry Date'?: string;
+  'IQAMA Expiry Date'?: string;
   'Passport Number'?: string;
   'Passport Issue Date'?: string;
   'Passport Expiry Date'?: string;
@@ -73,7 +73,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         'Date of Joining': '2024-01-01',
         'IQAMA/ID Number': '1234567890',
         'IQAMA Issue Date': '2020-01-01',
-        'EIQAMA Expiry Date': '2025-12-31',
+        'IQAMA Expiry Date': '2025-12-31',
         'Passport Number': 'A12345678',
         'Passport Issue Date': '2018-06-01',
         'Passport Expiry Date': '2028-05-31',
@@ -291,7 +291,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           employment_type: normalizeContractType(getFieldValue(row, 'Contract Type', 'ContractType', 'Contract_Type', 'Employment Type')),
           status: normalizeStatus(getFieldValue(row, 'Status')),
           iqama_number: (getFieldValue(row, 'IQAMA/ID Number', 'IQAMA Number', 'IqamaNumber', 'Iqama_Number', 'ID Number', 'IQAMA') || '').toString().trim(),
-          iqama_expiry: getFieldValue(row, 'EIQAMA Expiry Date', 'IQAMA Expiry Date', 'Iqama Expiry Date', 'IqamaExpiryDate', 'Iqama_Expiry_Date', 'IQAMA Expiry') ? getFieldValue(row, 'EIQAMA Expiry Date', 'IQAMA Expiry Date', 'Iqama Expiry Date', 'IqamaExpiryDate', 'Iqama_Expiry_Date', 'IQAMA Expiry').toString() : null,
+          iqama_expiry: getFieldValue(row, 'IQAMA Expiry Date', 'EIQAMA Expiry Date', 'Iqama Expiry Date', 'IqamaExpiryDate', 'Iqama_Expiry_Date', 'IQAMA Expiry') ? getFieldValue(row, 'IQAMA Expiry Date', 'EIQAMA Expiry Date', 'Iqama Expiry Date', 'IqamaExpiryDate', 'Iqama_Expiry_Date', 'IQAMA Expiry').toString() : null,
           passport_number: getFieldValue(row, 'Passport Number', 'PassportNumber', 'Passport_Number') ? getFieldValue(row, 'Passport Number', 'PassportNumber', 'Passport_Number').toString().trim() : null,
           passport_expiry: getFieldValue(row, 'Passport Expiry Date', 'PassportExpiryDate', 'Passport_Expiry_Date', 'Passport Expiry') ? getFieldValue(row, 'Passport Expiry Date', 'PassportExpiryDate', 'Passport_Expiry_Date', 'Passport Expiry').toString() : null,
           department_name: getFieldValue(row, 'Department') ? getFieldValue(row, 'Department').toString().trim() : null,
