@@ -350,37 +350,78 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         const results = await Promise.all(
           employeesToInsert.map(async ({ employee: emp, payroll }) => {
             if (existingNumbers.has(emp.employee_number)) {
+              const { data: existingEmp } = await supabase
+                .from('employees')
+                .select('*')
+                .eq('company_id', currentCompany.id)
+                .eq('employee_number', emp.employee_number)
+                .single();
+
+              const mergedData: any = {};
+              Object.keys(emp).forEach((key) => {
+                const newValue = (emp as any)[key];
+                const existingValue = existingEmp?.[key];
+
+                if (key === 'company_id' || key === 'employee_number') {
+                  mergedData[key] = newValue;
+                } else if (newValue !== null && newValue !== undefined && newValue !== '') {
+                  mergedData[key] = newValue;
+                } else if (existingValue !== null && existingValue !== undefined) {
+                  mergedData[key] = existingValue;
+                }
+              });
+
               const empResult = await supabase
                 .from('employees')
-                .update(emp)
+                .update(mergedData)
                 .eq('company_id', currentCompany.id)
                 .eq('employee_number', emp.employee_number)
                 .select();
 
-              if (empResult.data && empResult.data[0] && payroll.basic_salary > 0) {
-                const grossSalary = payroll.basic_salary + payroll.housing_allowance + payroll.transportation_allowance + payroll.other_allowances;
-                const gosiEmployee = emp.is_saudi ? grossSalary * 0.1 : 0;
-                const gosiEmployer = emp.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
-
-                await supabase
+              if (empResult.data && empResult.data[0]) {
+                const { data: existingPayroll } = await supabase
                   .from('payroll')
-                  .upsert({
-                    employee_id: empResult.data[0].id,
-                    company_id: currentCompany.id,
-                    basic_salary: payroll.basic_salary,
-                    housing_allowance: payroll.housing_allowance,
-                    transportation_allowance: payroll.transportation_allowance,
-                    other_allowances: payroll.other_allowances,
-                    gross_salary: grossSalary,
-                    gosi_employee: gosiEmployee,
-                    gosi_employer: gosiEmployer,
-                    net_salary: grossSalary - gosiEmployee,
-                    iban: payroll.iban,
-                    bank_name: payroll.bank_name,
-                    effective_from: emp.hire_date,
-                  }, {
-                    onConflict: 'employee_id,effective_from'
-                  });
+                  .select('*')
+                  .eq('employee_id', empResult.data[0].id)
+                  .eq('company_id', currentCompany.id)
+                  .order('effective_from', { ascending: false })
+                  .limit(1)
+                  .maybeSingle();
+
+                const mergedPayroll = {
+                  basic_salary: payroll.basic_salary || existingPayroll?.basic_salary || 0,
+                  housing_allowance: payroll.housing_allowance || existingPayroll?.housing_allowance || 0,
+                  transportation_allowance: payroll.transportation_allowance || existingPayroll?.transportation_allowance || 0,
+                  other_allowances: payroll.other_allowances || existingPayroll?.other_allowances || 0,
+                  iban: payroll.iban || existingPayroll?.iban || null,
+                  bank_name: payroll.bank_name || existingPayroll?.bank_name || null,
+                };
+
+                if (mergedPayroll.basic_salary > 0) {
+                  const grossSalary = mergedPayroll.basic_salary + mergedPayroll.housing_allowance + mergedPayroll.transportation_allowance + mergedPayroll.other_allowances;
+                  const gosiEmployee = mergedData.is_saudi ? grossSalary * 0.1 : 0;
+                  const gosiEmployer = mergedData.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
+
+                  await supabase
+                    .from('payroll')
+                    .upsert({
+                      employee_id: empResult.data[0].id,
+                      company_id: currentCompany.id,
+                      basic_salary: mergedPayroll.basic_salary,
+                      housing_allowance: mergedPayroll.housing_allowance,
+                      transportation_allowance: mergedPayroll.transportation_allowance,
+                      other_allowances: mergedPayroll.other_allowances,
+                      gross_salary: grossSalary,
+                      gosi_employee: gosiEmployee,
+                      gosi_employer: gosiEmployer,
+                      net_salary: grossSalary - gosiEmployee,
+                      iban: mergedPayroll.iban,
+                      bank_name: mergedPayroll.bank_name,
+                      effective_from: mergedData.hire_date,
+                    }, {
+                      onConflict: 'employee_id,effective_from'
+                    });
+                }
               }
 
               return empResult;
@@ -562,7 +603,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
               className="h-4 w-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
             />
             <label htmlFor="updateMode" className="text-sm text-gray-700">
-              Update existing employees (overwrite data for duplicate Employee IDs)
+              Update existing employees (merge new data with existing, preserve non-empty fields)
             </label>
           </div>
 
