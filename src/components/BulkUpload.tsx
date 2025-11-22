@@ -263,10 +263,17 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         const transportationAllowanceValue = getFieldValue(row, 'Transportation Allowance', 'TransportationAllowance', 'Transportation_Allowance');
         const otherAllowanceValue = getFieldValue(row, 'Other Allowance', 'OtherAllowance', 'Other_Allowance');
 
-        const basicSalary = basicSalaryValue ? parseFloat(basicSalaryValue.toString().replace(/,/g, '')) : 0;
-        const housingAllowance = housingAllowanceValue ? parseFloat(housingAllowanceValue.toString().replace(/,/g, '')) : 0;
-        const transportationAllowance = transportationAllowanceValue ? parseFloat(transportationAllowanceValue.toString().replace(/,/g, '')) : 0;
-        const otherAllowances = otherAllowanceValue ? parseFloat(otherAllowanceValue.toString().replace(/,/g, '')) : 0;
+        const parseNumber = (val: any): number => {
+          if (!val) return 0;
+          const str = val.toString().trim().replace(/,/g, '').replace(/[^\d.-]/g, '');
+          const num = parseFloat(str);
+          return isNaN(num) ? 0 : num;
+        };
+
+        const basicSalary = parseNumber(basicSalaryValue);
+        const housingAllowance = parseNumber(housingAllowanceValue);
+        const transportationAllowance = parseNumber(transportationAllowanceValue);
+        const otherAllowances = parseNumber(otherAllowanceValue);
 
         return {
           row,
@@ -501,7 +508,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
                 .insert(emp)
                 .select();
 
-              if (empResult.data && empResult.data[0] && payroll.basic_salary > 0) {
+              if (empResult.data && empResult.data[0]) {
                 const grossSalary = payroll.basic_salary + payroll.housing_allowance + payroll.transportation_allowance + payroll.other_allowances;
                 const gosiEmployee = emp.is_saudi ? grossSalary * 0.1 : 0;
                 const gosiEmployer = emp.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
@@ -569,29 +576,28 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
             result.data.map(async (emp, index) => {
               const payroll = newEmployees[index].payroll;
               const companyId = newEmployees[index].companyId;
-              if (payroll.basic_salary > 0) {
-                const grossSalary = payroll.basic_salary + payroll.housing_allowance + payroll.transportation_allowance + payroll.other_allowances;
-                const gosiEmployee = newEmployees[index].employee.is_saudi ? grossSalary * 0.1 : 0;
-                const gosiEmployer = newEmployees[index].employee.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
 
-                await supabase
-                  .from('payroll')
-                  .insert({
-                    employee_id: emp.id,
-                    company_id: companyId,
-                    basic_salary: payroll.basic_salary,
-                    housing_allowance: payroll.housing_allowance,
-                    transportation_allowance: payroll.transportation_allowance,
-                    other_allowances: payroll.other_allowances,
-                    gross_salary: grossSalary,
-                    gosi_employee: gosiEmployee,
-                    gosi_employer: gosiEmployer,
-                    net_salary: grossSalary - gosiEmployee,
-                    iban: payroll.iban,
-                    bank_name: payroll.bank_name,
-                    effective_from: emp.hire_date,
-                  });
-              }
+              const grossSalary = payroll.basic_salary + payroll.housing_allowance + payroll.transportation_allowance + payroll.other_allowances;
+              const gosiEmployee = newEmployees[index].employee.is_saudi ? grossSalary * 0.1 : 0;
+              const gosiEmployer = newEmployees[index].employee.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
+
+              await supabase
+                .from('payroll')
+                .insert({
+                  employee_id: emp.id,
+                  company_id: companyId,
+                  basic_salary: payroll.basic_salary,
+                  housing_allowance: payroll.housing_allowance,
+                  transportation_allowance: payroll.transportation_allowance,
+                  other_allowances: payroll.other_allowances,
+                  gross_salary: grossSalary,
+                  gosi_employee: gosiEmployee,
+                  gosi_employer: gosiEmployer,
+                  net_salary: grossSalary - gosiEmployee,
+                  iban: payroll.iban,
+                  bank_name: payroll.bank_name,
+                  effective_from: emp.hire_date,
+                });
             })
           );
         }
