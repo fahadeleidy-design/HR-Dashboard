@@ -236,9 +236,9 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 my-8">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8 max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-2xl font-bold text-gray-900">
             {employee ? 'Edit Employee' : 'Add Employee'}
           </h2>
@@ -247,7 +247,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6">
+        <form id="employee-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -706,23 +706,25 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {loading ? 'Saving...' : employee ? 'Update Employee' : 'Add Employee'}
-            </button>
-          </div>
         </form>
+
+        <div className="flex justify-end space-x-3 p-6 border-t border-gray-200 flex-shrink-0 bg-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="employee-form"
+            disabled={loading}
+            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading ? 'Saving...' : employee ? 'Update Employee' : 'Add Employee'}
+          </button>
+        </div>
       </div>
     </div>
   );
