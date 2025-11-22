@@ -12,9 +12,11 @@ interface EmployeeFormProps {
 
 export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps) {
   const { currentCompany } = useCompany();
+  const [companies, setCompanies] = useState<any[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
   const [payroll, setPayroll] = useState<any>(null);
+  const [selectedCompanyId, setSelectedCompanyId] = useState(employee?.company_id || currentCompany?.id || '');
   const [formData, setFormData] = useState({
     employee_number: employee?.employee_number || '',
     first_name_en: employee?.first_name_en || '',
@@ -51,22 +53,40 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
   });
 
   useEffect(() => {
-    if (currentCompany) {
-      fetchDepartments();
-    }
+    fetchCompanies();
     if (employee) {
       fetchPayroll();
     }
-  }, [currentCompany, employee]);
+  }, [employee]);
+
+  useEffect(() => {
+    if (selectedCompanyId) {
+      fetchDepartments();
+    }
+  }, [selectedCompanyId]);
+
+  const fetchCompanies = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('companies')
+        .select('id, name_en, name_ar')
+        .order('name_en');
+
+      if (error) throw error;
+      setCompanies(data || []);
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+    }
+  };
 
   const fetchDepartments = async () => {
-    if (!currentCompany) return;
+    if (!selectedCompanyId) return;
 
     try {
       const { data, error } = await supabase
         .from('departments')
         .select('*')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', selectedCompanyId)
         .order('name_en');
 
       if (error) throw error;
@@ -107,14 +127,14 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!currentCompany) return;
+    if (!selectedCompanyId) return;
 
     setLoading(true);
 
     try {
       const employeeData = {
         ...formData,
-        company_id: currentCompany.id,
+        company_id: selectedCompanyId,
         department_id: formData.department_id || null,
         first_name_ar: formData.first_name_ar || null,
         last_name_ar: formData.last_name_ar || null,
@@ -163,7 +183,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
 
         const payrollRecord = {
           employee_id: employeeId,
-          company_id: currentCompany.id,
+          company_id: selectedCompanyId,
           basic_salary: basicSalary,
           housing_allowance: housingAllowance,
           transportation_allowance: transportationAllowance,
@@ -231,16 +251,24 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Employee Number *
+                Company *
               </label>
-              <input
-                type="text"
-                name="employee_number"
+              <select
                 required
-                value={formData.employee_number}
-                onChange={handleChange}
+                value={selectedCompanyId}
+                onChange={(e) => {
+                  setSelectedCompanyId(e.target.value);
+                  setFormData(prev => ({ ...prev, department_id: '' }));
+                }}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
+              >
+                <option value="">Select Company</option>
+                {companies.map((company) => (
+                  <option key={company.id} value={company.id}>
+                    {company.name_en}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div>
@@ -260,6 +288,20 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                   </option>
                 ))}
               </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Employee Number *
+              </label>
+              <input
+                type="text"
+                name="employee_number"
+                required
+                value={formData.employee_number}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
             </div>
 
             <div>
