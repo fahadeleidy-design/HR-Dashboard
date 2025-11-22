@@ -242,6 +242,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         const isSaudi = nationality.toLowerCase().includes('saudi');
 
         return {
+          row,
           company_id: currentCompany.id,
           employee_number: (row['Employee ID'] || '').toString(),
           first_name_en: firstName,
@@ -263,13 +264,57 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           iqama_expiry: row['EIQAMA Expiry Date'] ? row['EIQAMA Expiry Date'].toString() : null,
           passport_number: row['Passport Number'] ? row['Passport Number'].toString().trim() : null,
           passport_expiry: row['Passport Expiry Date'] ? row['Passport Expiry Date'].toString() : null,
-          department_id: row.Department ? row.Department.toString().trim() : null,
+          department_name: row.Department ? row.Department.toString().trim() : null,
         };
       });
 
+      const { data: existingDepts } = await supabase
+        .from('departments')
+        .select('id, name_en, code')
+        .eq('company_id', currentCompany.id);
+
+      const deptMap = new Map<string, string>();
+      if (existingDepts) {
+        existingDepts.forEach(dept => {
+          deptMap.set(dept.name_en.toLowerCase(), dept.id);
+          deptMap.set(dept.code.toLowerCase(), dept.id);
+        });
+      }
+
+      const newDepartments = new Set<string>();
+      employees.forEach(emp => {
+        if (emp.department_name && !deptMap.has(emp.department_name.toLowerCase())) {
+          newDepartments.add(emp.department_name);
+        }
+      });
+
+      if (newDepartments.size > 0) {
+        const deptsToCreate = Array.from(newDepartments).map(name => ({
+          company_id: currentCompany.id,
+          name_en: name,
+          code: name.substring(0, 10).toUpperCase().replace(/\s+/g, '_'),
+        }));
+
+        const { data: createdDepts } = await supabase
+          .from('departments')
+          .insert(deptsToCreate)
+          .select('id, name_en');
+
+        if (createdDepts) {
+          createdDepts.forEach(dept => {
+            deptMap.set(dept.name_en.toLowerCase(), dept.id);
+          });
+        }
+      }
+
+      const employeesToInsert = employees.map(({ row, department_name, ...emp }) => ({
+        ...emp,
+        department_id: department_name ? deptMap.get(department_name.toLowerCase()) || null : null,
+      }));
+
       const { data: insertedData, error } = await supabase
         .from('employees')
-        .insert(employees)
+        .insert(employeesToInsert)
         .select();
 
       if (error) {
