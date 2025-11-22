@@ -6,6 +6,7 @@ import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
+import { Employees } from './pages/Employees';
 
 function App() {
   return (
@@ -30,10 +31,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Employee Management</h2>
-                      <p className="text-gray-600 mt-2">Module under development</p>
-                    </div>
+                    <Employees />
                   </Layout>
                 </ProtectedRoute>
               }
