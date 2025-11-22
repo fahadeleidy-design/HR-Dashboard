@@ -7,6 +7,14 @@ import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Employees } from './pages/Employees';
+import { Payroll } from './pages/Payroll';
+import { Leave } from './pages/Leave';
+import { Attendance } from './pages/Attendance';
+import { Performance } from './pages/Performance';
+import { Training } from './pages/Training';
+import { Documents } from './pages/Documents';
+import { Compliance } from './pages/Compliance';
+import { Settings } from './pages/Settings';
 
 function App() {
   return (
@@ -41,10 +49,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Payroll Management</h2>
-                      <p className="text-gray-600 mt-2">Module under development</p>
-                    </div>
+                    <Payroll />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -54,10 +59,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Leave Management</h2>
-                      <p className="text-gray-600 mt-2">Module under development</p>
-                    </div>
+                    <Leave />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -67,10 +69,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Attendance Tracking</h2>
-                      <p className="text-gray-600 mt-2">Module under development</p>
-                    </div>
+                    <Attendance />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -80,10 +79,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Performance Management</h2>
-                      <p className="text-gray-600 mt-2">Module under development</p>
-                    </div>
+                    <Performance />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -93,10 +89,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Training Management</h2>
-                      <p className="text-gray-600 mt-2">Module under development</p>
-                    </div>
+                    <Training />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -106,10 +99,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Document Management</h2>
-                      <p className="text-gray-600 mt-2">Module under development</p>
-                    </div>
+                    <Documents />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -119,10 +109,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Compliance & Reporting</h2>
-                      <p className="text-gray-600 mt-2">Module under development</p>
-                    </div>
+                    <Compliance />
                   </Layout>
                 </ProtectedRoute>
               }
@@ -132,10 +119,7 @@ function App() {
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <div className="text-center py-12">
-                      <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-                      <p className="text-gray-600 mt-2">Module under development</p>
-                    </div>
+                    <Settings />
                   </Layout>
                 </ProtectedRoute>
               }
