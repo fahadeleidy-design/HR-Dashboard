@@ -11,12 +11,12 @@ interface PayrollRecord {
   housing_allowance: number;
   transportation_allowance: number;
   other_allowances: number;
+  gross_salary: number;
   gosi_employee: number;
-  gosi_employer_retirement: number;
-  gosi_employer_hazards: number;
-  total_deductions: number;
+  gosi_employer: number;
+  other_deductions: number;
   net_salary: number;
-  effective_date: string;
+  effective_from: string;
   employee: {
     employee_number: string;
     first_name_en: string;
@@ -92,9 +92,8 @@ export function Payroll() {
     const gosiBase = Math.min(grossSalary, 45000);
 
     return {
-      employee: isSaudi ? gosiBase * 0.10 : 0,
-      employerRetirement: isSaudi ? gosiBase * 0.12 : 0,
-      employerHazards: gosiBase * 0.02,
+      employee: isSaudi ? gosiBase * 0.10 : gosiBase * 0.02,
+      employer: isSaudi ? gosiBase * 0.12 : gosiBase * 0.02,
     };
   };
 
@@ -122,12 +121,12 @@ export function Payroll() {
         housing_allowance: salaryForm.housing_allowance,
         transportation_allowance: salaryForm.transportation_allowance,
         other_allowances: salaryForm.other_allowances,
+        gross_salary: grossSalary,
         gosi_employee: gosi.employee,
-        gosi_employer_retirement: gosi.employerRetirement,
-        gosi_employer_hazards: gosi.employerHazards,
-        total_deductions: totalDeductions,
+        gosi_employer: gosi.employer,
+        other_deductions: 0,
         net_salary: netSalary,
-        effective_date: new Date().toISOString().split('T')[0],
+        effective_from: new Date().toISOString().split('T')[0],
       }]);
 
       if (error) throw error;
@@ -155,13 +154,12 @@ export function Payroll() {
       'Housing Allowance': record.housing_allowance,
       'Transportation Allowance': record.transportation_allowance,
       'Other Allowances': record.other_allowances,
-      'Gross Salary': record.basic_salary + record.housing_allowance + record.transportation_allowance + record.other_allowances,
-      'GOSI Employee (10%)': record.gosi_employee,
-      'GOSI Employer Retirement (12%)': record.gosi_employer_retirement,
-      'GOSI Employer Hazards (2%)': record.gosi_employer_hazards,
-      'Total Deductions': record.total_deductions,
+      'Gross Salary': record.gross_salary,
+      'GOSI Employee': record.gosi_employee,
+      'GOSI Employer': record.gosi_employer,
+      'Other Deductions': record.other_deductions,
       'Net Salary': record.net_salary,
-      'Effective Date': record.effective_date,
+      'Effective From': record.effective_from,
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -178,12 +176,10 @@ export function Payroll() {
     );
   }
 
-  const totalGrossSalary = payrollRecords.reduce((sum, record) =>
-    sum + record.basic_salary + record.housing_allowance + record.transportation_allowance + record.other_allowances, 0
-  );
-  const totalNetSalary = payrollRecords.reduce((sum, record) => sum + record.net_salary, 0);
+  const totalGrossSalary = payrollRecords.reduce((sum, record) => sum + (record.gross_salary || 0), 0);
+  const totalNetSalary = payrollRecords.reduce((sum, record) => sum + (record.net_salary || 0), 0);
   const totalGOSI = payrollRecords.reduce((sum, record) =>
-    sum + record.gosi_employee + record.gosi_employer_retirement + record.gosi_employer_hazards, 0
+    sum + (record.gosi_employee || 0) + (record.gosi_employer || 0), 0
   );
 
   return (
@@ -286,8 +282,7 @@ export function Payroll() {
                 </tr>
               ) : (
                 payrollRecords.map((record) => {
-                  const gross = record.basic_salary + record.housing_allowance + record.transportation_allowance + record.other_allowances;
-                  const totalGosi = record.gosi_employee + record.gosi_employer_retirement + record.gosi_employer_hazards;
+                  const totalGosi = (record.gosi_employee || 0) + (record.gosi_employer || 0);
 
                   return (
                     <tr key={record.id} className="hover:bg-gray-50">
@@ -298,22 +293,22 @@ export function Payroll() {
                         <div className="text-sm text-gray-500">{record.employee.employee_number}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        SAR {record.basic_salary.toLocaleString()}
+                        SAR {(record.basic_salary || 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        SAR {(record.housing_allowance + record.transportation_allowance + record.other_allowances).toLocaleString()}
+                        SAR {((record.housing_allowance || 0) + (record.transportation_allowance || 0) + (record.other_allowances || 0)).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        SAR {gross.toLocaleString()}
+                        SAR {(record.gross_salary || 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         SAR {totalGosi.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-                        SAR {record.net_salary.toLocaleString()}
+                        SAR {(record.net_salary || 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(record.effective_date).toLocaleDateString()}
+                        {record.effective_from ? new Date(record.effective_from).toLocaleDateString() : 'N/A'}
                       </td>
                     </tr>
                   );
