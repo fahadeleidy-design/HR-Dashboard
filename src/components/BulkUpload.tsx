@@ -119,14 +119,8 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
     if (!row['Employee Name (English)']) {
       rowErrors.push({ row: rowNum, field: 'Employee Name (English)', message: 'Required' });
     }
-    if (!row.Nationality) {
-      rowErrors.push({ row: rowNum, field: 'Nationality', message: 'Required' });
-    }
-    if (!row['Date of Joining']) {
-      rowErrors.push({ row: rowNum, field: 'Date of Joining', message: 'Required' });
-    }
-    if (!row['Position/Job Title']) {
-      rowErrors.push({ row: rowNum, field: 'Position/Job Title', message: 'Required' });
+    if (!row['IQAMA/ID Number']) {
+      rowErrors.push({ row: rowNum, field: 'IQAMA/ID Number', message: 'Required' });
     }
 
     if (row.Gender) {
@@ -244,6 +238,9 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           }
         }
 
+        const nationality = row.Nationality ? row.Nationality.toString().trim() : 'Not Specified';
+        const isSaudi = nationality.toLowerCase().includes('saudi');
+
         return {
           company_id: currentCompany.id,
           employee_number: (row['Employee ID'] || '').toString(),
@@ -251,22 +248,22 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           last_name_en: lastName,
           first_name_ar: firstNameAr,
           last_name_ar: lastNameAr,
-          email: row['Email Address'] ? row['Email Address'].toString() : null,
-          phone: row['Mobile Number'] ? row['Mobile Number'].toString() : null,
-          nationality: (row.Nationality || '').toString(),
-          is_saudi: (row.Nationality || '').toString().toLowerCase().includes('saudi') || false,
+          email: row['Email Address'] ? row['Email Address'].toString().trim() : null,
+          phone: row['Mobile Number'] ? row['Mobile Number'].toString().trim() : null,
+          nationality: nationality,
+          is_saudi: isSaudi,
           gender: normalizeGender(row.Gender),
           date_of_birth: row['Birth Date'] ? row['Birth Date'].toString() : null,
-          hire_date: (row['Date of Joining'] || '').toString(),
-          job_title_en: (row['Position/Job Title'] || '').toString(),
+          hire_date: row['Date of Joining'] ? row['Date of Joining'].toString() : new Date().toISOString().split('T')[0],
+          job_title_en: row['Position/Job Title'] ? row['Position/Job Title'].toString().trim() : 'Employee',
           job_title_ar: null,
           employment_type: normalizeContractType(row['Contract Type']),
           status: normalizeStatus(row.Status),
-          iqama_number: row['IQAMA/ID Number'] ? row['IQAMA/ID Number'].toString() : null,
+          iqama_number: (row['IQAMA/ID Number'] || '').toString().trim(),
           iqama_expiry: row['EIQAMA Expiry Date'] ? row['EIQAMA Expiry Date'].toString() : null,
-          passport_number: row['Passport Number'] ? row['Passport Number'].toString() : null,
+          passport_number: row['Passport Number'] ? row['Passport Number'].toString().trim() : null,
           passport_expiry: row['Passport Expiry Date'] ? row['Passport Expiry Date'].toString() : null,
-          department_id: row.Department ? row.Department.toString() : null,
+          department_id: row.Department ? row.Department.toString().trim() : null,
         };
       });
 
@@ -307,7 +304,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
             <h3 className="text-sm font-medium text-blue-900 mb-2">Instructions</h3>
             <ol className="text-sm text-blue-800 space-y-1 list-decimal list-inside">
               <li>Download the Excel template below</li>
-              <li>Fill in your employee data</li>
+              <li>Fill in your employee data (Required: Employee ID, Employee Name (English), IQAMA/ID Number)</li>
               <li>Upload the completed file</li>
               <li>Review any errors and correct them</li>
               <li>Click "Upload" to import employees</li>
