@@ -110,40 +110,43 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
     return value.toString().trim().toLowerCase();
   };
 
-  const validateRow = (row: EmployeeRow, index: number): ValidationError[] => {
+  const validateRow = (row: any, index: number): ValidationError[] => {
     const rowErrors: ValidationError[] = [];
     const rowNum = index + 2;
 
-    if (!row['Employee ID']) {
+    if (!getFieldValue(row, 'Employee ID', 'EmployeeID', 'Employee_ID')) {
       rowErrors.push({ row: rowNum, field: 'Employee ID', message: 'Required' });
     }
-    if (!row['Employee Name (English)']) {
+    if (!getFieldValue(row, 'Employee Name (English)', 'Employee Name')) {
       rowErrors.push({ row: rowNum, field: 'Employee Name (English)', message: 'Required' });
     }
-    if (!row['IQAMA/ID Number']) {
+    if (!getFieldValue(row, 'IQAMA/ID Number', 'IQAMA Number', 'IqamaNumber', 'Iqama_Number', 'ID Number', 'IQAMA')) {
       rowErrors.push({ row: rowNum, field: 'IQAMA/ID Number', message: 'Required' });
     }
 
-    if (row.Gender) {
-      const gender = normalizeValue(row.Gender);
+    const gender = getFieldValue(row, 'Gender');
+    if (gender) {
+      const genderNorm = normalizeValue(gender);
       const validGenders = ['male', 'female', 'm', 'f', 'ذكر', 'أنثى'];
-      if (!validGenders.includes(gender)) {
+      if (!validGenders.includes(genderNorm)) {
         rowErrors.push({ row: rowNum, field: 'Gender', message: 'Must be "male", "female", "M", "F", "ذكر", or "أنثى"' });
       }
     }
 
-    if (row['Contract Type']) {
-      const contractType = normalizeValue(row['Contract Type']).replace(/[\s-]/g, '_');
+    const contractType = getFieldValue(row, 'Contract Type', 'ContractType', 'Contract_Type', 'Employment Type');
+    if (contractType) {
+      const contractTypeNorm = normalizeValue(contractType).replace(/[\s-]/g, '_');
       const validContractTypes = ['indefinite', 'fixed_term', 'temporary', 'part_time', 'seasonal', 'full_time', 'contract'];
-      if (!validContractTypes.includes(contractType)) {
+      if (!validContractTypes.includes(contractTypeNorm)) {
         rowErrors.push({ row: rowNum, field: 'Contract Type', message: 'Must be "indefinite", "fixed_term", "temporary", "part_time", "seasonal", "full_time", or "contract"' });
       }
     }
 
-    if (row.Status) {
-      const status = normalizeValue(row.Status).replace(/[\s-]/g, '_');
+    const status = getFieldValue(row, 'Status');
+    if (status) {
+      const statusNorm = normalizeValue(status).replace(/[\s-]/g, '_');
       const validStatuses = ['active', 'on_leave', 'terminated', 'onleave'];
-      if (!validStatuses.includes(status)) {
+      if (!validStatuses.includes(statusNorm)) {
         rowErrors.push({ row: rowNum, field: 'Status', message: 'Must be "active", "on_leave", or "terminated"' });
       }
     }
@@ -160,6 +163,15 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
     }
   };
 
+  const getFieldValue = (row: any, ...fieldNames: string[]): any => {
+    for (const fieldName of fieldNames) {
+      if (row[fieldName] !== undefined && row[fieldName] !== null && row[fieldName] !== '') {
+        return row[fieldName];
+      }
+    }
+    return null;
+  };
+
   const handleUpload = async () => {
     if (!file || !currentCompany) return;
 
@@ -171,7 +183,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'array', codepage: 65001 });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json<EmployeeRow>(worksheet, {
+      const jsonData = XLSX.utils.sheet_to_json<any>(worksheet, {
         raw: false,
         defval: ''
       });
@@ -222,12 +234,12 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
       };
 
       const employees = jsonData.map((row) => {
-        const englishName = (row['Employee Name (English)'] || '').toString().trim();
+        const englishName = (getFieldValue(row, 'Employee Name (English)', 'Employee Name') || '').toString().trim();
         const englishNameParts = englishName.split(/\s+/).filter(part => part.length > 0);
         const firstName = englishNameParts[0] || '';
         const lastName = englishNameParts.slice(1).join(' ') || englishNameParts[0] || '';
 
-        const arabicName = (row['Employee Name (Arabic)'] || '').toString().trim();
+        const arabicName = (getFieldValue(row, 'Employee Name (Arabic)', 'Employee Name Arabic') || '').toString().trim();
         let firstNameAr = null;
         let lastNameAr = null;
 
@@ -239,52 +251,57 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           }
         }
 
-        const nationality = row.Nationality ? row.Nationality.toString().trim() : 'Not Specified';
+        const nationality = getFieldValue(row, 'Nationality') ? getFieldValue(row, 'Nationality').toString().trim() : 'Not Specified';
         const isSaudi = nationality.toLowerCase().includes('saudi');
 
-        const probationDays = row['Probation Period'] ? parseInt(row['Probation Period'].toString()) : 90;
-        const hireDate = row['Date of Joining'] ? row['Date of Joining'].toString() : new Date().toISOString().split('T')[0];
-        const probationEndDate = row['Probation Period'] ? new Date(new Date(hireDate).getTime() + probationDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null;
+        const probationDays = getFieldValue(row, 'Probation Period') ? parseInt(getFieldValue(row, 'Probation Period').toString()) : 90;
+        const hireDate = getFieldValue(row, 'Date of Joining', 'Hire Date') ? getFieldValue(row, 'Date of Joining', 'Hire Date').toString() : new Date().toISOString().split('T')[0];
+        const probationEndDate = getFieldValue(row, 'Probation Period') ? new Date(new Date(hireDate).getTime() + probationDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null;
 
-        const basicSalary = row['Basic Salary'] ? parseFloat(row['Basic Salary'].toString()) : 0;
-        const housingAllowance = row['Housing Allowance'] ? parseFloat(row['Housing Allowance'].toString()) : 0;
-        const transportationAllowance = row['Transportation Allowance'] ? parseFloat(row['Transportation Allowance'].toString()) : 0;
-        const otherAllowances = row['Other Allowance'] ? parseFloat(row['Other Allowance'].toString()) : 0;
+        const basicSalaryValue = getFieldValue(row, 'Basic Salary', 'BasicSalary', 'Basic_Salary');
+        const housingAllowanceValue = getFieldValue(row, 'Housing Allowance', 'HousingAllowance', 'Housing_Allowance');
+        const transportationAllowanceValue = getFieldValue(row, 'Transportation Allowance', 'TransportationAllowance', 'Transportation_Allowance');
+        const otherAllowanceValue = getFieldValue(row, 'Other Allowance', 'OtherAllowance', 'Other_Allowance');
+
+        const basicSalary = basicSalaryValue ? parseFloat(basicSalaryValue.toString().replace(/,/g, '')) : 0;
+        const housingAllowance = housingAllowanceValue ? parseFloat(housingAllowanceValue.toString().replace(/,/g, '')) : 0;
+        const transportationAllowance = transportationAllowanceValue ? parseFloat(transportationAllowanceValue.toString().replace(/,/g, '')) : 0;
+        const otherAllowances = otherAllowanceValue ? parseFloat(otherAllowanceValue.toString().replace(/,/g, '')) : 0;
 
         return {
           row,
           company_id: currentCompany.id,
-          employee_number: (row['Employee ID'] || '').toString(),
+          employee_number: (getFieldValue(row, 'Employee ID', 'EmployeeID', 'Employee_ID') || '').toString(),
           first_name_en: firstName,
           last_name_en: lastName,
           first_name_ar: firstNameAr,
           last_name_ar: lastNameAr,
-          email: row['Email Address'] ? row['Email Address'].toString().trim() : null,
-          phone: row['Mobile Number'] ? row['Mobile Number'].toString().trim() : null,
+          email: getFieldValue(row, 'Email Address', 'Email', 'EmailAddress') ? getFieldValue(row, 'Email Address', 'Email', 'EmailAddress').toString().trim() : null,
+          phone: getFieldValue(row, 'Mobile Number', 'Phone', 'Mobile', 'MobileNumber') ? getFieldValue(row, 'Mobile Number', 'Phone', 'Mobile', 'MobileNumber').toString().trim() : null,
           nationality: nationality,
           is_saudi: isSaudi,
-          gender: normalizeGender(row.Gender),
-          date_of_birth: row['Birth Date'] ? row['Birth Date'].toString() : null,
+          gender: normalizeGender(getFieldValue(row, 'Gender')),
+          date_of_birth: getFieldValue(row, 'Birth Date', 'BirthDate', 'Date of Birth') ? getFieldValue(row, 'Birth Date', 'BirthDate', 'Date of Birth').toString() : null,
           hire_date: hireDate,
           probation_end_date: probationEndDate,
-          contract_start_date: row['Contract Start Date'] ? row['Contract Start Date'].toString() : null,
-          contract_end_date: row['Contract End Date'] ? row['Contract End Date'].toString() : null,
-          job_title_en: row['Position/Job Title'] ? row['Position/Job Title'].toString().trim() : 'Employee',
+          contract_start_date: getFieldValue(row, 'Contract Start Date', 'ContractStartDate', 'Contract_Start_Date') ? getFieldValue(row, 'Contract Start Date', 'ContractStartDate', 'Contract_Start_Date').toString() : null,
+          contract_end_date: getFieldValue(row, 'Contract End Date', 'ContractEndDate', 'Contract_End_Date') ? getFieldValue(row, 'Contract End Date', 'ContractEndDate', 'Contract_End_Date').toString() : null,
+          job_title_en: getFieldValue(row, 'Position/Job Title', 'Job Title', 'Position', 'JobTitle') ? getFieldValue(row, 'Position/Job Title', 'Job Title', 'Position', 'JobTitle').toString().trim() : 'Employee',
           job_title_ar: null,
-          employment_type: normalizeContractType(row['Contract Type']),
-          status: normalizeStatus(row.Status),
-          iqama_number: (row['IQAMA/ID Number'] || '').toString().trim(),
-          iqama_expiry: row['EIQAMA Expiry Date'] ? row['EIQAMA Expiry Date'].toString() : null,
-          passport_number: row['Passport Number'] ? row['Passport Number'].toString().trim() : null,
-          passport_expiry: row['Passport Expiry Date'] ? row['Passport Expiry Date'].toString() : null,
-          department_name: row.Department ? row.Department.toString().trim() : null,
+          employment_type: normalizeContractType(getFieldValue(row, 'Contract Type', 'ContractType', 'Contract_Type', 'Employment Type')),
+          status: normalizeStatus(getFieldValue(row, 'Status')),
+          iqama_number: (getFieldValue(row, 'IQAMA/ID Number', 'IQAMA Number', 'IqamaNumber', 'Iqama_Number', 'ID Number', 'IQAMA') || '').toString().trim(),
+          iqama_expiry: getFieldValue(row, 'EIQAMA Expiry Date', 'IQAMA Expiry Date', 'Iqama Expiry Date', 'IqamaExpiryDate', 'Iqama_Expiry_Date', 'IQAMA Expiry') ? getFieldValue(row, 'EIQAMA Expiry Date', 'IQAMA Expiry Date', 'Iqama Expiry Date', 'IqamaExpiryDate', 'Iqama_Expiry_Date', 'IQAMA Expiry').toString() : null,
+          passport_number: getFieldValue(row, 'Passport Number', 'PassportNumber', 'Passport_Number') ? getFieldValue(row, 'Passport Number', 'PassportNumber', 'Passport_Number').toString().trim() : null,
+          passport_expiry: getFieldValue(row, 'Passport Expiry Date', 'PassportExpiryDate', 'Passport_Expiry_Date', 'Passport Expiry') ? getFieldValue(row, 'Passport Expiry Date', 'PassportExpiryDate', 'Passport_Expiry_Date', 'Passport Expiry').toString() : null,
+          department_name: getFieldValue(row, 'Department') ? getFieldValue(row, 'Department').toString().trim() : null,
           payroll: {
             basic_salary: basicSalary,
             housing_allowance: housingAllowance,
             transportation_allowance: transportationAllowance,
             other_allowances: otherAllowances,
-            iban: row.IBAN ? row.IBAN.toString().trim() : null,
-            bank_name: row['Bank Name'] ? row['Bank Name'].toString().trim() : null,
+            iban: getFieldValue(row, 'IBAN', 'Iban', 'Bank Account') ? getFieldValue(row, 'IBAN', 'Iban', 'Bank Account').toString().trim() : null,
+            bank_name: getFieldValue(row, 'Bank Name', 'BankName', 'Bank_Name', 'Bank') ? getFieldValue(row, 'Bank Name', 'BankName', 'Bank_Name', 'Bank').toString().trim() : null,
           }
         };
       });
