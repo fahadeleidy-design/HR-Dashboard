@@ -18,13 +18,13 @@ interface GOSIContribution {
   month: string;
   employee_id: string;
   employee_contribution: number;
-  employer_retirement: number;
-  employer_hazards: number;
+  employer_contribution: number;
   total_contribution: number;
   employee: {
     employee_number: string;
     first_name_en: string;
     last_name_en: string;
+    is_saudi: boolean;
   };
 }
 
@@ -69,7 +69,7 @@ export function Compliance() {
         .from('gosi_contributions')
         .select(`
           *,
-          employee:employees(employee_number, first_name_en, last_name_en)
+          employee:employees(employee_number, first_name_en, last_name_en, is_saudi)
         `)
         .eq('company_id', currentCompany.id)
         .eq('month', selectedMonth)
@@ -88,10 +88,10 @@ export function Compliance() {
     const exportData = gosiContributions.map((contrib) => ({
       'Employee Number': contrib.employee.employee_number,
       'Employee Name': `${contrib.employee.first_name_en} ${contrib.employee.last_name_en}`,
+      'Nationality': contrib.employee.is_saudi ? 'Saudi' : 'Non-Saudi',
       Month: contrib.month,
-      'Employee Contribution (10%)': contrib.employee_contribution,
-      'Employer Retirement (12%)': contrib.employer_retirement,
-      'Employer Hazards (2%)': contrib.employer_hazards,
+      'Employee Contribution': contrib.employee_contribution,
+      'Employer Contribution': contrib.employer_contribution,
       'Total Contribution': contrib.total_contribution,
     }));
 
@@ -102,9 +102,9 @@ export function Compliance() {
   };
 
   const currentMetric = nitaqatMetrics[0];
-  const totalGOSI = gosiContributions.reduce((sum, c) => sum + c.total_contribution, 0);
-  const employeeGOSI = gosiContributions.reduce((sum, c) => sum + c.employee_contribution, 0);
-  const employerGOSI = gosiContributions.reduce((sum, c) => sum + c.employer_retirement + c.employer_hazards, 0);
+  const totalGOSI = gosiContributions.reduce((sum, c) => sum + (c.total_contribution || 0), 0);
+  const employeeGOSI = gosiContributions.reduce((sum, c) => sum + (c.employee_contribution || 0), 0);
+  const employerGOSI = gosiContributions.reduce((sum, c) => sum + (c.employer_contribution || 0), 0);
 
   if (loading) {
     return (
@@ -195,7 +195,7 @@ export function Compliance() {
           <div className="flex items-center space-x-4">
             <DollarSign className="h-12 w-12 text-green-600" />
             <div>
-              <p className="text-sm text-gray-600">Employee (10%)</p>
+              <p className="text-sm text-gray-600">Employee Contribution</p>
               <p className="text-xl font-bold text-gray-900">SAR {employeeGOSI.toLocaleString()}</p>
             </div>
           </div>
@@ -203,7 +203,7 @@ export function Compliance() {
           <div className="flex items-center space-x-4">
             <DollarSign className="h-12 w-12 text-orange-600" />
             <div>
-              <p className="text-sm text-gray-600">Employer (14%)</p>
+              <p className="text-sm text-gray-600">Employer Contribution</p>
               <p className="text-xl font-bold text-gray-900">SAR {employerGOSI.toLocaleString()}</p>
             </div>
           </div>
@@ -217,13 +217,13 @@ export function Compliance() {
                   Employee
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee (10%)
+                  Nationality
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employer Retirement (12%)
+                  Employee Contribution
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employer Hazards (2%)
+                  Employer Contribution
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Total
@@ -247,16 +247,22 @@ export function Compliance() {
                       <div className="text-sm text-gray-500">{contrib.employee.employee_number}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      SAR {contrib.employee_contribution.toLocaleString()}
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        contrib.employee.is_saudi
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {contrib.employee.is_saudi ? 'Saudi' : 'Non-Saudi'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      SAR {contrib.employer_retirement.toLocaleString()}
+                      SAR {(contrib.employee_contribution || 0).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      SAR {contrib.employer_hazards.toLocaleString()}
+                      SAR {(contrib.employer_contribution || 0).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                      SAR {contrib.total_contribution.toLocaleString()}
+                      SAR {(contrib.total_contribution || 0).toLocaleString()}
                     </td>
                   </tr>
                 ))
