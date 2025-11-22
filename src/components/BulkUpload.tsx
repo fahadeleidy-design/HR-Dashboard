@@ -267,6 +267,8 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           date_of_birth: row['Birth Date'] ? row['Birth Date'].toString() : null,
           hire_date: hireDate,
           probation_end_date: probationEndDate,
+          contract_start_date: row['Contract Start Date'] ? row['Contract Start Date'].toString() : null,
+          contract_end_date: row['Contract End Date'] ? row['Contract End Date'].toString() : null,
           job_title_en: row['Position/Job Title'] ? row['Position/Job Title'].toString().trim() : 'Employee',
           job_title_ar: null,
           employment_type: normalizeContractType(row['Contract Type']),

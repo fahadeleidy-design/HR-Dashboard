@@ -29,6 +29,8 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     date_of_birth: employee?.date_of_birth || '',
     hire_date: employee?.hire_date || new Date().toISOString().split('T')[0],
     probation_end_date: employee?.probation_end_date || '',
+    contract_start_date: employee?.contract_start_date || '',
+    contract_end_date: employee?.contract_end_date || '',
     job_title_en: employee?.job_title_en || '',
     job_title_ar: employee?.job_title_ar || '',
     employment_type: employee?.employment_type || 'indefinite',
@@ -119,6 +121,9 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
         email: formData.email || null,
         phone: formData.phone || null,
         date_of_birth: formData.date_of_birth || null,
+        probation_end_date: formData.probation_end_date || null,
+        contract_start_date: formData.contract_start_date || null,
+        contract_end_date: formData.contract_end_date || null,
         job_title_ar: formData.job_title_ar || null,
         iqama_number: formData.iqama_number || null,
         iqama_expiry: formData.iqama_expiry || null,
@@ -420,6 +425,33 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contract Start Date
+              </label>
+              <input
+                type="date"
+                name="contract_start_date"
+                value={formData.contract_start_date}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Contract End Date
+              </label>
+              <input
+                type="date"
+                name="contract_end_date"
+                value={formData.contract_end_date}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">Leave empty for indefinite contracts</p>
             </div>
 
             <div>
