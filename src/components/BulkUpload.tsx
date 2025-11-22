@@ -248,10 +248,14 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
             />
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-full flex items-center justify-center space-x-2 px-4 py-3 border-2 border-gray-300 rounded-lg hover:border-primary-500 hover:bg-gray-50 transition-colors"
+              className={`w-full flex items-center justify-center space-x-2 px-4 py-3 border-2 rounded-lg transition-colors ${
+                file
+                  ? 'border-green-500 bg-green-50 text-green-700'
+                  : 'border-dashed border-primary-400 bg-primary-50 hover:bg-primary-100 text-primary-700'
+              }`}
             >
               <Upload className="h-5 w-5" />
-              <span>{file ? file.name : 'Choose Excel File'}</span>
+              <span className="font-medium">{file ? `✓ ${file.name}` : 'Click to Choose Excel File (.xlsx, .xls)'}</span>
             </button>
           </div>
 
