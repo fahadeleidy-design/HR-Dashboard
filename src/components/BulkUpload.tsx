@@ -10,27 +10,39 @@ interface BulkUploadProps {
 }
 
 interface EmployeeRow {
-  'Employee Number': string;
-  'First Name': string;
-  'Last Name': string;
-  'Arabic First Name'?: string;
-  'Arabic Last Name'?: string;
-  Email?: string;
-  'Phone Number'?: string;
+  'Employee ID': string;
+  'Employee Name (English)': string;
+  'Employee Name (Arabic)'?: string;
   Nationality: string;
-  Saudi: string;
-  Gender: string;
-  'Date of Birth'?: string;
-  'Hire Date': string;
-  'Job Title': string;
-  'Arabic Job Title'?: string;
-  'Employment Type': string;
-  Status?: string;
-  'Iqama Number'?: string;
-  'Iqama Expiry'?: string;
-  'Passport Number'?: string;
-  'Passport Expiry'?: string;
   Department?: string;
+  'Position/Job Title': string;
+  Status?: string;
+  'Date of Joining': string;
+  'IQAMA/ID Number'?: string;
+  'IQAMA Issue Date'?: string;
+  'EIQAMA Expiry Date'?: string;
+  'Passport Number'?: string;
+  'Passport Issue Date'?: string;
+  'Passport Expiry Date'?: string;
+  'Contract Type'?: string;
+  'Contract Number'?: string;
+  'Contract Start Date'?: string;
+  'Contract End Date'?: string;
+  'Work Days/Week'?: string;
+  'Work Hours/Day'?: string;
+  'Annual Leave Days'?: string;
+  'Probation Period'?: string;
+  'Email Address'?: string;
+  'Mobile Number'?: string;
+  'Company Name'?: string;
+  'Basic Salary'?: string;
+  'Housing Allowance'?: string;
+  'Transportation Allowance'?: string;
+  'Other Allowance'?: string;
+  IBAN?: string;
+  'Bank Name'?: string;
+  Gender?: string;
+  'Birth Date'?: string;
 }
 
 interface ValidationError {
@@ -50,27 +62,39 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
   const downloadTemplate = () => {
     const template = [
       {
-        'Employee Number': 'EMP001',
-        'First Name': 'Ahmed',
-        'Last Name': 'Al-Rashid',
-        'Arabic First Name': 'أحمد',
-        'Arabic Last Name': 'الراشد',
-        Email: 'ahmed@example.com',
-        'Phone Number': '+966501234567',
+        'Employee ID': 'EMP001',
+        'Employee Name (English)': 'Ahmed Al-Rashid',
+        'Employee Name (Arabic)': 'أحمد الراشد',
         Nationality: 'Saudi Arabia',
-        Saudi: 'Yes',
-        Gender: 'male',
-        'Date of Birth': '1990-01-15',
-        'Hire Date': '2024-01-01',
-        'Job Title': 'Software Engineer',
-        'Arabic Job Title': 'مهندس برمجيات',
-        'Employment Type': 'full_time',
-        Status: 'active',
-        'Iqama Number': '1234567890',
-        'Iqama Expiry': '2025-12-31',
-        'Passport Number': 'A12345678',
-        'Passport Expiry': '2028-12-31',
         Department: 'IT',
+        'Position/Job Title': 'Software Engineer',
+        Status: 'active',
+        'Date of Joining': '2024-01-01',
+        'IQAMA/ID Number': '1234567890',
+        'IQAMA Issue Date': '2020-01-01',
+        'EIQAMA Expiry Date': '2025-12-31',
+        'Passport Number': 'A12345678',
+        'Passport Issue Date': '2018-06-01',
+        'Passport Expiry Date': '2028-05-31',
+        'Contract Type': 'full_time',
+        'Contract Number': 'CNT-2024-001',
+        'Contract Start Date': '2024-01-01',
+        'Contract End Date': '2026-12-31',
+        'Work Days/Week': '5',
+        'Work Hours/Day': '8',
+        'Annual Leave Days': '30',
+        'Probation Period': '90',
+        'Email Address': 'ahmed@example.com',
+        'Mobile Number': '+966501234567',
+        'Company Name': 'My Company',
+        'Basic Salary': '15000',
+        'Housing Allowance': '3000',
+        'Transportation Allowance': '1000',
+        'Other Allowance': '500',
+        IBAN: 'SA1234567891234567891234',
+        'Bank Name': 'Al Rajhi Bank',
+        Gender: 'male',
+        'Birth Date': '1990-01-15',
       },
     ];
 
@@ -84,31 +108,28 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
     const rowErrors: ValidationError[] = [];
     const rowNum = index + 2;
 
-    if (!row['Employee Number']) {
-      rowErrors.push({ row: rowNum, field: 'Employee Number', message: 'Required' });
+    if (!row['Employee ID']) {
+      rowErrors.push({ row: rowNum, field: 'Employee ID', message: 'Required' });
     }
-    if (!row['First Name']) {
-      rowErrors.push({ row: rowNum, field: 'First Name', message: 'Required' });
-    }
-    if (!row['Last Name']) {
-      rowErrors.push({ row: rowNum, field: 'Last Name', message: 'Required' });
+    if (!row['Employee Name (English)']) {
+      rowErrors.push({ row: rowNum, field: 'Employee Name (English)', message: 'Required' });
     }
     if (!row.Nationality) {
       rowErrors.push({ row: rowNum, field: 'Nationality', message: 'Required' });
     }
-    if (!row['Hire Date']) {
-      rowErrors.push({ row: rowNum, field: 'Hire Date', message: 'Required' });
+    if (!row['Date of Joining']) {
+      rowErrors.push({ row: rowNum, field: 'Date of Joining', message: 'Required' });
     }
-    if (!row['Job Title']) {
-      rowErrors.push({ row: rowNum, field: 'Job Title', message: 'Required' });
+    if (!row['Position/Job Title']) {
+      rowErrors.push({ row: rowNum, field: 'Position/Job Title', message: 'Required' });
     }
 
     if (row.Gender && !['male', 'female'].includes(row.Gender.toLowerCase())) {
       rowErrors.push({ row: rowNum, field: 'Gender', message: 'Must be "male" or "female"' });
     }
 
-    if (row['Employment Type'] && !['full_time', 'part_time', 'contract'].includes(row['Employment Type'].toLowerCase())) {
-      rowErrors.push({ row: rowNum, field: 'Employment Type', message: 'Must be "full_time", "part_time", or "contract"' });
+    if (row['Contract Type'] && !['full_time', 'part_time', 'contract'].includes(row['Contract Type'].toLowerCase())) {
+      rowErrors.push({ row: rowNum, field: 'Contract Type', message: 'Must be "full_time", "part_time", or "contract"' });
     }
 
     if (row.Status && !['active', 'on_leave', 'terminated'].includes(row.Status.toLowerCase())) {
@@ -158,30 +179,42 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         return;
       }
 
-      const employees = jsonData.map((row) => ({
-        company_id: currentCompany.id,
-        employee_number: row['Employee Number'],
-        first_name_en: row['First Name'],
-        last_name_en: row['Last Name'],
-        first_name_ar: row['Arabic First Name'] || null,
-        last_name_ar: row['Arabic Last Name'] || null,
-        email: row.Email || null,
-        phone: row['Phone Number'] || null,
-        nationality: row.Nationality,
-        is_saudi: row.Saudi?.toLowerCase() === 'yes' || row.Saudi?.toLowerCase() === 'true',
-        gender: row.Gender?.toLowerCase() as 'male' | 'female',
-        date_of_birth: row['Date of Birth'] || null,
-        hire_date: row['Hire Date'],
-        job_title_en: row['Job Title'],
-        job_title_ar: row['Arabic Job Title'] || null,
-        employment_type: (row['Employment Type']?.toLowerCase() || 'full_time') as 'full_time' | 'part_time' | 'contract',
-        status: (row.Status?.toLowerCase() || 'active') as 'active' | 'on_leave' | 'terminated',
-        iqama_number: row['Iqama Number'] || null,
-        iqama_expiry: row['Iqama Expiry'] || null,
-        passport_number: row['Passport Number'] || null,
-        passport_expiry: row['Passport Expiry'] || null,
-        department_id: row.Department || null,
-      }));
+      const employees = jsonData.map((row) => {
+        const englishName = row['Employee Name (English)'] || '';
+        const englishNameParts = englishName.trim().split(/\s+/);
+        const firstName = englishNameParts[0] || '';
+        const lastName = englishNameParts.slice(1).join(' ') || englishNameParts[0] || '';
+
+        const arabicName = row['Employee Name (Arabic)'] || '';
+        const arabicNameParts = arabicName.trim().split(/\s+/);
+        const firstNameAr = arabicNameParts[0] || null;
+        const lastNameAr = arabicNameParts.slice(1).join(' ') || arabicNameParts[0] || null;
+
+        return {
+          company_id: currentCompany.id,
+          employee_number: row['Employee ID'],
+          first_name_en: firstName,
+          last_name_en: lastName,
+          first_name_ar: firstNameAr,
+          last_name_ar: lastNameAr,
+          email: row['Email Address'] || null,
+          phone: row['Mobile Number'] || null,
+          nationality: row.Nationality,
+          is_saudi: row.Nationality?.toLowerCase().includes('saudi') || false,
+          gender: row.Gender?.toLowerCase() as 'male' | 'female' | undefined,
+          date_of_birth: row['Birth Date'] || null,
+          hire_date: row['Date of Joining'],
+          job_title_en: row['Position/Job Title'],
+          job_title_ar: null,
+          employment_type: (row['Contract Type']?.toLowerCase() || 'full_time') as 'full_time' | 'part_time' | 'contract',
+          status: (row.Status?.toLowerCase() || 'active') as 'active' | 'on_leave' | 'terminated',
+          iqama_number: row['IQAMA/ID Number'] || null,
+          iqama_expiry: row['EIQAMA Expiry Date'] || null,
+          passport_number: row['Passport Number'] || null,
+          passport_expiry: row['Passport Expiry Date'] || null,
+          department_id: row.Department || null,
+        };
+      });
 
       const { data: insertedData, error } = await supabase
         .from('employees')
