@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Users, UserCheck, UserX, TrendingUp, Calendar, AlertCircle } from 'lucide-react';
+import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 
 interface DashboardStats {
   totalEmployees: number;
@@ -26,7 +27,11 @@ export function Dashboard() {
     pendingLeaveRequests: 0,
     expiringDocuments: 0,
   });
+  const [departmentData, setDepartmentData] = useState<any[]>([]);
+  const [monthlyHiresData, setMonthlyHiresData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
 
   useEffect(() => {
     if (currentCompany) {
@@ -83,6 +88,39 @@ export function Dashboard() {
         pendingLeaveRequests: leaveRequestsResult.data?.length || 0,
         expiringDocuments: documentsResult.data?.length || 0,
       });
+
+      const { data: deptData } = await supabase
+        .from('employees')
+        .select('department_id, departments(name_en)')
+        .eq('company_id', currentCompany.id);
+
+      const deptCounts = (deptData || []).reduce((acc: any, emp: any) => {
+        const deptName = emp.departments?.name_en || 'Unassigned';
+        acc[deptName] = (acc[deptName] || 0) + 1;
+        return acc;
+      }, {});
+
+      setDepartmentData(
+        Object.entries(deptCounts).map(([name, value]) => ({ name, value }))
+      );
+
+      const { data: hireData } = await supabase
+        .from('employees')
+        .select('hire_date')
+        .eq('company_id', currentCompany.id);
+
+      const last6Months = Array.from({ length: 6 }, (_, i) => {
+        const d = new Date();
+        d.setMonth(d.getMonth() - (5 - i));
+        return d.toISOString().slice(0, 7);
+      });
+
+      const hireCounts = last6Months.map(month => ({
+        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+        hires: (hireData || []).filter((emp: any) => emp.hire_date?.startsWith(month)).length,
+      }));
+
+      setMonthlyHiresData(hireCounts);
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
@@ -216,6 +254,68 @@ export function Dashboard() {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Employee Distribution by Department</h2>
+          {departmentData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={departmentData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {departmentData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <p className="text-center text-gray-500 py-12">No department data available</p>
+          )}
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4">Employee Composition</h2>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={[
+              { name: 'Saudi', value: stats.saudiEmployees },
+              { name: 'Non-Saudi', value: stats.nonSaudiEmployees }
+            ]}>
+              <XAxis dataKey="name" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Bar dataKey="value" fill="#0088FE" name="Employees" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Hiring Trend (Last 6 Months)</h2>
+        {monthlyHiresData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={monthlyHiresData}>
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip />
+              <Legend />
+              <Line type="monotone" dataKey="hires" stroke="#00C49F" strokeWidth={2} name="New Hires" />
+            </LineChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-center text-gray-500 py-12">No hiring data available</p>
+        )}
       </div>
     </div>
   );

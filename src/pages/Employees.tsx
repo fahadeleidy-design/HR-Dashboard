@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types/database';
-import { Plus, Upload, Download, Pencil, Trash2, Search } from 'lucide-react';
+import { Plus, Upload, Download, Pencil, Trash2, Search, Eye } from 'lucide-react';
 import { EmployeeForm } from '@/components/EmployeeForm';
 import { BulkUpload } from '@/components/BulkUpload';
+import { EmployeeDetail } from '@/components/EmployeeDetail';
 import * as XLSX from 'xlsx';
 
 export function Employees() {
@@ -15,6 +16,8 @@ export function Employees() {
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
   useEffect(() => {
@@ -116,6 +119,11 @@ export function Employees() {
   const handleEdit = (employee: Employee) => {
     setEditingEmployee(employee);
     setShowForm(true);
+  };
+
+  const handleView = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
+    setShowDetail(true);
   };
 
   const handleFormClose = () => {
@@ -281,14 +289,23 @@ export function Employees() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
+                        onClick={() => handleView(employee.id)}
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                        title="View Details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      <button
                         onClick={() => handleEdit(employee)}
                         className="text-primary-600 hover:text-primary-900 mr-3"
+                        title="Edit"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(employee.id)}
                         className="text-red-600 hover:text-red-900"
+                        title="Delete"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -319,6 +336,16 @@ export function Employees() {
         <BulkUpload
           onClose={() => setShowBulkUpload(false)}
           onSuccess={fetchEmployees}
+        />
+      )}
+
+      {showDetail && selectedEmployeeId && (
+        <EmployeeDetail
+          employeeId={selectedEmployeeId}
+          onClose={() => {
+            setShowDetail(false);
+            setSelectedEmployeeId(null);
+          }}
         />
       )}
     </div>
