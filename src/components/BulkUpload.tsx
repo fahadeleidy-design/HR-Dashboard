@@ -11,26 +11,26 @@ interface BulkUploadProps {
 
 interface EmployeeRow {
   'Employee Number': string;
-  'First Name (EN)': string;
-  'Last Name (EN)': string;
-  'First Name (AR)'?: string;
-  'Last Name (AR)'?: string;
+  'First Name': string;
+  'Last Name': string;
+  'Arabic First Name'?: string;
+  'Arabic Last Name'?: string;
   Email?: string;
-  Phone?: string;
+  'Phone Number'?: string;
   Nationality: string;
-  'Is Saudi': string;
+  Saudi: string;
   Gender: string;
   'Date of Birth'?: string;
   'Hire Date': string;
-  'Job Title (EN)': string;
-  'Job Title (AR)'?: string;
+  'Job Title': string;
+  'Arabic Job Title'?: string;
   'Employment Type': string;
   Status?: string;
   'Iqama Number'?: string;
   'Iqama Expiry'?: string;
   'Passport Number'?: string;
   'Passport Expiry'?: string;
-  'Department ID'?: string;
+  Department?: string;
 }
 
 interface ValidationError {
@@ -51,26 +51,26 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
     const template = [
       {
         'Employee Number': 'EMP001',
-        'First Name (EN)': 'Ahmed',
-        'Last Name (EN)': 'Al-Rashid',
-        'First Name (AR)': 'أحمد',
-        'Last Name (AR)': 'الراشد',
+        'First Name': 'Ahmed',
+        'Last Name': 'Al-Rashid',
+        'Arabic First Name': 'أحمد',
+        'Arabic Last Name': 'الراشد',
         Email: 'ahmed@example.com',
-        Phone: '+966501234567',
+        'Phone Number': '+966501234567',
         Nationality: 'Saudi Arabia',
-        'Is Saudi': 'Yes',
+        Saudi: 'Yes',
         Gender: 'male',
         'Date of Birth': '1990-01-15',
         'Hire Date': '2024-01-01',
-        'Job Title (EN)': 'Software Engineer',
-        'Job Title (AR)': 'مهندس برمجيات',
+        'Job Title': 'Software Engineer',
+        'Arabic Job Title': 'مهندس برمجيات',
         'Employment Type': 'full_time',
         Status: 'active',
         'Iqama Number': '1234567890',
         'Iqama Expiry': '2025-12-31',
-        'Passport Number': '',
-        'Passport Expiry': '',
-        'Department ID': '',
+        'Passport Number': 'A12345678',
+        'Passport Expiry': '2028-12-31',
+        Department: 'IT',
       },
     ];
 
@@ -87,11 +87,11 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
     if (!row['Employee Number']) {
       rowErrors.push({ row: rowNum, field: 'Employee Number', message: 'Required' });
     }
-    if (!row['First Name (EN)']) {
-      rowErrors.push({ row: rowNum, field: 'First Name (EN)', message: 'Required' });
+    if (!row['First Name']) {
+      rowErrors.push({ row: rowNum, field: 'First Name', message: 'Required' });
     }
-    if (!row['Last Name (EN)']) {
-      rowErrors.push({ row: rowNum, field: 'Last Name (EN)', message: 'Required' });
+    if (!row['Last Name']) {
+      rowErrors.push({ row: rowNum, field: 'Last Name', message: 'Required' });
     }
     if (!row.Nationality) {
       rowErrors.push({ row: rowNum, field: 'Nationality', message: 'Required' });
@@ -99,8 +99,8 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
     if (!row['Hire Date']) {
       rowErrors.push({ row: rowNum, field: 'Hire Date', message: 'Required' });
     }
-    if (!row['Job Title (EN)']) {
-      rowErrors.push({ row: rowNum, field: 'Job Title (EN)', message: 'Required' });
+    if (!row['Job Title']) {
+      rowErrors.push({ row: rowNum, field: 'Job Title', message: 'Required' });
     }
 
     if (row.Gender && !['male', 'female'].includes(row.Gender.toLowerCase())) {
@@ -161,26 +161,26 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
       const employees = jsonData.map((row) => ({
         company_id: currentCompany.id,
         employee_number: row['Employee Number'],
-        first_name_en: row['First Name (EN)'],
-        last_name_en: row['Last Name (EN)'],
-        first_name_ar: row['First Name (AR)'] || null,
-        last_name_ar: row['Last Name (AR)'] || null,
+        first_name_en: row['First Name'],
+        last_name_en: row['Last Name'],
+        first_name_ar: row['Arabic First Name'] || null,
+        last_name_ar: row['Arabic Last Name'] || null,
         email: row.Email || null,
-        phone: row.Phone || null,
+        phone: row['Phone Number'] || null,
         nationality: row.Nationality,
-        is_saudi: row['Is Saudi']?.toLowerCase() === 'yes' || row['Is Saudi']?.toLowerCase() === 'true',
+        is_saudi: row.Saudi?.toLowerCase() === 'yes' || row.Saudi?.toLowerCase() === 'true',
         gender: row.Gender?.toLowerCase() as 'male' | 'female',
         date_of_birth: row['Date of Birth'] || null,
         hire_date: row['Hire Date'],
-        job_title_en: row['Job Title (EN)'],
-        job_title_ar: row['Job Title (AR)'] || null,
+        job_title_en: row['Job Title'],
+        job_title_ar: row['Arabic Job Title'] || null,
         employment_type: (row['Employment Type']?.toLowerCase() || 'full_time') as 'full_time' | 'part_time' | 'contract',
         status: (row.Status?.toLowerCase() || 'active') as 'active' | 'on_leave' | 'terminated',
         iqama_number: row['Iqama Number'] || null,
         iqama_expiry: row['Iqama Expiry'] || null,
         passport_number: row['Passport Number'] || null,
         passport_expiry: row['Passport Expiry'] || null,
-        department_id: row['Department ID'] || null,
+        department_id: row.Department || null,
       }));
 
       const { data: insertedData, error } = await supabase
