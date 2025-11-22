@@ -242,6 +242,15 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         const nationality = row.Nationality ? row.Nationality.toString().trim() : 'Not Specified';
         const isSaudi = nationality.toLowerCase().includes('saudi');
 
+        const probationDays = row['Probation Period'] ? parseInt(row['Probation Period'].toString()) : 90;
+        const hireDate = row['Date of Joining'] ? row['Date of Joining'].toString() : new Date().toISOString().split('T')[0];
+        const probationEndDate = row['Probation Period'] ? new Date(new Date(hireDate).getTime() + probationDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : null;
+
+        const basicSalary = row['Basic Salary'] ? parseFloat(row['Basic Salary'].toString()) : 0;
+        const housingAllowance = row['Housing Allowance'] ? parseFloat(row['Housing Allowance'].toString()) : 0;
+        const transportationAllowance = row['Transportation Allowance'] ? parseFloat(row['Transportation Allowance'].toString()) : 0;
+        const otherAllowances = row['Other Allowance'] ? parseFloat(row['Other Allowance'].toString()) : 0;
+
         return {
           row,
           company_id: currentCompany.id,
@@ -256,7 +265,8 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           is_saudi: isSaudi,
           gender: normalizeGender(row.Gender),
           date_of_birth: row['Birth Date'] ? row['Birth Date'].toString() : null,
-          hire_date: row['Date of Joining'] ? row['Date of Joining'].toString() : new Date().toISOString().split('T')[0],
+          hire_date: hireDate,
+          probation_end_date: probationEndDate,
           job_title_en: row['Position/Job Title'] ? row['Position/Job Title'].toString().trim() : 'Employee',
           job_title_ar: null,
           employment_type: normalizeContractType(row['Contract Type']),
@@ -266,6 +276,14 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           passport_number: row['Passport Number'] ? row['Passport Number'].toString().trim() : null,
           passport_expiry: row['Passport Expiry Date'] ? row['Passport Expiry Date'].toString() : null,
           department_name: row.Department ? row.Department.toString().trim() : null,
+          payroll: {
+            basic_salary: basicSalary,
+            housing_allowance: housingAllowance,
+            transportation_allowance: transportationAllowance,
+            other_allowances: otherAllowances,
+            iban: row.IBAN ? row.IBAN.toString().trim() : null,
+            bank_name: row['Bank Name'] ? row['Bank Name'].toString().trim() : null,
+          }
         };
       });
 
@@ -315,9 +333,12 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
 
       const existingNumbers = new Set(existingEmployees?.map(e => e.employee_number) || []);
 
-      const employeesToInsert = employees.map(({ row, department_name, ...emp }) => ({
-        ...emp,
-        department_id: department_name ? deptMap.get(department_name.toLowerCase()) || null : null,
+      const employeesToInsert = employees.map(({ row, department_name, payroll, ...emp }) => ({
+        employee: {
+          ...emp,
+          department_id: department_name ? deptMap.get(department_name.toLowerCase()) || null : null,
+        },
+        payroll
       }));
 
       let insertedData;
@@ -325,19 +346,73 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
 
       if (updateMode) {
         const results = await Promise.all(
-          employeesToInsert.map(async (emp) => {
+          employeesToInsert.map(async ({ employee: emp, payroll }) => {
             if (existingNumbers.has(emp.employee_number)) {
-              return await supabase
+              const empResult = await supabase
                 .from('employees')
                 .update(emp)
                 .eq('company_id', currentCompany.id)
                 .eq('employee_number', emp.employee_number)
                 .select();
+
+              if (empResult.data && empResult.data[0] && payroll.basic_salary > 0) {
+                const grossSalary = payroll.basic_salary + payroll.housing_allowance + payroll.transportation_allowance + payroll.other_allowances;
+                const gosiEmployee = emp.is_saudi ? grossSalary * 0.1 : 0;
+                const gosiEmployer = emp.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
+
+                await supabase
+                  .from('payroll')
+                  .upsert({
+                    employee_id: empResult.data[0].id,
+                    company_id: currentCompany.id,
+                    basic_salary: payroll.basic_salary,
+                    housing_allowance: payroll.housing_allowance,
+                    transportation_allowance: payroll.transportation_allowance,
+                    other_allowances: payroll.other_allowances,
+                    gross_salary: grossSalary,
+                    gosi_employee: gosiEmployee,
+                    gosi_employer: gosiEmployer,
+                    net_salary: grossSalary - gosiEmployee,
+                    iban: payroll.iban,
+                    bank_name: payroll.bank_name,
+                    effective_from: emp.hire_date,
+                  }, {
+                    onConflict: 'employee_id,effective_from'
+                  });
+              }
+
+              return empResult;
             } else {
-              return await supabase
+              const empResult = await supabase
                 .from('employees')
                 .insert(emp)
                 .select();
+
+              if (empResult.data && empResult.data[0] && payroll.basic_salary > 0) {
+                const grossSalary = payroll.basic_salary + payroll.housing_allowance + payroll.transportation_allowance + payroll.other_allowances;
+                const gosiEmployee = emp.is_saudi ? grossSalary * 0.1 : 0;
+                const gosiEmployer = emp.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
+
+                await supabase
+                  .from('payroll')
+                  .insert({
+                    employee_id: empResult.data[0].id,
+                    company_id: currentCompany.id,
+                    basic_salary: payroll.basic_salary,
+                    housing_allowance: payroll.housing_allowance,
+                    transportation_allowance: payroll.transportation_allowance,
+                    other_allowances: payroll.other_allowances,
+                    gross_salary: grossSalary,
+                    gosi_employee: gosiEmployee,
+                    gosi_employer: gosiEmployer,
+                    net_salary: grossSalary - gosiEmployee,
+                    iban: payroll.iban,
+                    bank_name: payroll.bank_name,
+                    effective_from: emp.hire_date,
+                  });
+              }
+
+              return empResult;
             }
           })
         );
@@ -351,11 +426,11 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
           insertedData = allData;
         }
       } else {
-        const newEmployees = employeesToInsert.filter(emp => !existingNumbers.has(emp.employee_number));
-        const duplicates = employeesToInsert.filter(emp => existingNumbers.has(emp.employee_number));
+        const newEmployees = employeesToInsert.filter(({ employee: emp }) => !existingNumbers.has(emp.employee_number));
+        const duplicates = employeesToInsert.filter(({ employee: emp }) => existingNumbers.has(emp.employee_number));
 
         if (duplicates.length > 0) {
-          const duplicateIds = duplicates.map(emp => emp.employee_number).join(', ');
+          const duplicateIds = duplicates.map(({ employee: emp }) => emp.employee_number).join(', ');
           setErrors([{
             row: 0,
             field: 'Duplicate',
@@ -367,8 +442,39 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
 
         const result = await supabase
           .from('employees')
-          .insert(newEmployees)
+          .insert(newEmployees.map(e => e.employee))
           .select();
+
+        if (result.data) {
+          await Promise.all(
+            result.data.map(async (emp, index) => {
+              const payroll = newEmployees[index].payroll;
+              if (payroll.basic_salary > 0) {
+                const grossSalary = payroll.basic_salary + payroll.housing_allowance + payroll.transportation_allowance + payroll.other_allowances;
+                const gosiEmployee = newEmployees[index].employee.is_saudi ? grossSalary * 0.1 : 0;
+                const gosiEmployer = newEmployees[index].employee.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
+
+                await supabase
+                  .from('payroll')
+                  .insert({
+                    employee_id: emp.id,
+                    company_id: currentCompany.id,
+                    basic_salary: payroll.basic_salary,
+                    housing_allowance: payroll.housing_allowance,
+                    transportation_allowance: payroll.transportation_allowance,
+                    other_allowances: payroll.other_allowances,
+                    gross_salary: grossSalary,
+                    gosi_employee: gosiEmployee,
+                    gosi_employer: gosiEmployer,
+                    net_salary: grossSalary - gosiEmployee,
+                    iban: payroll.iban,
+                    bank_name: payroll.bank_name,
+                    effective_from: emp.hire_date,
+                  });
+              }
+            })
+          );
+        }
 
         insertedData = result.data;
         error = result.error;

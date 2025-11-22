@@ -14,6 +14,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
   const { currentCompany } = useCompany();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
+  const [payroll, setPayroll] = useState<any>(null);
   const [formData, setFormData] = useState({
     employee_number: employee?.employee_number || '',
     first_name_en: employee?.first_name_en || '',
@@ -27,6 +28,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     gender: employee?.gender || 'male',
     date_of_birth: employee?.date_of_birth || '',
     hire_date: employee?.hire_date || new Date().toISOString().split('T')[0],
+    probation_end_date: employee?.probation_end_date || '',
     job_title_en: employee?.job_title_en || '',
     job_title_ar: employee?.job_title_ar || '',
     employment_type: employee?.employment_type || 'indefinite',
@@ -37,12 +39,23 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     passport_expiry: employee?.passport_expiry || '',
     department_id: employee?.department_id || '',
   });
+  const [payrollData, setPayrollData] = useState({
+    basic_salary: '0',
+    housing_allowance: '0',
+    transportation_allowance: '0',
+    other_allowances: '0',
+    iban: '',
+    bank_name: '',
+  });
 
   useEffect(() => {
     if (currentCompany) {
       fetchDepartments();
     }
-  }, [currentCompany]);
+    if (employee) {
+      fetchPayroll();
+    }
+  }, [currentCompany, employee]);
 
   const fetchDepartments = async () => {
     if (!currentCompany) return;
@@ -58,6 +71,35 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       setDepartments(data || []);
     } catch (error) {
       console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchPayroll = async () => {
+    if (!employee) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('payroll')
+        .select('*')
+        .eq('employee_id', employee.id)
+        .order('effective_from', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        setPayroll(data);
+        setPayrollData({
+          basic_salary: data.basic_salary?.toString() || '0',
+          housing_allowance: data.housing_allowance?.toString() || '0',
+          transportation_allowance: data.transportation_allowance?.toString() || '0',
+          other_allowances: data.other_allowances?.toString() || '0',
+          iban: data.iban || '',
+          bank_name: data.bank_name || '',
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching payroll:', error);
     }
   };
 
@@ -84,6 +126,8 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
         passport_expiry: formData.passport_expiry || null,
       };
 
+      let employeeId = employee?.id;
+
       if (employee) {
         const { error } = await supabase
           .from('employees')
@@ -92,11 +136,52 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
 
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('employees')
-          .insert([employeeData]);
+          .insert([employeeData])
+          .select();
 
         if (error) throw error;
+        if (data && data[0]) {
+          employeeId = data[0].id;
+        }
+      }
+
+      if (employeeId && parseFloat(payrollData.basic_salary) > 0) {
+        const basicSalary = parseFloat(payrollData.basic_salary) || 0;
+        const housingAllowance = parseFloat(payrollData.housing_allowance) || 0;
+        const transportationAllowance = parseFloat(payrollData.transportation_allowance) || 0;
+        const otherAllowances = parseFloat(payrollData.other_allowances) || 0;
+        const grossSalary = basicSalary + housingAllowance + transportationAllowance + otherAllowances;
+        const gosiEmployee = formData.is_saudi ? grossSalary * 0.1 : 0;
+        const gosiEmployer = formData.is_saudi ? grossSalary * 0.12 : grossSalary * 0.02;
+
+        const payrollRecord = {
+          employee_id: employeeId,
+          company_id: currentCompany.id,
+          basic_salary: basicSalary,
+          housing_allowance: housingAllowance,
+          transportation_allowance: transportationAllowance,
+          other_allowances: otherAllowances,
+          gross_salary: grossSalary,
+          gosi_employee: gosiEmployee,
+          gosi_employer: gosiEmployer,
+          net_salary: grossSalary - gosiEmployee,
+          iban: payrollData.iban || null,
+          bank_name: payrollData.bank_name || null,
+          effective_from: formData.hire_date,
+        };
+
+        if (payroll) {
+          await supabase
+            .from('payroll')
+            .update(payrollRecord)
+            .eq('id', payroll.id);
+        } else {
+          await supabase
+            .from('payroll')
+            .insert(payrollRecord);
+        }
       }
 
       onSuccess();
@@ -114,6 +199,14 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     setFormData((prev) => ({
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+    }));
+  };
+
+  const handlePayrollChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPayrollData((prev) => ({
+      ...prev,
+      [name]: value,
     }));
   };
 
@@ -318,6 +411,19 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Probation End Date
+              </label>
+              <input
+                type="date"
+                name="probation_end_date"
+                value={formData.probation_end_date}
+                onChange={handleChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Job Title (English) *
               </label>
               <input
@@ -430,6 +536,99 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                 onChange={handleChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
+            </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Payroll Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Basic Salary (SAR)
+                </label>
+                <input
+                  type="number"
+                  name="basic_salary"
+                  min="0"
+                  step="0.01"
+                  value={payrollData.basic_salary}
+                  onChange={handlePayrollChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Housing Allowance (SAR)
+                </label>
+                <input
+                  type="number"
+                  name="housing_allowance"
+                  min="0"
+                  step="0.01"
+                  value={payrollData.housing_allowance}
+                  onChange={handlePayrollChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Transportation Allowance (SAR)
+                </label>
+                <input
+                  type="number"
+                  name="transportation_allowance"
+                  min="0"
+                  step="0.01"
+                  value={payrollData.transportation_allowance}
+                  onChange={handlePayrollChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Other Allowances (SAR)
+                </label>
+                <input
+                  type="number"
+                  name="other_allowances"
+                  min="0"
+                  step="0.01"
+                  value={payrollData.other_allowances}
+                  onChange={handlePayrollChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  IBAN
+                </label>
+                <input
+                  type="text"
+                  name="iban"
+                  value={payrollData.iban}
+                  onChange={handlePayrollChange}
+                  placeholder="SA1234567891234567891234"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Bank Name
+                </label>
+                <input
+                  type="text"
+                  name="bank_name"
+                  value={payrollData.bank_name}
+                  onChange={handlePayrollChange}
+                  placeholder="e.g., Al Rajhi Bank"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
             </div>
           </div>
 
