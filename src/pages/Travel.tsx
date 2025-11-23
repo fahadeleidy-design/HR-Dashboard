@@ -51,6 +51,14 @@ interface PerDiemRate {
   effective_to: string | null;
 }
 
+interface Employee {
+  id: string;
+  employee_number: string;
+  first_name_en: string;
+  last_name_en: string;
+  is_saudi: boolean;
+}
+
 export function Travel() {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
@@ -58,12 +66,30 @@ export function Travel() {
 
   const [travelRequests, setTravelRequests] = useState<TravelRequest[]>([]);
   const [perDiemRates, setPerDiemRates] = useState<PerDiemRate[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<TravelRequest | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    employee_id: '',
+    destination: '',
+    destination_country: '',
+    purpose: '',
+    departure_date: '',
+    return_date: '',
+    estimated_cost: '',
+    per_diem_rate: '',
+    requires_exit_reentry: false,
+    visa_required: false,
+    project_code: '',
+    cost_center: '',
+    notes: '',
+  });
 
   useEffect(() => {
     if (currentCompany) {
@@ -76,7 +102,7 @@ export function Travel() {
 
     setLoading(true);
 
-    const [requestsRes, ratesRes] = await Promise.all([
+    const [requestsRes, ratesRes, employeesRes] = await Promise.all([
       supabase
         .from('business_travel')
         .select('*, employees(first_name_en, last_name_en, employee_number)')
@@ -86,11 +112,19 @@ export function Travel() {
       supabase
         .from('travel_per_diem_rates')
         .select('*')
-        .order('destination_country', { ascending: true })
+        .order('destination_country', { ascending: true }),
+
+      supabase
+        .from('employees')
+        .select('id, employee_number, first_name_en, last_name_en, is_saudi')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'active')
+        .order('first_name_en', { ascending: true })
     ]);
 
     setTravelRequests(requestsRes.data || []);
     setPerDiemRates(ratesRes.data || []);
+    setEmployees(employeesRes.data || []);
     setLoading(false);
   };
 
@@ -130,6 +164,77 @@ export function Travel() {
       return <XCircle className="h-4 w-4 text-red-600" />;
     }
     return <Clock className="h-4 w-4 text-yellow-600" />;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCompany) return;
+
+    setSubmitting(true);
+
+    try {
+      const selectedEmployee = employees.find(emp => emp.id === formData.employee_id);
+      const departureDate = new Date(formData.departure_date);
+      const returnDate = new Date(formData.return_date);
+      const durationDays = differenceInDays(returnDate, departureDate) + 1;
+
+      const perDiemRate = formData.per_diem_rate ? parseFloat(formData.per_diem_rate) : null;
+      const perDiemTotal = perDiemRate ? perDiemRate * durationDays : null;
+
+      const requestNumber = `TR-${Date.now().toString().slice(-8)}`;
+
+      const { error } = await supabase.from('business_travel').insert({
+        company_id: currentCompany.id,
+        request_number: requestNumber,
+        employee_id: formData.employee_id,
+        destination: formData.destination,
+        destination_country: formData.destination_country,
+        purpose: formData.purpose,
+        departure_date: formData.departure_date,
+        return_date: formData.return_date,
+        duration_days: durationDays,
+        estimated_cost: parseFloat(formData.estimated_cost) || 0,
+        per_diem_rate: perDiemRate,
+        per_diem_total: perDiemTotal,
+        requires_exit_reentry: selectedEmployee?.is_saudi ? false : formData.requires_exit_reentry,
+        exit_reentry_obtained: false,
+        visa_required: formData.visa_required,
+        visa_obtained: false,
+        project_code: formData.project_code || null,
+        cost_center: formData.cost_center || null,
+        manager_approval: 'pending',
+        hr_approval: 'pending',
+        finance_approval: 'pending',
+        status: 'pending',
+        notes: formData.notes || null,
+      });
+
+      if (error) throw error;
+
+      setShowAddModal(false);
+      setFormData({
+        employee_id: '',
+        destination: '',
+        destination_country: '',
+        purpose: '',
+        departure_date: '',
+        return_date: '',
+        estimated_cost: '',
+        per_diem_rate: '',
+        requires_exit_reentry: false,
+        visa_required: false,
+        project_code: '',
+        cost_center: '',
+        notes: '',
+      });
+
+      await fetchData();
+    } catch (error) {
+      console.error('Error creating travel request:', error);
+      alert('Failed to create travel request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const filterRequests = () => {
@@ -757,30 +862,204 @@ export function Travel() {
               </div>
             </div>
 
-            <div className="p-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
-                  <div>
-                    <h3 className="text-sm font-semibold text-blue-900">Form Coming Soon</h3>
-                    <p className="text-sm text-blue-800 mt-1">
-                      The travel request creation form is under development. For now, please use the direct database interface or contact your system administrator to create new travel requests.
-                    </p>
+            <form onSubmit={handleSubmit} className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Employee <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.employee_id}
+                    onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">Select Employee</option>
+                    {employees.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Destination City <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.destination}
+                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., Dubai, London"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Destination Country <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.destination_country}
+                    onChange={(e) => setFormData({ ...formData, destination_country: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., United Arab Emirates"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Purpose <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    required
+                    value={formData.purpose}
+                    onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Purpose of travel..."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Departure Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.departure_date}
+                    onChange={(e) => setFormData({ ...formData, departure_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Return Date <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={formData.return_date}
+                    onChange={(e) => setFormData({ ...formData, return_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Estimated Cost (SAR) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    step="0.01"
+                    value={formData.estimated_cost}
+                    onChange={(e) => setFormData({ ...formData, estimated_cost: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Per Diem Rate (SAR/day)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.per_diem_rate}
+                    onChange={(e) => setFormData({ ...formData, per_diem_rate: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Project Code
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.project_code}
+                    onChange={(e) => setFormData({ ...formData, project_code: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Cost Center
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.cost_center}
+                    onChange={(e) => setFormData({ ...formData, cost_center: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <div className="flex items-start space-x-4">
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.requires_exit_reentry}
+                        onChange={(e) => setFormData({ ...formData, requires_exit_reentry: e.target.checked })}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-gray-700">Requires Exit-Reentry Permit</span>
+                    </label>
+
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.visa_required}
+                        onChange={(e) => setFormData({ ...formData, visa_required: e.target.checked })}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm text-gray-700">Visa Required</span>
+                    </label>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
-              <div className="flex justify-end">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Notes
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Additional notes..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6 pt-6 border-t border-gray-200">
                 <button
+                  type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+                  disabled={submitting}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
                 >
-                  Close
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                >
+                  {submitting ? 'Creating...' : 'Create Travel Request'}
                 </button>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
