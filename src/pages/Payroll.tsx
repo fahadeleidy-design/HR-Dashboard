@@ -57,6 +57,10 @@ export function Payroll() {
 
     setLoading(true);
     try {
+      const startDate = new Date(selectedMonth + '-01');
+      const endDate = new Date(startDate.getFullYear(), startDate.getMonth() + 1, 1);
+      const endDateString = endDate.toISOString().split('T')[0];
+
       const { data, error } = await supabase
         .from('payroll')
         .select(`
@@ -65,7 +69,7 @@ export function Payroll() {
         `)
         .eq('company_id', currentCompany.id)
         .gte('effective_from', `${selectedMonth}-01`)
-        .lt('effective_from', `${selectedMonth}-32`)
+        .lt('effective_from', endDateString)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
