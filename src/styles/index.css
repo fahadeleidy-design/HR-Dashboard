@@ -7,8 +7,13 @@
     @apply antialiased scroll-smooth;
   }
 
+  /* Arabic Font Support */
   html[dir="rtl"] {
-    font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+    font-family: 'Cairo', 'Noto Sans Arabic', 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+  }
+
+  html[dir="ltr"] {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   }
 
   body {
@@ -19,7 +24,11 @@
     @apply transition-colors duration-200;
   }
 
-  /* RTL Support */
+  /* Enhanced RTL Support */
+  [dir="rtl"] {
+    text-align: right;
+  }
+
   [dir="rtl"] .space-x-reverse > :not([hidden]) ~ :not([hidden]) {
     --tw-space-x-reverse: 1;
   }
@@ -36,6 +45,100 @@
 
   [dir="rtl"] .text-right {
     text-align: left !important;
+  }
+
+  /* RTL Margin and Padding Corrections */
+  [dir="rtl"] .ml-auto {
+    margin-left: 0 !important;
+    margin-right: auto !important;
+  }
+
+  [dir="rtl"] .mr-auto {
+    margin-right: 0 !important;
+    margin-left: auto !important;
+  }
+
+  [dir="rtl"] .pl-10 {
+    padding-left: 0.75rem !important;
+    padding-right: 2.5rem !important;
+  }
+
+  [dir="rtl"] .pr-10 {
+    padding-right: 0.75rem !important;
+    padding-left: 2.5rem !important;
+  }
+
+  [dir="rtl"] .rounded-l-lg {
+    border-top-left-radius: 0 !important;
+    border-bottom-left-radius: 0 !important;
+    border-top-right-radius: 0.5rem !important;
+    border-bottom-right-radius: 0.5rem !important;
+  }
+
+  [dir="rtl"] .rounded-r-lg {
+    border-top-right-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    border-top-left-radius: 0.5rem !important;
+    border-bottom-left-radius: 0.5rem !important;
+  }
+
+  /* RTL Border Radius */
+  [dir="rtl"] .border-l {
+    border-left: 0 !important;
+    border-right: 1px solid !important;
+  }
+
+  [dir="rtl"] .border-r {
+    border-right: 0 !important;
+    border-left: 1px solid !important;
+  }
+
+  /* RTL Flex Direction */
+  [dir="rtl"] .flex-row {
+    flex-direction: row-reverse;
+  }
+
+  /* RTL Transform Corrections */
+  [dir="rtl"] .translate-x-full {
+    transform: translateX(-100%) !important;
+  }
+
+  [dir="rtl"] .-translate-x-full {
+    transform: translateX(100%) !important;
+  }
+
+  /* Arabic Number Support */
+  [dir="rtl"] input[type="number"],
+  [dir="rtl"] input[type="tel"] {
+    direction: ltr;
+    text-align: left;
+  }
+
+  /* Better Arabic Typography */
+  [dir="rtl"] h1,
+  [dir="rtl"] h2,
+  [dir="rtl"] h3,
+  [dir="rtl"] h4,
+  [dir="rtl"] h5,
+  [dir="rtl"] h6 {
+    font-weight: 600;
+    letter-spacing: 0;
+  }
+
+  [dir="rtl"] p,
+  [dir="rtl"] span,
+  [dir="rtl"] div {
+    line-height: 1.8;
+  }
+
+  /* Arabic Button Styling */
+  [dir="rtl"] button {
+    font-weight: 500;
+  }
+
+  /* Better Arabic Form Labels */
+  [dir="rtl"] label {
+    font-weight: 500;
   }
 }
 
@@ -116,12 +219,49 @@
     @apply px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider;
   }
 
+  [dir="rtl"] .data-table th {
+    @apply text-right;
+  }
+
   .data-table td {
     @apply px-6 py-4 whitespace-nowrap text-sm text-gray-900;
   }
 
+  [dir="rtl"] .data-table td {
+    @apply text-right;
+  }
+
   .data-table tbody tr {
     @apply hover:bg-gray-50 transition-colors duration-150;
+  }
+
+  /* RTL-Specific Component Styles */
+  [dir="rtl"] .sidebar {
+    left: auto;
+    right: 0;
+  }
+
+  [dir="rtl"] .sidebar-item {
+    flex-direction: row-reverse;
+  }
+
+  /* Arabic-Friendly Spacing */
+  [dir="rtl"] .space-x-2 > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-x-reverse: 1;
+    margin-left: calc(0.5rem * var(--tw-space-x-reverse));
+    margin-right: calc(0.5rem * calc(1 - var(--tw-space-x-reverse)));
+  }
+
+  [dir="rtl"] .space-x-3 > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-x-reverse: 1;
+    margin-left: calc(0.75rem * var(--tw-space-x-reverse));
+    margin-right: calc(0.75rem * calc(1 - var(--tw-space-x-reverse)));
+  }
+
+  [dir="rtl"] .space-x-4 > :not([hidden]) ~ :not([hidden]) {
+    --tw-space-x-reverse: 1;
+    margin-left: calc(1rem * var(--tw-space-x-reverse));
+    margin-right: calc(1rem * calc(1 - var(--tw-space-x-reverse)));
   }
 }
 
@@ -152,7 +292,40 @@
     }
   }
 
+  @keyframes slideInRTL {
+    from {
+      opacity: 0;
+      transform: translateX(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
   .animate-slideIn {
     animation: slideIn 0.3s ease-out;
+  }
+
+  [dir="rtl"] .animate-slideIn {
+    animation: slideInRTL 0.3s ease-out;
+  }
+
+  /* Utility Classes for Arabic */
+  .rtl-flip {
+    transform: scaleX(-1);
+  }
+
+  [dir="rtl"] .rtl-flip {
+    transform: scaleX(1);
+  }
+
+  /* Arabic-friendly shadow */
+  [dir="rtl"] .shadow-left {
+    box-shadow: -4px 0 6px -1px rgba(0, 0, 0, 0.1);
+  }
+
+  [dir="ltr"] .shadow-left {
+    box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.1);
   }
 }

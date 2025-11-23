@@ -204,17 +204,17 @@ export function Layout({ children }: LayoutProps) {
       <div className="flex">
         <aside
           className={`
-            fixed lg:static inset-y-0 left-0 z-30
-            w-72 bg-white border-r border-gray-200
+            fixed lg:static inset-y-0 ${isRTL ? 'right-0' : 'left-0'} z-30
+            w-72 bg-white ${isRTL ? 'border-l' : 'border-r'} border-gray-200
             transform transition-transform duration-300 ease-in-out
-            ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+            ${sidebarOpen ? 'translate-x-0' : `${isRTL ? 'translate-x-full' : '-translate-x-full'} lg:translate-x-0`}
             min-h-[calc(100vh-4rem)] overflow-y-auto shadow-xl lg:shadow-none
           `}
         >
           <nav className="p-4 space-y-6">
             {navSections.map((section) => (
               <div key={section.title}>
-                <h3 className="px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <h3 className={`px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'}`}>
                   {section.title}
                 </h3>
                 <div className="space-y-1">
@@ -227,7 +227,7 @@ export function Layout({ children }: LayoutProps) {
                         to={item.path}
                         onClick={() => setSidebarOpen(false)}
                         className={`
-                          group flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-200
+                          group flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
                           ${
                             active
                               ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md shadow-primary-200'
@@ -236,7 +236,7 @@ export function Layout({ children }: LayoutProps) {
                         `}
                       >
                         <Icon className={`h-5 w-5 transition-transform group-hover:scale-110 ${active ? 'text-white' : 'text-gray-400'}`} />
-                        <span className={`font-medium text-sm ${active ? 'text-white' : ''}`}>{item.label}</span>
+                        <span className={`font-medium text-sm ${active ? 'text-white' : ''} flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>{item.label}</span>
                       </Link>
                     );
                   })}
