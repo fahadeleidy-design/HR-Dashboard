@@ -73,7 +73,44 @@ export function Dashboard() {
   const [monthlyHiresData, setMonthlyHiresData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8', '#82CA9D'];
+  const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
+
+  const CustomTooltip = ({ active, payload, label }: any) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white px-4 py-3 rounded-lg shadow-xl border border-gray-200">
+          {label && <p className="font-semibold text-gray-900 mb-1">{label}</p>}
+          {payload.map((entry: any, index: number) => (
+            <p key={index} className="text-sm" style={{ color: entry.color }}>
+              <span className="font-medium">{entry.name}:</span> {entry.value}
+            </p>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
+
+  const CustomPieLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, name, value }: any) => {
+    if (percent < 0.05) return null;
+    const RADIAN = Math.PI / 180;
+    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="white"
+        textAnchor={x > cx ? 'start' : 'end'}
+        dominantBaseline="central"
+        className="font-semibold text-sm"
+      >
+        {`${value} (${(percent * 100).toFixed(0)}%)`}
+      </text>
+    );
+  };
 
   useEffect(() => {
     if (currentCompany) {
@@ -799,101 +836,187 @@ export function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Gender Distribution</h2>
+        <div className="card p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Users className="h-5 w-5 text-primary-600" />
+            Gender Distribution
+          </h2>
           {genderData.some(d => d.value > 0) ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={genderData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }) => `${name}: ${value}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  <Cell fill="#3B82F6" />
-                  <Cell fill="#EC4899" />
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={genderData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={CustomPieLabel}
+                    outerRadius={85}
+                    fill="#8884d8"
+                    dataKey="value"
+                    strokeWidth={2}
+                    stroke="#fff"
+                  >
+                    <Cell fill="#3B82F6" />
+                    <Cell fill="#EC4899" />
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex justify-center gap-4 mt-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                  <span className="text-sm text-gray-600">Male: {genderData[0]?.value || 0}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-full bg-pink-500"></div>
+                  <span className="text-sm text-gray-600">Female: {genderData[1]?.value || 0}</span>
+                </div>
+              </div>
+            </>
           ) : (
-            <p className="text-center text-gray-500 py-12">No data available</p>
+            <div className="flex items-center justify-center h-[220px]">
+              <p className="text-center text-gray-400">No data available</p>
+            </div>
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Employment Types</h2>
+        <div className="card p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Briefcase className="h-5 w-5 text-primary-600" />
+            Employment Types
+          </h2>
           {employmentTypeData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={employmentTypeData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {employmentTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={employmentTypeData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={CustomPieLabel}
+                    outerRadius={85}
+                    fill="#8884d8"
+                    dataKey="value"
+                    strokeWidth={2}
+                    stroke="#fff"
+                  >
+                    {employmentTypeData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-2 gap-2 mt-4">
+                {employmentTypeData.map((entry, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                    <span className="text-xs text-gray-600 truncate">{entry.name}: {entry.value}</span>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
-            <p className="text-center text-gray-500 py-12">No data available</p>
+            <div className="flex items-center justify-center h-[220px]">
+              <p className="text-center text-gray-400">No data available</p>
+            </div>
           )}
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Departments</h2>
+        <div className="card p-6">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <Building2 className="h-5 w-5 text-primary-600" />
+            Departments
+          </h2>
           {departmentData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={departmentData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {departmentData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            <>
+              <ResponsiveContainer width="100%" height={220}>
+                <PieChart>
+                  <Pie
+                    data={departmentData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={CustomPieLabel}
+                    outerRadius={85}
+                    fill="#8884d8"
+                    dataKey="value"
+                    strokeWidth={2}
+                    stroke="#fff"
+                  >
+                    {departmentData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="grid grid-cols-2 gap-2 mt-4 max-h-24 overflow-y-auto">
+                {departmentData.map((entry, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                    <span className="text-xs text-gray-600 truncate">{entry.name}: {entry.value}</span>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
-            <p className="text-center text-gray-500 py-12">No department data</p>
+            <div className="flex items-center justify-center h-[220px]">
+              <p className="text-center text-gray-400">No department data</p>
+            </div>
           )}
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Hiring Trend (Last 6 Months)</h2>
+      <div className="card p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-primary-600" />
+          Hiring Trend (Last 6 Months)
+        </h2>
         {monthlyHiresData.length > 0 ? (
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={monthlyHiresData}>
-              <XAxis dataKey="month" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="hires" stroke="#00C49F" strokeWidth={2} name="New Hires" />
+            <LineChart data={monthlyHiresData} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+              <defs>
+                <linearGradient id="colorHires" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis
+                dataKey="month"
+                tick={{ fill: '#6B7280', fontSize: 12 }}
+                axisLine={{ stroke: '#E5E7EB' }}
+                tickLine={{ stroke: '#E5E7EB' }}
+              />
+              <YAxis
+                tick={{ fill: '#6B7280', fontSize: 12 }}
+                axisLine={{ stroke: '#E5E7EB' }}
+                tickLine={{ stroke: '#E5E7EB' }}
+                allowDecimals={false}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend
+                wrapperStyle={{ paddingTop: '20px' }}
+                iconType="circle"
+              />
+              <Line
+                type="monotone"
+                dataKey="hires"
+                stroke="#10B981"
+                strokeWidth={3}
+                name="New Hires"
+                dot={{ fill: '#10B981', r: 5 }}
+                activeDot={{ r: 7, fill: '#059669' }}
+                fill="url(#colorHires)"
+              />
             </LineChart>
           </ResponsiveContainer>
         ) : (
-          <p className="text-center text-gray-500 py-12">No hiring data available</p>
+          <div className="flex items-center justify-center h-[300px]">
+            <p className="text-center text-gray-400">No hiring data available</p>
+          </div>
         )}
       </div>
     </div>
