@@ -54,6 +54,7 @@ export function RealEstate() {
     lease_end_date: '',
     monthly_rent: 0,
     annual_rent: 0,
+    payment_frequency: 'monthly',
     landlord_name: '',
     landlord_contact: '',
     purpose: '',
@@ -223,6 +224,7 @@ export function RealEstate() {
       lease_end_date: '',
       monthly_rent: 0,
       annual_rent: 0,
+      payment_frequency: 'monthly',
       landlord_name: '',
       landlord_contact: '',
       purpose: '',
@@ -506,6 +508,15 @@ export function RealEstate() {
                 {propertyForm.ownership_type === 'leased' || propertyForm.ownership_type === 'rented' ? (
                   <>
                     <div><label className="block text-sm font-medium mb-1">Monthly Rent (SAR)</label><input type="number" min="0" value={propertyForm.monthly_rent} onChange={(e) => setPropertyForm({...propertyForm, monthly_rent: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1">Payment Frequency</label>
+                      <select value={propertyForm.payment_frequency} onChange={(e) => setPropertyForm({...propertyForm, payment_frequency: e.target.value})} className="w-full px-3 py-2 border rounded-md">
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                        <option value="semi_annually">Semi-Annually</option>
+                        <option value="annually">Annually</option>
+                      </select>
+                    </div>
                     <div><label className="block text-sm font-medium mb-1">Lease End Date</label><input type="date" value={propertyForm.lease_end_date} onChange={(e) => setPropertyForm({...propertyForm, lease_end_date: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
                     <div><label className="block text-sm font-medium mb-1">Landlord Name</label><input type="text" value={propertyForm.landlord_name} onChange={(e) => setPropertyForm({...propertyForm, landlord_name: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
                   </>
