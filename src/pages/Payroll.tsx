@@ -337,8 +337,10 @@ export function Payroll() {
         .eq('id', batch.id);
 
       alert(`Payroll batch created successfully with ${payrollItemsToInsert.length} employees!`);
-      fetchBatches();
-      setView('batches');
+      await fetchBatches();
+      setSelectedBatch(batch);
+      await fetchPayrollItems(batch.id);
+      setView('items');
     } catch (error: any) {
       console.error('Error creating batch:', error);
       alert('Failed to create payroll batch: ' + error.message);
@@ -492,6 +494,28 @@ export function Payroll() {
 
       {view === 'batches' && (
         <div className="space-y-6">
+          {batches.length > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-blue-900">Latest Batch: {batches[0].month}</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    {batches[0].total_employees} employees | SAR {Number(batches[0].total_net || 0).toLocaleString()} total
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedBatch(batches[0]);
+                    setView('items');
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
+                >
+                  View Details
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white rounded-lg shadow p-6">
               <div className="flex items-center justify-between">
