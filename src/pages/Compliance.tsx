@@ -66,17 +66,34 @@ export function Compliance() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('gosi_contributions')
+        .from('payroll')
         .select(`
-          *,
+          id,
+          employee_id,
+          gosi_employee,
+          gosi_employer,
+          gross_salary,
+          effective_from,
           employee:employees(employee_number, first_name_en, last_name_en, is_saudi)
         `)
         .eq('company_id', currentCompany.id)
-        .eq('month', selectedMonth)
-        .order('created_at', { ascending: false });
+        .gte('effective_from', `${selectedMonth}-01`)
+        .lt('effective_from', `${selectedMonth}-32`)
+        .order('effective_from', { ascending: false });
 
       if (error) throw error;
-      setGosiContributions(data || []);
+
+      const transformed = (data || []).map(record => ({
+        id: record.id,
+        month: selectedMonth,
+        employee_id: record.employee_id,
+        employee_contribution: record.gosi_employee || 0,
+        employer_contribution: record.gosi_employer || 0,
+        total_contribution: (record.gosi_employee || 0) + (record.gosi_employer || 0),
+        employee: record.employee,
+      }));
+
+      setGosiContributions(transformed);
     } catch (error) {
       console.error('Error fetching GOSI contributions:', error);
     } finally {
