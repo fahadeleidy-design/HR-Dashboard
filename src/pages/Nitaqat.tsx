@@ -133,50 +133,13 @@ export function Nitaqat() {
 
     setLoading(true);
     try {
-      const { data: bandData, error: bandError } = await supabase.rpc('get_current_nitaqat_band', {
-        p_company_id: currentCompany.id
-      });
-
-      if (bandError) {
-        console.error('Error fetching Nitaqat band:', bandError);
-      }
-
-      if (bandData && bandData.status === 'success') {
-        setNitaqatCalc({
-          totalEmployees: bandData.total_employees,
-          saudiCount: bandData.saudi_count,
-          nonSaudiCount: bandData.non_saudi_count,
-          fullCountSaudis: 0,
-          halfCountSaudis: 0,
-          disabledSaudis: 0,
-          effectiveSaudiCount: bandData.effective_saudi_count,
-          saudizationPercentage: bandData.current_percentage,
-          effectivePercentage: bandData.effective_percentage,
-          nitaqatColor: bandData.band_color,
-          bandName: bandData.band_name,
-          colorZone: bandData.band_name,
-          requirements: getBandRequirements(bandData.band_name),
-          nextZonePercentage: bandData.next_band?.min_percentage,
-          employeesNeededForNextZone: bandData.next_band?.saudi_employees_needed,
-          minPercentage: bandData.min_percentage,
-          maxPercentage: bandData.max_percentage,
-          sizeBandName: bandData.size_band_name,
-          sectorName: bandData.sector_name,
-          calculationMethod: bandData.calculation_method,
-          nextBandName: bandData.next_band?.band_name,
-          nextBandColor: bandData.next_band?.band_color,
-        });
-        setLoading(false);
-        return;
-      }
-
-      const { data: empData, error } = await supabase
+      const { data: empData, error: empError } = await supabase
         .from('employees')
         .select('id, is_saudi, has_disability')
         .eq('company_id', currentCompany.id)
         .eq('status', 'active');
 
-      if (error) throw error;
+      if (empError) throw empError;
 
       const { data: payrollData } = await supabase
         .from('payroll')
@@ -191,11 +154,7 @@ export function Nitaqat() {
         basic_salary: salaryMap.get(emp.id) || 0
       }));
 
-      setEmployees(enrichedEmployees);
-
-      const totalEmployees = enrichedEmployees.length;
       const saudiEmployees = enrichedEmployees.filter(e => e.is_saudi);
-      const saudiCount = saudiEmployees.length;
 
       let fullCountSaudis = 0;
       let halfCountSaudis = 0;
@@ -214,6 +173,50 @@ export function Nitaqat() {
           effectiveSaudiCount += 0.5;
         }
       });
+
+      const { data: bandData, error: bandError } = await supabase.rpc('get_current_nitaqat_band', {
+        p_company_id: currentCompany.id
+      });
+
+      if (bandError) {
+        console.error('Error fetching Nitaqat band:', bandError);
+      }
+
+      if (bandData && bandData.status === 'success') {
+        setNitaqatCalc({
+          totalEmployees: bandData.total_employees,
+          saudiCount: bandData.saudi_count,
+          nonSaudiCount: bandData.non_saudi_count,
+          fullCountSaudis: fullCountSaudis,
+          halfCountSaudis: halfCountSaudis,
+          disabledSaudis: disabledSaudis,
+          effectiveSaudiCount: effectiveSaudiCount,
+          saudizationPercentage: bandData.current_percentage,
+          effectivePercentage: bandData.effective_percentage,
+          nitaqatColor: bandData.band_color,
+          bandName: bandData.band_name,
+          colorZone: bandData.band_name,
+          requirements: getBandRequirements(bandData.band_name),
+          nextZonePercentage: bandData.next_band?.min_percentage,
+          employeesNeededForNextZone: bandData.next_band?.saudi_employees_needed,
+          minPercentage: bandData.min_percentage,
+          maxPercentage: bandData.max_percentage,
+          sizeBandName: bandData.size_band_name,
+          sectorName: bandData.sector_name,
+          calculationMethod: bandData.calculation_method,
+          nextBandName: bandData.next_band?.band_name,
+          nextBandColor: bandData.next_band?.band_color,
+        });
+        setEmployees(enrichedEmployees);
+        setLoading(false);
+        return;
+      }
+
+      setEmployees(enrichedEmployees);
+
+      const totalEmployees = enrichedEmployees.length;
+      const saudiCount = saudiEmployees.length;
+      const nonSaudiCount = enrichedEmployees.filter(e => !e.is_saudi).length;
 
       const saudizationPercentage = totalEmployees > 0 ? (effectiveSaudiCount / totalEmployees) * 100 : 0;
 
@@ -252,7 +255,7 @@ export function Nitaqat() {
       setNitaqatCalc({
         totalEmployees,
         saudiCount,
-        nonSaudiCount: totalEmployees - saudiCount,
+        nonSaudiCount,
         fullCountSaudis,
         halfCountSaudis,
         disabledSaudis,
