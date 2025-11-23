@@ -28,6 +28,7 @@ import {
   X,
   Calculator,
   ScrollText,
+  BookOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -55,6 +56,7 @@ export function Layout({ children }: LayoutProps) {
         { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/employees', icon: Users, label: 'Employees' },
         { path: '/org-chart', icon: TrendingUp, label: 'Org Chart' },
+        { path: '/handbook', icon: BookOpen, label: 'Employee Handbook' },
         { path: '/attendance', icon: Clock, label: 'Attendance' },
         { path: '/leave', icon: Calendar, label: 'Leave' },
       ]
