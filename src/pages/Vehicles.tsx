@@ -30,6 +30,25 @@ export function Vehicles() {
   const [violations, setViolations] = useState<ViolationSummary>({ total_violations: 0, total_fines: 0, pending_fines: 0 });
   const [maintenanceDue, setMaintenanceDue] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    vehicle_number: '',
+    plate_number: '',
+    make: '',
+    model: '',
+    year: new Date().getFullYear(),
+    vehicle_type: 'sedan',
+    status: 'active',
+    current_mileage: 0,
+    purchase_date: '',
+    purchase_price: 0,
+    insurance_provider: '',
+    insurance_policy_number: '',
+    insurance_expiry: '',
+    registration_expiry: '',
+    ownership_type: 'owned',
+    notes: ''
+  });
 
   useEffect(() => {
     if (currentCompany) {
@@ -101,7 +120,10 @@ export function Vehicles() {
           <h1 className="text-3xl font-bold text-gray-900">Vehicle Management</h1>
           <p className="text-gray-600 mt-1">Fleet management, violations, and maintenance tracking</p>
         </div>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors">
+        <button
+          onClick={() => setShowForm(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+        >
           <Plus className="h-4 w-4" />
           <span>Add Vehicle</span>
         </button>
@@ -269,6 +291,308 @@ export function Vehicles() {
           </table>
         </div>
       </div>
+
+      {showForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Add New Vehicle</h2>
+            </div>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (!currentCompany) return;
+
+              try {
+                const { error } = await supabase
+                  .from('vehicles')
+                  .insert([{
+                    ...formData,
+                    company_id: currentCompany.id,
+                    purchase_date: formData.purchase_date || null,
+                    insurance_expiry: formData.insurance_expiry || null,
+                    registration_expiry: formData.registration_expiry || null,
+                    insurance_provider: formData.insurance_provider || null,
+                    insurance_policy_number: formData.insurance_policy_number || null,
+                    notes: formData.notes || null
+                  }]);
+
+                if (error) throw error;
+
+                alert('Vehicle added successfully!');
+                setShowForm(false);
+                setFormData({
+                  vehicle_number: '',
+                  plate_number: '',
+                  make: '',
+                  model: '',
+                  year: new Date().getFullYear(),
+                  vehicle_type: 'sedan',
+                  status: 'active',
+                  current_mileage: 0,
+                  purchase_date: '',
+                  purchase_price: 0,
+                  insurance_provider: '',
+                  insurance_policy_number: '',
+                  insurance_expiry: '',
+                  registration_expiry: '',
+                  ownership_type: 'owned',
+                  notes: ''
+                });
+                fetchData();
+              } catch (error: any) {
+                console.error('Error adding vehicle:', error);
+                alert('Failed to add vehicle: ' + error.message);
+              }
+            }} className="p-6 overflow-y-auto flex-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vehicle Number *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.vehicle_number}
+                    onChange={(e) => setFormData({ ...formData, vehicle_number: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Plate Number *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.plate_number}
+                    onChange={(e) => setFormData({ ...formData, plate_number: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Make *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.make}
+                    onChange={(e) => setFormData({ ...formData, make: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Model *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.model}
+                    onChange={(e) => setFormData({ ...formData, model: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Year *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1900"
+                    max={new Date().getFullYear() + 1}
+                    value={formData.year}
+                    onChange={(e) => setFormData({ ...formData, year: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Vehicle Type *
+                  </label>
+                  <select
+                    required
+                    value={formData.vehicle_type}
+                    onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="sedan">Sedan</option>
+                    <option value="suv">SUV</option>
+                    <option value="truck">Truck</option>
+                    <option value="van">Van</option>
+                    <option value="bus">Bus</option>
+                    <option value="motorcycle">Motorcycle</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Current Mileage (km) *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    value={formData.current_mileage}
+                    onChange={(e) => setFormData({ ...formData, current_mileage: parseInt(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Status *
+                  </label>
+                  <select
+                    required
+                    value={formData.status}
+                    onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="active">Active</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Purchase Date
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.purchase_date}
+                    onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Purchase Price (SAR)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={formData.purchase_price}
+                    onChange={(e) => setFormData({ ...formData, purchase_price: parseFloat(e.target.value) })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ownership Type *
+                  </label>
+                  <select
+                    required
+                    value={formData.ownership_type}
+                    onChange={(e) => setFormData({ ...formData, ownership_type: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="owned">Owned</option>
+                    <option value="leased">Leased</option>
+                    <option value="rented">Rented</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Insurance Provider
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.insurance_provider}
+                    onChange={(e) => setFormData({ ...formData, insurance_provider: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Insurance Policy Number
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.insurance_policy_number}
+                    onChange={(e) => setFormData({ ...formData, insurance_policy_number: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Insurance Expiry
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.insurance_expiry}
+                    onChange={(e) => setFormData({ ...formData, insurance_expiry: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Registration Expiry
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.registration_expiry}
+                    onChange={(e) => setFormData({ ...formData, registration_expiry: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Notes
+                  </label>
+                  <textarea
+                    value={formData.notes}
+                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                </div>
+              </div>
+            </form>
+
+            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowForm(false)}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="vehicle-form"
+                onClick={(e) => {
+                  const form = document.querySelector('form') as HTMLFormElement;
+                  if (form) {
+                    const event = new Event('submit', { bubbles: true, cancelable: true });
+                    form.dispatchEvent(event);
+                  }
+                }}
+                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+              >
+                Add Vehicle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
