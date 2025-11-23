@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Building2, Users, Plus, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { UserRoleManagement } from '@/components/UserRoleManagement';
@@ -46,6 +47,7 @@ interface Company {
 
 export function Settings() {
   const { currentCompany, companies } = useCompany();
+  const { t, isRTL } = useLanguage();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeptForm, setShowDeptForm] = useState(false);
@@ -307,24 +309,24 @@ export function Settings() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-600 mt-1">Manage company and system settings</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t.settings.title}</h1>
+        <p className="text-gray-600 mt-1">{t.settings.subtitle}</p>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center space-x-4 mb-6">
+        <div className={`flex items-center gap-4 mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <Building2 className="h-12 w-12 text-primary-600" />
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Company Information</h2>
-            <p className="text-gray-600">Current company details</p>
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <h2 className="text-xl font-bold text-gray-900">{isRTL ? 'معلومات الشركة' : 'Company Information'}</h2>
+            <p className="text-gray-600">{isRTL ? 'تفاصيل الشركة الحالية' : 'Current company details'}</p>
           </div>
         </div>
 
         {currentCompany && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Company Name (English)
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.settings.companyNameEn}
               </label>
               <input
                 type="text"
@@ -335,8 +337,8 @@ export function Settings() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Company Name (Arabic)
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.settings.companyNameAr}
               </label>
               <input
                 type="text"

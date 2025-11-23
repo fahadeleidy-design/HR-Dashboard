@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatNumber, formatPercentage } from '@/lib/formatters';
 import { Shield, TrendingUp, Download, Info, AlertCircle, CheckCircle, Users, Calculator } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -48,6 +50,7 @@ interface NitaqatHistoryRecord {
 
 export function Nitaqat() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [nitaqatCalc, setNitaqatCalc] = useState<NitaqatCalculation | null>(null);
   const [loading, setLoading] = useState(true);
@@ -354,23 +357,23 @@ export function Nitaqat() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Nitaqat Compliance</h1>
-          <p className="text-gray-600 mt-1">Saudi Saudization program tracking and compliance</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t.nitaqat.title}</h1>
+          <p className="text-gray-600 mt-1">{t.nitaqat.subtitle}</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <button
             onClick={() => setShowCalculator(!showCalculator)}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Calculator className="h-4 w-4" />
-            <span>Calculator</span>
+            <span>{isRTL ? 'حاسبة' : 'Calculator'}</span>
           </button>
           <button
             onClick={() => setShowNitaqatInfo(!showNitaqatInfo)}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Info className="h-4 w-4" />
-            <span>Info</span>
+            <span>{t.common.info}</span>
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types/database';
 import { Plus, Upload, Download, Pencil, Trash2, Search, Eye } from 'lucide-react';
@@ -12,6 +13,7 @@ import * as XLSX from 'xlsx';
 
 export function Employees() {
   const { currentCompany } = useCompany();
+  const { t, isRTL } = useLanguage();
   const [searchParams] = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
@@ -211,8 +213,8 @@ export function Employees() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Employees</h1>
-          <p className="text-gray-600 mt-1">Manage your employee records</p>
+          <h1 className="text-3xl font-bold text-gray-900">{t.employees.title}</h1>
+          <p className="text-gray-600 mt-1">{t.employees.subtitle}</p>
           {activeFilters.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
               {activeFilters.map(filter => (
@@ -226,27 +228,27 @@ export function Employees() {
             </div>
           )}
         </div>
-        <div className="flex space-x-3">
+        <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <button
             onClick={handleExport}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Download className="h-4 w-4" />
-            <span>Export</span>
+            <span>{t.employees.exportData}</span>
           </button>
           <button
             onClick={() => setShowBulkUpload(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            className={`flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Upload className="h-4 w-4" />
-            <span>Bulk Upload</span>
+            <span>{t.employees.bulkUpload}</span>
           </button>
           <button
             onClick={() => setShowForm(true)}
-            className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+            className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Plus className="h-4 w-4" />
-            <span>Add Employee</span>
+            <span>{t.employees.addEmployee}</span>
           </button>
         </div>
       </div>
@@ -254,13 +256,13 @@ export function Employees() {
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 border-b border-gray-200">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400`} />
             <input
               type="text"
-              placeholder="Search employees..."
+              placeholder={t.employees.searchEmployees}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500`}
             />
           </div>
         </div>
@@ -270,55 +272,55 @@ export function Employees() {
             <thead className="bg-gray-50">
               <tr>
                 <SortableTableHeader
-                  label="Employee #"
+                  label={t.employees.employeeNumber}
                   sortKey="employee_number"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Name"
+                  label={t.common.name}
                   sortKey="first_name_en"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Job Title"
+                  label={t.employees.jobTitle}
                   sortKey="job_title_en"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="IQAMA/ID Number"
+                  label={t.employees.iqamaNumber}
                   sortKey="iqama_number"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Iqama Expiry"
+                  label={t.employees.iqamaExpiry}
                   sortKey="iqama_expiry"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Nationality"
+                  label={t.employees.nationality}
                   sortKey="nationality"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Status"
+                  label={t.common.status}
                   sortKey="status"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Hire Date"
+                  label={t.employees.hireDate}
                   sortKey="hire_date"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                <th className={`px-6 py-3 ${isRTL ? 'text-left' : 'text-right'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.common.actions}
                 </th>
               </tr>
             </thead>
