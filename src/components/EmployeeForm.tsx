@@ -852,14 +852,22 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                   </div>
                 </div>
               </div>
-              <p className="text-xs text-gray-500 mt-3">
-                {formData.is_saudi
-                  ? 'Saudi employees: 9.75% employee + 11.75% employer (per Saudi Labor Law 2024)'
-                  : 'Non-Saudi employees: 0% employee + 2% employer paid by employer (occupational hazards only)'}
-              </p>
-              <p className="text-xs text-gray-500 mt-1">
-                GOSI calculated on: Basic Salary + Housing Allowance only (max 45,000 SAR/month)
-              </p>
+              <div className="text-xs text-gray-500 mt-3 space-y-1">
+                {formData.is_saudi ? (
+                  <>
+                    <p className="font-medium">Saudi employees - Total: 9.75% employee + 11.75% employer = 21.5%</p>
+                    <p className="ml-2">• Annuity (Pension): 9% employee + 9% employer</p>
+                    <p className="ml-2">• Unemployment: 0.75% employee + 0.75% employer</p>
+                    <p className="ml-2">• Occupational Hazards: 0% employee + 2% employer</p>
+                  </>
+                ) : (
+                  <>
+                    <p className="font-medium">Non-Saudi employees - Total: 0% employee + 2% employer = 2%</p>
+                    <p className="ml-2">• Occupational Hazards only: 0% employee + 2% employer</p>
+                  </>
+                )}
+                <p className="font-medium mt-2">GOSI calculated on: Basic Salary + Housing Allowance only (max 45,000 SAR/month)</p>
+              </div>
             </div>
           </div>
 
