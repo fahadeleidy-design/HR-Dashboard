@@ -25,6 +25,7 @@ import { Visas } from './pages/Visas';
 import { Settings } from './pages/Settings';
 import { Loans } from './pages/Loans';
 import { Advances } from './pages/Advances';
+import { GovSubscriptions } from './pages/GovSubscriptions';
 
 function App() {
   return (
@@ -134,6 +135,7 @@ function App() {
             <Route path="/visas" element={<ProtectedRoute><Layout><Visas /></Layout></ProtectedRoute>} />
             <Route path="/loans" element={<ProtectedRoute><Layout><Loans /></Layout></ProtectedRoute>} />
             <Route path="/advances" element={<ProtectedRoute><Layout><Advances /></Layout></ProtectedRoute>} />
+            <Route path="/gov-subscriptions" element={<ProtectedRoute><Layout><GovSubscriptions /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

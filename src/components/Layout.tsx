@@ -23,6 +23,7 @@ import {
   Plane,
   Receipt,
   CreditCard,
+  Globe,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -62,6 +63,7 @@ export function Layout({ children }: LayoutProps) {
     { path: '/travel', icon: Plane, label: 'Travel' },
     { path: '/expenses', icon: Receipt, label: 'Expenses' },
     { path: '/visas', icon: CreditCard, label: 'Visas' },
+    { path: '/gov-subscriptions', icon: Globe, label: 'Gov Subscriptions' },
     { path: '/settings', icon: Settings, label: 'Settings' },
   ];
 
