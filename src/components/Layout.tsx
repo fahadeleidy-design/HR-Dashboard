@@ -54,6 +54,7 @@ export function Layout({ children }: LayoutProps) {
       items: [
         { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
         { path: '/employees', icon: Users, label: 'Employees' },
+        { path: '/org-chart', icon: TrendingUp, label: 'Org Chart' },
         { path: '/attendance', icon: Clock, label: 'Attendance' },
         { path: '/leave', icon: Calendar, label: 'Leave' },
       ]

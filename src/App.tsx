@@ -29,6 +29,7 @@ import { Advances } from './pages/Advances';
 import { GovSubscriptions } from './pages/GovSubscriptions';
 import { EndOfService } from './pages/EndOfService';
 import { AuditLog } from './pages/AuditLog';
+import { OrgChart } from './pages/OrgChart';
 
 function App() {
   return (
@@ -54,6 +55,16 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Employees />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/org-chart"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <OrgChart />
                   </Layout>
                 </ProtectedRoute>
               }
