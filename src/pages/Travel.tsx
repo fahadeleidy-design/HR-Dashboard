@@ -79,15 +79,28 @@ export function Travel() {
     employee_id: '',
     destination: '',
     destination_country: '',
+    destination_city: '',
     purpose: '',
+    travel_type: 'business',
     departure_date: '',
     return_date: '',
     estimated_cost: '',
     per_diem_rate: '',
+    accommodation_needed: true,
+    transportation_method: 'flight',
     requires_exit_reentry: false,
     visa_required: false,
+    booking_status: 'not_booked',
+    flight_details: '',
+    hotel_details: '',
+    rental_car_needed: false,
+    rental_car_details: '',
+    emergency_contact_name: '',
+    emergency_contact_phone: '',
+    insurance_coverage: '',
     project_code: '',
     cost_center: '',
+    advance_amount: '',
     notes: '',
   });
 
@@ -187,25 +200,39 @@ export function Travel() {
         company_id: currentCompany.id,
         request_number: requestNumber,
         employee_id: formData.employee_id,
-        destination: formData.destination,
+        trip_purpose: formData.purpose,
+        destination_city: formData.destination_city || formData.destination,
         destination_country: formData.destination_country,
-        purpose: formData.purpose,
         departure_date: formData.departure_date,
         return_date: formData.return_date,
-        duration_days: durationDays,
+        travel_days: durationDays,
+        travel_type: formData.destination_country.toLowerCase() === 'saudi arabia' ? 'domestic' : 'international',
+        transportation_method: formData.transportation_method,
+        accommodation_needed: formData.accommodation_needed,
         estimated_cost: parseFloat(formData.estimated_cost) || 0,
+        advance_amount: formData.advance_amount ? parseFloat(formData.advance_amount) : null,
+        advance_paid: false,
         per_diem_rate: perDiemRate,
-        per_diem_total: perDiemTotal,
-        requires_exit_reentry: selectedEmployee?.is_saudi ? false : formData.requires_exit_reentry,
+        total_per_diem: perDiemTotal,
+        exit_reentry_required: selectedEmployee?.is_saudi ? false : formData.requires_exit_reentry,
         exit_reentry_obtained: false,
         visa_required: formData.visa_required,
-        visa_obtained: false,
+        visa_status: formData.visa_required ? 'pending' : null,
+        booking_status: formData.booking_status,
+        flight_details: formData.flight_details || null,
+        hotel_details: formData.hotel_details || null,
+        rental_car_details: formData.rental_car_details || null,
+        emergency_contact_name: formData.emergency_contact_name || null,
+        emergency_contact_phone: formData.emergency_contact_phone || null,
+        insurance_coverage: formData.insurance_coverage || null,
         project_code: formData.project_code || null,
         cost_center: formData.cost_center || null,
-        manager_approval: 'pending',
-        hr_approval: 'pending',
-        finance_approval: 'pending',
-        status: 'pending',
+        approval_status: 'pending',
+        manager_approval_id: null,
+        hr_approval_id: null,
+        finance_approval_id: null,
+        receipts_submitted: false,
+        settlement_status: 'pending',
         notes: formData.notes || null,
       });
 
@@ -216,15 +243,28 @@ export function Travel() {
         employee_id: '',
         destination: '',
         destination_country: '',
+        destination_city: '',
         purpose: '',
+        travel_type: 'business',
         departure_date: '',
         return_date: '',
         estimated_cost: '',
         per_diem_rate: '',
+        accommodation_needed: true,
+        transportation_method: 'flight',
         requires_exit_reentry: false,
         visa_required: false,
+        booking_status: 'not_booked',
+        flight_details: '',
+        hotel_details: '',
+        rental_car_needed: false,
+        rental_car_details: '',
+        emergency_contact_name: '',
+        emergency_contact_phone: '',
+        insurance_coverage: '',
         project_code: '',
         cost_center: '',
+        advance_amount: '',
         notes: '',
       });
 
@@ -846,12 +886,12 @@ export function Travel() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full my-8">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">New Travel Request</h2>
-                  <p className="text-gray-600 mt-1">Create a new business travel request</p>
+                  <h2 className="text-2xl font-bold text-gray-900">New Business Travel Request</h2>
+                  <p className="text-gray-600 mt-1">Create a comprehensive travel request with booking and approval workflow</p>
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}
@@ -1005,8 +1045,162 @@ export function Travel() {
                   />
                 </div>
 
+                <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Travel Details</h3>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Transportation Method
+                  </label>
+                  <select
+                    value={formData.transportation_method}
+                    onChange={(e) => setFormData({ ...formData, transportation_method: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="flight">Flight</option>
+                    <option value="car">Car</option>
+                    <option value="train">Train</option>
+                    <option value="bus">Bus</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Booking Status
+                  </label>
+                  <select
+                    value={formData.booking_status}
+                    onChange={(e) => setFormData({ ...formData, booking_status: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="not_booked">Not Booked</option>
+                    <option value="booked">Booked</option>
+                    <option value="cancelled">Cancelled</option>
+                  </select>
+                </div>
+
                 <div className="md:col-span-2">
-                  <div className="flex items-start space-x-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Flight Details
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.flight_details}
+                    onChange={(e) => setFormData({ ...formData, flight_details: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Flight number, airline, departure time..."
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="flex items-center space-x-2 cursor-pointer mb-3">
+                    <input
+                      type="checkbox"
+                      checked={formData.accommodation_needed}
+                      onChange={(e) => setFormData({ ...formData, accommodation_needed: e.target.checked })}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Accommodation Needed</span>
+                  </label>
+
+                  {formData.accommodation_needed && (
+                    <input
+                      type="text"
+                      value={formData.hotel_details}
+                      onChange={(e) => setFormData({ ...formData, hotel_details: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Hotel name, address, booking reference..."
+                    />
+                  )}
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="flex items-center space-x-2 cursor-pointer mb-3">
+                    <input
+                      type="checkbox"
+                      checked={formData.rental_car_needed}
+                      onChange={(e) => setFormData({ ...formData, rental_car_needed: e.target.checked })}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Rental Car Needed</span>
+                  </label>
+
+                  {formData.rental_car_needed && (
+                    <input
+                      type="text"
+                      value={formData.rental_car_details}
+                      onChange={(e) => setFormData({ ...formData, rental_car_details: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Rental company, car type, pickup location..."
+                    />
+                  )}
+                </div>
+
+                <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial & Emergency Information</h3>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Advance Payment (SAR)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.advance_amount}
+                    onChange={(e) => setFormData({ ...formData, advance_amount: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="0.00"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Amount to be paid in advance</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Travel Insurance
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.insurance_coverage}
+                    onChange={(e) => setFormData({ ...formData, insurance_coverage: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Insurance policy number"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Emergency Contact Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.emergency_contact_name}
+                    onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="Name"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Emergency Contact Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.emergency_contact_phone}
+                    onChange={(e) => setFormData({ ...formData, emergency_contact_phone: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="+966 5X XXX XXXX"
+                  />
+                </div>
+
+                <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance & Permissions</h3>
+                </div>
+
+                <div className="md:col-span-2">
+                  <div className="flex items-start space-x-6">
                     <label className="flex items-center space-x-2 cursor-pointer">
                       <input
                         type="checkbox"
@@ -1014,7 +1208,7 @@ export function Travel() {
                         onChange={(e) => setFormData({ ...formData, requires_exit_reentry: e.target.checked })}
                         className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                       />
-                      <span className="text-sm text-gray-700">Requires Exit-Reentry Permit</span>
+                      <span className="text-sm text-gray-700">Requires Exit-Reentry Permit (Expats)</span>
                     </label>
 
                     <label className="flex items-center space-x-2 cursor-pointer">
@@ -1024,9 +1218,12 @@ export function Travel() {
                         onChange={(e) => setFormData({ ...formData, visa_required: e.target.checked })}
                         className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                       />
-                      <span className="text-sm text-gray-700">Visa Required</span>
+                      <span className="text-sm text-gray-700">Destination Visa Required</span>
                     </label>
                   </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Exit-reentry permits required for expat employees leaving Saudi Arabia
+                  </p>
                 </div>
 
                 <div className="md:col-span-2">
