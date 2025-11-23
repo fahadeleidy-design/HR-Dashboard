@@ -34,6 +34,7 @@ export function Payroll() {
   const [showCalculator, setShowCalculator] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState('');
   const [employees, setEmployees] = useState<any[]>([]);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
   const [salaryForm, setSalaryForm] = useState({
     basic_salary: 0,
@@ -47,7 +48,7 @@ export function Payroll() {
       fetchPayrollRecords();
       fetchEmployees();
     }
-  }, [currentCompany]);
+  }, [currentCompany, selectedMonth]);
 
   const { sortedData, sortConfig, requestSort } = useSortableData(payrollRecords);
 
@@ -56,8 +57,6 @@ export function Payroll() {
 
     setLoading(true);
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7);
-
       const { data, error } = await supabase
         .from('payroll')
         .select(`
@@ -65,8 +64,8 @@ export function Payroll() {
           employee:employees(employee_number, first_name_en, last_name_en, is_saudi, iqama_number)
         `)
         .eq('company_id', currentCompany.id)
-        .gte('effective_from', `${currentMonth}-01`)
-        .lt('effective_from', `${currentMonth}-32`)
+        .gte('effective_from', `${selectedMonth}-01`)
+        .lt('effective_from', `${selectedMonth}-32`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -212,7 +211,19 @@ export function Payroll() {
           <h1 className="text-3xl font-bold text-gray-900">Payroll Management</h1>
           <p className="text-gray-600 mt-1">Manage employee salaries and GOSI calculations</p>
         </div>
-        <div className="flex space-x-3">
+        <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-2">
+            <label htmlFor="month-select" className="text-sm font-medium text-gray-700">
+              Month:
+            </label>
+            <input
+              id="month-select"
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
           <button
             onClick={handleExport}
             className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
