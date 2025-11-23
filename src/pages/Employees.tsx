@@ -6,6 +6,7 @@ import { Plus, Upload, Download, Pencil, Trash2, Search, Eye } from 'lucide-reac
 import { EmployeeForm } from '@/components/EmployeeForm';
 import { BulkUpload } from '@/components/BulkUpload';
 import { EmployeeDetail } from '@/components/EmployeeDetail';
+import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import * as XLSX from 'xlsx';
 
 export function Employees() {
@@ -30,6 +31,8 @@ export function Employees() {
   useEffect(() => {
     filterEmployees();
   }, [searchTerm, employees]);
+
+  const { sortedData, sortConfig, requestSort } = useSortableData(filteredEmployees);
 
   const fetchEmployees = async () => {
     if (!currentCompany) return;
@@ -219,44 +222,68 @@ export function Employees() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee #
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Job Title
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  IQAMA/ID Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Iqama Expiry
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nationality
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Hire Date
-                </th>
+                <SortableTableHeader
+                  label="Employee #"
+                  sortKey="employee_number"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Name"
+                  sortKey="first_name_en"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Job Title"
+                  sortKey="job_title_en"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="IQAMA/ID Number"
+                  sortKey="iqama_number"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Iqama Expiry"
+                  sortKey="iqama_expiry"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Nationality"
+                  sortKey="nationality"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Status"
+                  sortKey="status"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Hire Date"
+                  sortKey="hire_date"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredEmployees.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     No employees found. Click "Add Employee" or "Bulk Upload" to get started.
                   </td>
                 </tr>
               ) : (
-                filteredEmployees.map((employee) => (
+                sortedData.map((employee) => (
                   <tr key={employee.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {employee.employee_number}

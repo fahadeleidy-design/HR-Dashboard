@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, DollarSign, Calculator, Download } from 'lucide-react';
+import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import * as XLSX from 'xlsx';
 
 interface PayrollRecord {
@@ -46,6 +47,8 @@ export function Payroll() {
       fetchEmployees();
     }
   }, [currentCompany]);
+
+  const { sortedData, sortConfig, requestSort } = useSortableData(payrollRecords);
 
   const fetchPayrollRecords = async () => {
     if (!currentCompany) return;
@@ -250,38 +253,53 @@ export function Payroll() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Basic Salary
-                </th>
+                <SortableTableHeader
+                  label="Employee"
+                  sortKey="employee.first_name_en"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Basic Salary"
+                  sortKey="basic_salary"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Allowances
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Gross Salary
-                </th>
+                <SortableTableHeader
+                  label="Gross Salary"
+                  sortKey="gross_salary"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   GOSI
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Net Salary
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Effective Date
-                </th>
+                <SortableTableHeader
+                  label="Net Salary"
+                  sortKey="net_salary"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Effective Date"
+                  sortKey="effective_from"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {payrollRecords.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     No payroll records found. Click "Add Payroll" to get started.
                   </td>
                 </tr>
               ) : (
-                payrollRecords.map((record) => {
+                sortedData.map((record) => {
                   const totalGosi = (record.gosi_employee || 0) + (record.gosi_employer || 0);
 
                   return (

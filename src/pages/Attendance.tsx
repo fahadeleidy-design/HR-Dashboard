@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Calendar, Clock, Download } from 'lucide-react';
+import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import * as XLSX from 'xlsx';
 
 interface AttendanceRecord {
@@ -85,6 +86,8 @@ export function Attendance() {
   const lateCount = attendanceRecords.filter(r => r.status === 'late').length;
   const totalOvertime = attendanceRecords.reduce((sum, r) => sum + (r.overtime_hours || 0), 0);
 
+  const { sortedData, sortConfig, requestSort } = useSortableData(attendanceRecords);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -164,38 +167,59 @@ export function Attendance() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Check In
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Check Out
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Hours
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Overtime
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                <SortableTableHeader
+                  label="Employee"
+                  sortKey="employee.first_name_en"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Date"
+                  sortKey="date"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Check In"
+                  sortKey="check_in"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Check Out"
+                  sortKey="check_out"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Total Hours"
+                  sortKey="total_hours"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Overtime"
+                  sortKey="overtime_hours"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Status"
+                  sortKey="status"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {attendanceRecords.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     No attendance records found for this month.
                   </td>
                 </tr>
               ) : (
-                attendanceRecords.map((record) => (
+                sortedData.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">

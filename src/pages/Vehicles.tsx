@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Car, Plus, AlertTriangle, Wrench, DollarSign } from 'lucide-react';
+import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 
 interface Vehicle {
   id: string;
@@ -82,6 +83,8 @@ export function Vehicles() {
     const daysUntil = Math.floor((new Date(v.insurance_expiry).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
     return daysUntil <= 30 && daysUntil >= 0;
   }).length;
+
+  const { sortedData, sortConfig, requestSort } = useSortableData(vehicles);
 
   if (loading) {
     return (
@@ -185,35 +188,53 @@ export function Vehicles() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Vehicle Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Plate Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Make & Model
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mileage
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                <SortableTableHeader
+                  label="Vehicle Number"
+                  sortKey="vehicle_number"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Plate Number"
+                  sortKey="plate_number"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Make & Model"
+                  sortKey="make"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Type"
+                  sortKey="vehicle_type"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Mileage"
+                  sortKey="current_mileage"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Status"
+                  sortKey="status"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {vehicles.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     No vehicles found. Click "Add Vehicle" to register a vehicle.
                   </td>
                 </tr>
               ) : (
-                vehicles.map((vehicle) => (
+                sortedData.map((vehicle) => (
                   <tr key={vehicle.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {vehicle.vehicle_number}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { FileText, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 
 interface Document {
   id: string;
@@ -61,6 +62,8 @@ export function Documents() {
   const activeCount = documents.filter(d => d.status === 'active').length;
   const expiringSoonCount = documents.filter(d => d.status === 'expiring_soon').length;
   const expiredCount = documents.filter(d => d.status === 'expired').length;
+
+  const { sortedData, sortConfig, requestSort } = useSortableData(filteredDocuments);
 
   if (loading) {
     return (
@@ -144,35 +147,53 @@ export function Documents() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Document Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Document Number
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Issue Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Expiry Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                <SortableTableHeader
+                  label="Employee"
+                  sortKey="employee.first_name_en"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Document Type"
+                  sortKey="document_type"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Document Number"
+                  sortKey="document_number"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Issue Date"
+                  sortKey="issue_date"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Expiry Date"
+                  sortKey="expiry_date"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Status"
+                  sortKey="status"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredDocuments.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     No documents found.
                   </td>
                 </tr>
               ) : (
-                filteredDocuments.map((document) => (
+                sortedData.map((document) => (
                   <tr key={document.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">

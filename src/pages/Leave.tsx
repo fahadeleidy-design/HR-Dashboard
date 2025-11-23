@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Calendar, Check, X, Clock } from 'lucide-react';
+import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 
 interface LeaveRequest {
   id: string;
@@ -235,6 +236,8 @@ export function Leave() {
   const approvedCount = leaveRequests.filter(r => r.status === 'approved').length;
   const rejectedCount = leaveRequests.filter(r => r.status === 'rejected').length;
 
+  const { sortedData, sortConfig, requestSort } = useSortableData(filteredRequests);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -324,24 +327,42 @@ export function Leave() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Leave Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Start Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  End Date
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Days
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                <SortableTableHeader
+                  label="Employee"
+                  sortKey="employee.first_name_en"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Leave Type"
+                  sortKey="leave_type.name_en"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Start Date"
+                  sortKey="start_date"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="End Date"
+                  sortKey="end_date"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Days"
+                  sortKey="days_requested"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
+                <SortableTableHeader
+                  label="Status"
+                  sortKey="status"
+                  currentSort={sortConfig}
+                  onSort={requestSort}
+                />
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Reason
                 </th>
@@ -351,14 +372,14 @@ export function Leave() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredRequests.length === 0 ? (
+              {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                     No leave requests found.
                   </td>
                 </tr>
               ) : (
-                filteredRequests.map((request) => (
+                sortedData.map((request) => (
                   <tr key={request.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
