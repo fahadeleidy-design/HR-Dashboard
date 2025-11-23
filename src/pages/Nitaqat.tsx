@@ -14,16 +14,26 @@ interface Employee {
 interface NitaqatCalculation {
   totalEmployees: number;
   saudiCount: number;
+  nonSaudiCount: number;
   fullCountSaudis: number;
   halfCountSaudis: number;
   disabledSaudis: number;
   effectiveSaudiCount: number;
   saudizationPercentage: number;
+  effectivePercentage: number;
   nitaqatColor: string;
+  bandName: string;
   colorZone: string;
   requirements: string;
   nextZonePercentage?: number;
   employeesNeededForNextZone?: number;
+  minPercentage?: number;
+  maxPercentage?: number;
+  sizeBandName?: string;
+  sectorName?: string;
+  calculationMethod?: string;
+  nextBandName?: string;
+  nextBandColor?: string;
 }
 
 interface NitaqatHistoryRecord {
@@ -70,6 +80,25 @@ export function Nitaqat() {
     }
   };
 
+  const getBandRequirements = (bandName: string): string => {
+    switch (bandName) {
+      case 'Red':
+        return 'Your company is in the Red Band. You cannot hire new expatriates, renew work permits, or transfer employees. Immediate action required to increase Saudization.';
+      case 'Yellow':
+        return 'Your company is in the Yellow Band. You have minimal compliance. Work towards achieving Green status for better benefits.';
+      case 'Low Green':
+        return 'Your company is in the Low Green Band. You have basic compliance but limited flexibility for visa services.';
+      case 'Mid Green':
+        return 'Your company is in the Mid Green Band. You have good compliance with standard visa services available.';
+      case 'High Green':
+        return 'Your company is in the High Green Band. Excellent compliance with full access to visa services.';
+      case 'Platinum':
+        return 'Congratulations! Your company is in the Platinum Band with the highest Saudization rate. You have priority access to all government services.';
+      default:
+        return 'Your Nitaqat status is being calculated based on your company sector and size.';
+    }
+  };
+
   const calculateNitaqatColor = (totalEmp: number, saudizationPercent: number): { color: string; zone: string } => {
     if (totalEmp < 6) {
       return { color: 'exempt', zone: 'Exempt (< 6 employees)' };
@@ -104,6 +133,43 @@ export function Nitaqat() {
 
     setLoading(true);
     try {
+      const { data: bandData, error: bandError } = await supabase.rpc('get_current_nitaqat_band', {
+        p_company_id: currentCompany.id
+      });
+
+      if (bandError) {
+        console.error('Error fetching Nitaqat band:', bandError);
+      }
+
+      if (bandData && bandData.status === 'success') {
+        setNitaqatCalc({
+          totalEmployees: bandData.total_employees,
+          saudiCount: bandData.saudi_count,
+          nonSaudiCount: bandData.non_saudi_count,
+          fullCountSaudis: 0,
+          halfCountSaudis: 0,
+          disabledSaudis: 0,
+          effectiveSaudiCount: bandData.effective_saudi_count,
+          saudizationPercentage: bandData.current_percentage,
+          effectivePercentage: bandData.effective_percentage,
+          nitaqatColor: bandData.band_color,
+          bandName: bandData.band_name,
+          colorZone: bandData.band_name,
+          requirements: getBandRequirements(bandData.band_name),
+          nextZonePercentage: bandData.next_band?.min_percentage,
+          employeesNeededForNextZone: bandData.next_band?.saudi_employees_needed,
+          minPercentage: bandData.min_percentage,
+          maxPercentage: bandData.max_percentage,
+          sizeBandName: bandData.size_band_name,
+          sectorName: bandData.sector_name,
+          calculationMethod: bandData.calculation_method,
+          nextBandName: bandData.next_band?.band_name,
+          nextBandColor: bandData.next_band?.band_color,
+        });
+        setLoading(false);
+        return;
+      }
+
       const { data: empData, error } = await supabase
         .from('employees')
         .select('id, is_saudi, has_disability')
@@ -186,12 +252,15 @@ export function Nitaqat() {
       setNitaqatCalc({
         totalEmployees,
         saudiCount,
+        nonSaudiCount: totalEmployees - saudiCount,
         fullCountSaudis,
         halfCountSaudis,
         disabledSaudis,
         effectiveSaudiCount,
         saudizationPercentage,
+        effectivePercentage: saudizationPercentage,
         nitaqatColor: color,
+        bandName: zone,
         colorZone: zone,
         requirements,
         nextZonePercentage,
@@ -436,6 +505,32 @@ export function Nitaqat() {
                 </p>
               </div>
             </div>
+
+            {nitaqatCalc.sectorName && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-gray-900 mb-2">Company Configuration</h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-600">Sector</p>
+                    <p className="font-bold text-gray-900">{nitaqatCalc.sectorName}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Size Band</p>
+                    <p className="font-bold text-gray-900">{nitaqatCalc.sizeBandName}</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Band Range</p>
+                    <p className="font-bold text-gray-900">{nitaqatCalc.minPercentage}% - {nitaqatCalc.maxPercentage || '∞'}%</p>
+                  </div>
+                  <div>
+                    <p className="text-gray-600">Method</p>
+                    <p className="font-bold text-gray-900 text-xs">
+                      {nitaqatCalc.calculationMethod === 'immediate' ? 'Immediate (1-Week)' : '26-Week Average'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="font-semibold text-gray-900 mb-2">Calculation Breakdown</h3>

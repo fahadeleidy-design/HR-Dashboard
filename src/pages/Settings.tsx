@@ -23,6 +23,26 @@ interface GOSIConfig {
   sync_enabled: boolean;
 }
 
+interface NitaqatSector {
+  id: string;
+  name_en: string;
+  name_ar: string | null;
+  code: string;
+}
+
+interface Company {
+  id: string;
+  name_en: string;
+  name_ar: string | null;
+  cr_number: string | null;
+  establishment_number: string | null;
+  nitaqat_entity_size: string;
+  nitaqat_activity: string;
+  nitaqat_sector_id: string | null;
+  establishment_date: string | null;
+  nitaqat_calculation_method: 'average_26_weeks' | 'immediate';
+}
+
 export function Settings() {
   const { currentCompany, companies } = useCompany();
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -41,6 +61,13 @@ export function Settings() {
     environment: 'sandbox' as 'sandbox' | 'production',
     sync_enabled: false,
   });
+  const [nitaqatSectors, setNitaqatSectors] = useState<NitaqatSector[]>([]);
+  const [companyForm, setCompanyForm] = useState({
+    nitaqat_sector_id: '',
+    establishment_date: '',
+    nitaqat_calculation_method: 'average_26_weeks' as 'average_26_weeks' | 'immediate',
+  });
+  const [companyLoading, setCompanyLoading] = useState(false);
   const [deptForm, setDeptForm] = useState({
     name_en: '',
     name_ar: '',
@@ -51,6 +78,12 @@ export function Settings() {
     if (currentCompany) {
       fetchDepartments();
       fetchGOSIConfig();
+      fetchNitaqatSectors();
+      setCompanyForm({
+        nitaqat_sector_id: currentCompany.nitaqat_sector_id || '',
+        establishment_date: currentCompany.establishment_date || '',
+        nitaqat_calculation_method: currentCompany.nitaqat_calculation_method || 'average_26_weeks',
+      });
     }
   }, [currentCompany]);
 
@@ -71,6 +104,20 @@ export function Settings() {
       console.error('Error fetching departments:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchNitaqatSectors = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('nitaqat_sectors')
+        .select('*')
+        .order('name_en');
+
+      if (error) throw error;
+      setNitaqatSectors(data || []);
+    } catch (error) {
+      console.error('Error fetching Nitaqat sectors:', error);
     }
   };
 
@@ -199,6 +246,32 @@ export function Settings() {
     }
   };
 
+  const handleUpdateCompanyNitaqat = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCompany) return;
+
+    setCompanyLoading(true);
+    try {
+      const { error } = await supabase
+        .from('companies')
+        .update({
+          nitaqat_sector_id: companyForm.nitaqat_sector_id || null,
+          establishment_date: companyForm.establishment_date || null,
+          nitaqat_calculation_method: companyForm.nitaqat_calculation_method,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', currentCompany.id);
+
+      if (error) throw error;
+      alert('Nitaqat configuration updated successfully!');
+    } catch (error: any) {
+      console.error('Error updating company:', error);
+      alert(error.message || 'Failed to update Nitaqat configuration');
+    } finally {
+      setCompanyLoading(false);
+    }
+  };
+
   const handleAddDepartment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCompany) return;
@@ -322,6 +395,88 @@ export function Settings() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center space-x-4 mb-6">
+          <Building2 className="h-12 w-12 text-green-600" />
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Nitaqat Configuration</h2>
+            <p className="text-gray-600">Configure sector and calculation method for Nitaqat tracking</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleUpdateCompanyNitaqat}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nitaqat Sector *
+              </label>
+              <select
+                required
+                value={companyForm.nitaqat_sector_id}
+                onChange={(e) => setCompanyForm({ ...companyForm, nitaqat_sector_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">Select a sector...</option>
+                {nitaqatSectors.map((sector) => (
+                  <option key={sector.id} value={sector.id}>
+                    {sector.name_en} {sector.name_ar ? `(${sector.name_ar})` : ''}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-500 mt-1">
+                Select your company's primary economic sector as registered with HRSD
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Establishment Date
+              </label>
+              <input
+                type="date"
+                value={companyForm.establishment_date}
+                onChange={(e) => setCompanyForm({ ...companyForm, establishment_date: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Used to determine if entity is newly established (&lt; 13 weeks)
+              </p>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Calculation Method
+              </label>
+              <select
+                value={companyForm.nitaqat_calculation_method}
+                onChange={(e) => setCompanyForm({ ...companyForm, nitaqat_calculation_method: e.target.value as 'average_26_weeks' | 'immediate' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="average_26_weeks">Traditional (26-Week Average)</option>
+                <option value="immediate">Immediate (1-Week Calculation)</option>
+              </select>
+              <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <p className="text-sm text-blue-900 font-medium mb-1">About Calculation Methods:</p>
+                <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                  <li><strong>Traditional (26-Week Average):</strong> Default method for most establishments. Calculates based on 26-week average to reduce risk of quick band changes.</li>
+                  <li><strong>Immediate (1-Week):</strong> Only applies if: (a) Entity in Low Green+ for 13 consecutive weeks, (b) Newly established (&lt; 13 weeks), or (c) Small-A entity (≤ 5 employees).</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              type="submit"
+              disabled={companyLoading}
+              className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {companyLoading ? 'Updating...' : 'Update Configuration'}
+            </button>
+          </div>
+        </form>
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
