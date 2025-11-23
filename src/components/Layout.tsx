@@ -27,6 +27,7 @@ import {
   Menu,
   X,
   Calculator,
+  ScrollText,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -98,6 +99,7 @@ export function Layout({ children }: LayoutProps) {
     {
       title: 'System',
       items: [
+        { path: '/audit-log', icon: ScrollText, label: 'Audit Log' },
         { path: '/settings', icon: Settings, label: 'Settings' },
       ]
     }
