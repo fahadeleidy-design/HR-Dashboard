@@ -13,7 +13,8 @@ import { Attendance } from './pages/Attendance';
 import { Performance } from './pages/Performance';
 import { Training } from './pages/Training';
 import { Documents } from './pages/Documents';
-import { Compliance } from './pages/Compliance';
+import { Nitaqat } from './pages/Nitaqat';
+import { GOSI } from './pages/GOSI';
 import { Vehicles } from './pages/Vehicles';
 import { GovernmentalDocs } from './pages/GovernmentalDocs';
 import { RealEstate } from './pages/RealEstate';
@@ -116,11 +117,21 @@ function App() {
               }
             />
             <Route
-              path="/compliance"
+              path="/nitaqat"
               element={
                 <ProtectedRoute>
                   <Layout>
-                    <Compliance />
+                    <Nitaqat />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/gosi"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <GOSI />
                   </Layout>
                 </ProtectedRoute>
               }
