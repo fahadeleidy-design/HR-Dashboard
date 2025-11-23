@@ -477,16 +477,17 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
                 const grossSalary = mergedPayroll.basic_salary + mergedPayroll.housing_allowance + mergedPayroll.transportation_allowance + mergedPayroll.other_allowances;
 
                 const gosiWageCeiling = 45000;
-                const gosiWage = Math.min(grossSalary, gosiWageCeiling);
+                const gosiBase = mergedPayroll.basic_salary + mergedPayroll.housing_allowance;
+                const gosiWage = Math.min(gosiBase, gosiWageCeiling);
 
                 let gosiEmployee = 0;
                 let gosiEmployer = 0;
 
                 if (mergedData.is_saudi) {
-                  gosiEmployee = gosiWage * 0.10;
-                  gosiEmployer = gosiWage * 0.12;
+                  gosiEmployee = gosiWage * 0.0975;
+                  gosiEmployer = gosiWage * 0.1175;
                 } else {
-                  gosiEmployee = gosiWage * 0.02;
+                  gosiEmployee = 0;
                   gosiEmployer = gosiWage * 0.02;
                 }
 
