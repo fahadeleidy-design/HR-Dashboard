@@ -388,6 +388,34 @@ export function Payroll() {
     }
   };
 
+  const deleteBatch = async (batchId: string) => {
+    if (!confirm('Are you sure you want to delete this draft batch? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error: itemsError } = await supabase
+        .from('payroll_items')
+        .delete()
+        .eq('batch_id', batchId);
+
+      if (itemsError) throw itemsError;
+
+      const { error: batchError } = await supabase
+        .from('payroll_batches')
+        .delete()
+        .eq('id', batchId);
+
+      if (batchError) throw batchError;
+
+      alert('Batch deleted successfully');
+      fetchBatches();
+    } catch (error: any) {
+      console.error('Error deleting batch:', error);
+      alert('Failed to delete batch: ' + error.message);
+    }
+  };
+
   const generatePayslips = async (batchId: string) => {
     try {
       const items = await supabase
@@ -645,13 +673,22 @@ export function Payroll() {
                               <Eye className="h-4 w-4" />
                             </button>
                             {batch.status === 'draft' && (
-                              <button
-                                onClick={() => updateBatchStatus(batch.id, 'pending_approval')}
-                                className="text-yellow-600 hover:text-yellow-800"
-                                title="Submit for Approval"
-                              >
-                                <Send className="h-4 w-4" />
-                              </button>
+                              <>
+                                <button
+                                  onClick={() => updateBatchStatus(batch.id, 'pending_approval')}
+                                  className="text-yellow-600 hover:text-yellow-800"
+                                  title="Submit for Approval"
+                                >
+                                  <Send className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={() => deleteBatch(batch.id)}
+                                  className="text-red-600 hover:text-red-800"
+                                  title="Delete Draft"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </>
                             )}
                             {batch.status === 'pending_approval' && (
                               <button
