@@ -26,6 +26,7 @@ import {
   Globe,
   Menu,
   X,
+  Calculator,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -63,6 +64,7 @@ export function Layout({ children }: LayoutProps) {
         { path: '/loans', icon: CreditCard, label: 'Loans' },
         { path: '/advances', icon: Receipt, label: 'Advances' },
         { path: '/expenses', icon: Receipt, label: 'Expenses' },
+        { path: '/end-of-service', icon: Calculator, label: 'End of Service' },
       ]
     },
     {
