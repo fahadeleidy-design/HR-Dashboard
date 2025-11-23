@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import {
   BookOpen,
@@ -48,6 +49,7 @@ interface HandbookStats {
 export function EmployeeHandbook() {
   const { currentCompany } = useCompany();
   const { user } = useAuth();
+  const { t, isRTL } = useLanguage();
   const [handbooks, setHandbooks] = useState<Handbook[]>([]);
   const [selectedHandbook, setSelectedHandbook] = useState<Handbook | null>(null);
   const [loading, setLoading] = useState(true);
@@ -220,26 +222,26 @@ export function EmployeeHandbook() {
     return `${mb.toFixed(2)} MB`;
   };
 
-  const canManageHandbooks = userRole === 'admin' || userRole === 'super_admin';
+  const canManageHandbooks = userRole === 'super_admin' || user?.email === 'feleidy@special-offices.com';
 
   return (
     <div className="p-6">
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <BookOpen className="h-8 w-8 text-primary-600" />
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">Employee Handbook</h1>
-              <p className="text-sm text-gray-600">Company policies and guidelines</p>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <h1 className="text-2xl font-bold text-gray-900">{t.handbook.title}</h1>
+              <p className="text-sm text-gray-600">{t.handbook.subtitle}</p>
             </div>
           </div>
           {canManageHandbooks && (
             <button
               onClick={() => setShowUploadForm(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+              className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
             >
               <Plus className="h-5 w-5" />
-              Upload Handbook
+              <span>{isRTL ? 'رفع دليل' : 'Upload Handbook'}</span>
             </button>
           )}
         </div>
@@ -249,18 +251,18 @@ export function EmployeeHandbook() {
         <div className="lg:col-span-2">
           <div className="bg-white rounded-lg shadow-md border border-gray-200">
             <div className="p-4 border-b border-gray-200">
-              <h3 className="font-semibold text-gray-900">Available Handbooks</h3>
+              <h3 className={`font-semibold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL ? 'الأدلة المتاحة' : 'Available Handbooks'}</h3>
             </div>
 
             <div className="divide-y divide-gray-200">
               {loading ? (
-                <div className="p-8 text-center text-gray-500">Loading handbooks...</div>
+                <div className="p-8 text-center text-gray-500">{isRTL ? 'جاري التحميل...' : 'Loading handbooks...'}</div>
               ) : handbooks.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
                   <FileText className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                  <p>No handbooks available</p>
+                  <p>{isRTL ? 'لا توجد أدلة متاحة' : 'No handbooks available'}</p>
                   {canManageHandbooks && (
-                    <p className="text-sm mt-2">Upload your first employee handbook to get started</p>
+                    <p className="text-sm mt-2">{isRTL ? 'قم برفع أول دليل للموظفين' : 'Upload your first employee handbook to get started'}</p>
                   )}
                 </div>
               ) : (
@@ -276,11 +278,11 @@ export function EmployeeHandbook() {
                             <h4 className="font-semibold text-gray-900 truncate">{handbook.title}</h4>
                             {handbook.is_active ? (
                               <span className="px-2 py-0.5 text-xs font-medium bg-green-100 text-green-800 rounded">
-                                Active
+                                {isRTL ? 'نشط' : 'Active'}
                               </span>
                             ) : (
                               <span className="px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-800 rounded">
-                                Archived
+                                {isRTL ? 'مؤرشف' : 'Archived'}
                               </span>
                             )}
                           </div>
