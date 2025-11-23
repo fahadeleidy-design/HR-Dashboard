@@ -58,6 +58,29 @@ export function Insurance() {
   const [selectedPolicy, setSelectedPolicy] = useState<InsurancePolicy | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showBeneficiariesModal, setShowBeneficiariesModal] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const [formData, setFormData] = useState({
+    policy_number: '',
+    policy_type: 'health',
+    insurance_provider: '',
+    policy_class: '',
+    coverage_type: 'individual',
+    start_date: '',
+    end_date: '',
+    premium_amount: '',
+    cchi_approval_code: '',
+    network_type: 'nationwide',
+    coverage_limit: '',
+    deductible: '',
+    copay_percentage: '',
+    maternity_covered: true,
+    dental_covered: true,
+    optical_covered: true,
+    emergency_covered: true,
+    covered_employees_count: '',
+    covered_dependents_count: ''
+  });
 
   useEffect(() => {
     if (currentCompany) {
@@ -86,6 +109,73 @@ export function Insurance() {
     setPolicies(policiesRes.data || []);
     setBeneficiaries(beneficiariesRes.data || []);
     setLoading(false);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      policy_number: '',
+      policy_type: 'health',
+      insurance_provider: '',
+      policy_class: '',
+      coverage_type: 'individual',
+      start_date: '',
+      end_date: '',
+      premium_amount: '',
+      cchi_approval_code: '',
+      network_type: 'nationwide',
+      coverage_limit: '',
+      deductible: '',
+      copay_percentage: '',
+      maternity_covered: true,
+      dental_covered: true,
+      optical_covered: true,
+      emergency_covered: true,
+      covered_employees_count: '',
+      covered_dependents_count: ''
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCompany) return;
+
+    setSaving(true);
+    try {
+      const { error } = await supabase.from('insurance_policies').insert([{
+        company_id: currentCompany.id,
+        policy_number: formData.policy_number,
+        policy_type: formData.policy_type,
+        insurance_provider: formData.insurance_provider,
+        policy_class: formData.policy_class || null,
+        coverage_type: formData.coverage_type,
+        start_date: formData.start_date,
+        end_date: formData.end_date,
+        premium_amount: parseFloat(formData.premium_amount) || 0,
+        status: 'active',
+        cchi_approval_code: formData.cchi_approval_code || null,
+        network_type: formData.network_type || null,
+        coverage_limit: formData.coverage_limit ? parseFloat(formData.coverage_limit) : null,
+        deductible: formData.deductible ? parseFloat(formData.deductible) : null,
+        copay_percentage: formData.copay_percentage ? parseFloat(formData.copay_percentage) : null,
+        maternity_covered: formData.maternity_covered,
+        dental_covered: formData.dental_covered,
+        optical_covered: formData.optical_covered,
+        emergency_covered: formData.emergency_covered,
+        covered_employees_count: formData.covered_employees_count ? parseInt(formData.covered_employees_count) : null,
+        covered_dependents_count: formData.covered_dependents_count ? parseInt(formData.covered_dependents_count) : null
+      }]);
+
+      if (error) throw error;
+
+      await fetchData();
+      setShowAddModal(false);
+      resetForm();
+    } catch (error) {
+      console.error('Error creating insurance policy:', error);
+      alert('Failed to create insurance policy. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const getDaysUntilExpiry = (endDate: string) => {
@@ -774,47 +864,301 @@ export function Insurance() {
       )}
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Add New Insurance Policy</h2>
-                  <p className="text-gray-600 mt-1">Create a new insurance policy for your company</p>
-                </div>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="text-gray-400 hover:text-gray-600 text-2xl"
-                >
-                  ×
-                </button>
-              </div>
-            </div>
-
-            <div className="p-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+            <form onSubmit={handleSubmit}>
+              <div className="p-6 border-b border-gray-200">
+                <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="text-sm font-semibold text-blue-900">Form Coming Soon</h3>
-                    <p className="text-sm text-blue-800 mt-1">
-                      The insurance policy creation form is under development. For now, please use the direct database interface or contact your system administrator to add new policies.
-                    </p>
+                    <h2 className="text-2xl font-bold text-gray-900">Add New Insurance Policy</h2>
+                    <p className="text-gray-600 mt-1">Create a new insurance policy for your company</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddModal(false); resetForm(); }}
+                    className="text-gray-400 hover:text-gray-600 text-2xl"
+                  >
+                    ×
+                  </button>
+                </div>
+              </div>
+
+              <div className="p-6 max-h-[calc(100vh-300px)] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Policy Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.policy_number}
+                      onChange={(e) => setFormData({ ...formData, policy_number: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Policy Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.policy_type}
+                      onChange={(e) => setFormData({ ...formData, policy_type: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="health">Health Insurance</option>
+                      <option value="vehicle">Vehicle Insurance</option>
+                      <option value="workmen_compensation">Workmen Compensation</option>
+                      <option value="life">Life Insurance</option>
+                      <option value="property">Property Insurance</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Insurance Provider <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.insurance_provider}
+                      onChange={(e) => setFormData({ ...formData, insurance_provider: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g., Bupa, MedGulf, Tawuniya"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Policy Class
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.policy_class}
+                      onChange={(e) => setFormData({ ...formData, policy_class: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g., Class A, Premium, Standard"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Coverage Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.coverage_type}
+                      onChange={(e) => setFormData({ ...formData, coverage_type: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="individual">Individual</option>
+                      <option value="family">Family</option>
+                      <option value="group">Group</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      CCHI Approval Code
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.cchi_approval_code}
+                      onChange={(e) => setFormData({ ...formData, cchi_approval_code: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="CCHI approval code"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Start Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.start_date}
+                      onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      End Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.end_date}
+                      onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Premium Amount (SAR) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      value={formData.premium_amount}
+                      onChange={(e) => setFormData({ ...formData, premium_amount: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Network Type
+                    </label>
+                    <select
+                      value={formData.network_type}
+                      onChange={(e) => setFormData({ ...formData, network_type: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="nationwide">Nationwide</option>
+                      <option value="regional">Regional</option>
+                      <option value="local">Local</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Coverage Limit (SAR)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.coverage_limit}
+                      onChange={(e) => setFormData({ ...formData, coverage_limit: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Deductible (SAR)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={formData.deductible}
+                      onChange={(e) => setFormData({ ...formData, deductible: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Co-pay Percentage (%)
+                    </label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max="100"
+                      value={formData.copay_percentage}
+                      onChange={(e) => setFormData({ ...formData, copay_percentage: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Covered Employees Count
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.covered_employees_count}
+                      onChange={(e) => setFormData({ ...formData, covered_employees_count: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Covered Dependents Count
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.covered_dependents_count}
+                      onChange={(e) => setFormData({ ...formData, covered_dependents_count: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Coverage Options</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.maternity_covered}
+                        onChange={(e) => setFormData({ ...formData, maternity_covered: e.target.checked })}
+                        className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-700">Maternity</span>
+                    </label>
+
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.dental_covered}
+                        onChange={(e) => setFormData({ ...formData, dental_covered: e.target.checked })}
+                        className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-700">Dental</span>
+                    </label>
+
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.optical_covered}
+                        onChange={(e) => setFormData({ ...formData, optical_covered: e.target.checked })}
+                        className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-700">Optical</span>
+                    </label>
+
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.emergency_covered}
+                        onChange={(e) => setFormData({ ...formData, emergency_covered: e.target.checked })}
+                        className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-700">Emergency</span>
+                    </label>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-                >
-                  Close
-                </button>
+              <div className="p-6 border-t border-gray-200 bg-gray-50">
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => { setShowAddModal(false); resetForm(); }}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
+                    disabled={saving}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {saving ? 'Saving...' : 'Create Policy'}
+                  </button>
+                </div>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
