@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatInteger } from '@/lib/formatters';
 import { DollarSign, Download, RefreshCw, AlertCircle, CheckCircle, FileBarChart } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -17,6 +19,7 @@ interface GOSISyncLog {
 
 export function GOSI() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [gosiContributions, setGosiContributions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));

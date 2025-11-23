@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Calendar, Check, X, Clock } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
@@ -42,6 +43,7 @@ interface LeaveType {
 export function Leave() {
   const { currentCompany } = useCompany();
   const { user } = useAuth();
+  const { t, isRTL } = useLanguage();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);

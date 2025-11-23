@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatInteger, formatDate } from '@/lib/formatters';
 import {
   Plus,
   DollarSign,
@@ -100,6 +102,7 @@ type View = 'batches' | 'items' | 'create' | 'analytics';
 
 export function Payroll() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [view, setView] = useState<View>('batches');
   const [batches, setBatches] = useState<PayrollBatch[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<PayrollBatch | null>(null);
