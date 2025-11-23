@@ -45,19 +45,57 @@ interface VisaRequest {
   priority: string;
 }
 
+interface Employee {
+  id: string;
+  employee_number: string;
+  first_name_en: string;
+  last_name_en: string;
+  nationality: string;
+}
+
+interface ProfessionCode {
+  id: string;
+  profession_code: string;
+  profession_name_en: string;
+  profession_name_ar: string;
+  minimum_salary: number;
+}
+
 export function Visas() {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<'visas' | 'iqamas' | 'requests' | 'quotas'>('visas');
 
   const [workVisas, setWorkVisas] = useState<WorkVisa[]>([]);
   const [residencePermits, setResidencePermits] = useState<ResidencePermit[]>([]);
   const [visaRequests, setVisaRequests] = useState<VisaRequest[]>([]);
   const [quotas, setQuotas] = useState<any[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [professionCodes, setProfessionCodes] = useState<ProfessionCode[]>([]);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+
+  const [formData, setFormData] = useState({
+    request_type: 'new_visa',
+    employee_id: '',
+    employee_name: '',
+    nationality: '',
+    passport_number: '',
+    passport_expiry: '',
+    job_title: '',
+    profession_code: '',
+    education: '',
+    experience_years: '',
+    proposed_salary: '',
+    priority: 'normal',
+    expected_arrival_date: '',
+    sponsor_name: '',
+    visa_type: 'employment',
+    notes: '',
+  });
 
   useEffect(() => {
     if (currentCompany) {
@@ -70,7 +108,7 @@ export function Visas() {
 
     setLoading(true);
 
-    const [visasRes, iqamasRes, requestsRes, quotasRes] = await Promise.all([
+    const [visasRes, iqamasRes, requestsRes, quotasRes, employeesRes, professionsRes] = await Promise.all([
       supabase
         .from('work_visas')
         .select('*')
@@ -93,14 +131,116 @@ export function Visas() {
         .from('visa_quotas')
         .select('*')
         .eq('company_id', currentCompany.id)
-        .eq('quota_year', new Date().getFullYear())
+        .eq('quota_year', new Date().getFullYear()),
+
+      supabase
+        .from('employees')
+        .select('id, employee_number, first_name_en, last_name_en, nationality')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'active')
+        .order('first_name_en', { ascending: true }),
+
+      supabase
+        .from('profession_codes')
+        .select('id, profession_code, profession_name_en, profession_name_ar, minimum_salary')
+        .eq('is_active', true)
+        .order('profession_name_en', { ascending: true })
     ]);
 
     setWorkVisas(visasRes.data || []);
     setResidencePermits(iqamasRes.data || []);
     setVisaRequests(requestsRes.data || []);
     setQuotas(quotasRes.data || []);
+    setEmployees(employeesRes.data || []);
+    setProfessionCodes(professionsRes.data || []);
     setLoading(false);
+  };
+
+  const handleEmployeeChange = (employeeId: string) => {
+    const employee = employees.find(e => e.id === employeeId);
+    if (employee) {
+      setFormData({
+        ...formData,
+        employee_id: employeeId,
+        employee_name: `${employee.first_name_en} ${employee.last_name_en}`,
+        nationality: employee.nationality || '',
+      });
+    }
+  };
+
+  const handleProfessionChange = (professionId: string) => {
+    const profession = professionCodes.find(p => p.id === professionId);
+    if (profession) {
+      setFormData({
+        ...formData,
+        profession_code: profession.profession_code,
+        job_title: profession.profession_name_en,
+        proposed_salary: profession.minimum_salary?.toString() || '',
+      });
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCompany) return;
+
+    setSubmitting(true);
+
+    try {
+      const requestNumber = `VR-${Date.now().toString().slice(-8)}`;
+
+      const { error } = await supabase.from('visa_requests').insert({
+        company_id: currentCompany.id,
+        request_number: requestNumber,
+        request_type: formData.request_type,
+        employee_name: formData.employee_name,
+        nationality: formData.nationality,
+        passport_number: formData.passport_number || null,
+        passport_expiry_date: formData.passport_expiry || null,
+        job_title: formData.job_title,
+        profession_code: formData.profession_code || null,
+        education_level: formData.education || null,
+        experience_years: formData.experience_years ? parseInt(formData.experience_years) : null,
+        proposed_salary: formData.proposed_salary ? parseFloat(formData.proposed_salary) : null,
+        priority: formData.priority,
+        expected_arrival_date: formData.expected_arrival_date || null,
+        sponsor_company_name: formData.sponsor_name || currentCompany.company_name_en,
+        visa_type: formData.visa_type,
+        processing_status: 'pending',
+        workflow_step: 'initial_request',
+        request_date: new Date().toISOString().split('T')[0],
+        notes: formData.notes || null,
+      });
+
+      if (error) throw error;
+
+      setShowAddModal(false);
+      setFormData({
+        request_type: 'new_visa',
+        employee_id: '',
+        employee_name: '',
+        nationality: '',
+        passport_number: '',
+        passport_expiry: '',
+        job_title: '',
+        profession_code: '',
+        education: '',
+        experience_years: '',
+        proposed_salary: '',
+        priority: 'normal',
+        expected_arrival_date: '',
+        sponsor_name: '',
+        visa_type: 'employment',
+        notes: '',
+      });
+
+      await fetchData();
+    } catch (error) {
+      console.error('Error creating visa request:', error);
+      alert('Failed to create visa request. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   if (loading) {
@@ -591,13 +731,13 @@ export function Visas() {
       </div>
 
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">New Visa Request</h2>
-                  <p className="text-gray-600 mt-1">Create a new visa or iqama request</p>
+                  <h2 className="text-2xl font-bold text-gray-900">New Visa/Iqama Request</h2>
+                  <p className="text-gray-600 mt-1">Create a new visa or iqama request with MOL integration</p>
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}
@@ -608,30 +748,289 @@ export function Visas() {
               </div>
             </div>
 
-            <div className="p-6">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-start space-x-3">
-                  <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
+            <form onSubmit={handleSubmit}>
+              <div className="p-6 max-h-[calc(100vh-240px)] overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Request Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.request_type}
+                      onChange={(e) => setFormData({ ...formData, request_type: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="new_visa">New Work Visa</option>
+                      <option value="iqama_issuance">Iqama Issuance</option>
+                      <option value="iqama_renewal">Iqama Renewal</option>
+                      <option value="iqama_transfer">Iqama Transfer</option>
+                      <option value="profession_change">Profession Change</option>
+                      <option value="dependent_visa">Dependent Visa</option>
+                    </select>
+                  </div>
+
+                  {formData.request_type === 'iqama_renewal' || formData.request_type === 'profession_change' ? (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Select Employee <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={formData.employee_id}
+                        onChange={(e) => handleEmployeeChange(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      >
+                        <option value="">Select Employee</option>
+                        {employees.map((emp) => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Employee/Candidate Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={formData.employee_name}
+                        onChange={(e) => setFormData({ ...formData, employee_name: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        placeholder="Full name as per passport"
+                      />
+                    </div>
+                  )}
+
                   <div>
-                    <h3 className="text-sm font-semibold text-blue-900">Form Coming Soon</h3>
-                    <p className="text-sm text-blue-800 mt-1">
-                      The visa/iqama request creation form with MOL integration and quota management is under development. For now, please use the direct database interface or contact your system administrator to create new visa requests.
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nationality <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.nationality}
+                      onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="e.g., India, Pakistan, Egypt"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Passport Number
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.passport_number}
+                      onChange={(e) => setFormData({ ...formData, passport_number: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Passport Expiry Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.passport_expiry}
+                      onChange={(e) => setFormData({ ...formData, passport_expiry: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Saudi MOL Profession Code <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      onChange={(e) => handleProfessionChange(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">Select Profession</option>
+                      {professionCodes.map((prof) => (
+                        <option key={prof.id} value={prof.id}>
+                          {prof.profession_code} - {prof.profession_name_en} ({prof.profession_name_ar})
+                        </option>
+                      ))}
+                    </select>
+                    <p className="text-xs text-gray-500 mt-1">
+                      Select official MOL profession code for visa/iqama
                     </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Job Title <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.job_title}
+                      onChange={(e) => setFormData({ ...formData, job_title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Proposed Salary (SAR) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      value={formData.proposed_salary}
+                      onChange={(e) => setFormData({ ...formData, proposed_salary: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Minimum as per MOL requirements"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Education Level
+                    </label>
+                    <select
+                      value={formData.education}
+                      onChange={(e) => setFormData({ ...formData, education: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">Select</option>
+                      <option value="high_school">High School</option>
+                      <option value="diploma">Diploma</option>
+                      <option value="bachelor">Bachelor's Degree</option>
+                      <option value="master">Master's Degree</option>
+                      <option value="phd">PhD</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Experience (Years)
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.experience_years}
+                      onChange={(e) => setFormData({ ...formData, experience_years: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Years of experience"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Visa Type
+                    </label>
+                    <select
+                      value={formData.visa_type}
+                      onChange={(e) => setFormData({ ...formData, visa_type: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="employment">Employment Visa</option>
+                      <option value="business">Business Visa</option>
+                      <option value="dependent">Dependent Visa</option>
+                      <option value="visit">Visit Visa</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Priority
+                    </label>
+                    <select
+                      value={formData.priority}
+                      onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="low">Low</option>
+                      <option value="normal">Normal</option>
+                      <option value="high">High</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Expected Arrival Date
+                    </label>
+                    <input
+                      type="date"
+                      value={formData.expected_arrival_date}
+                      onChange={(e) => setFormData({ ...formData, expected_arrival_date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sponsor Name
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.sponsor_name}
+                      onChange={(e) => setFormData({ ...formData, sponsor_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder={currentCompany?.company_name_en || 'Company name'}
+                    />
+                  </div>
+
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Notes
+                    </label>
+                    <textarea
+                      value={formData.notes}
+                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Additional notes..."
+                    />
+                  </div>
+
+                  <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-start space-x-3">
+                      <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
+                      <div>
+                        <h3 className="text-sm font-semibold text-blue-900">MOL & Quota Information</h3>
+                        <p className="text-sm text-blue-800 mt-1">
+                          Ensure the profession code matches MOL requirements and check available quota before submission.
+                          Visa processing typically takes 3-5 business days after MOL approval.
+                        </p>
+                        <p className="text-sm text-blue-800 mt-2">
+                          <strong>Available Quota:</strong> {availableQuota} positions
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="p-6 border-t border-gray-200 bg-gray-50">
-              <div className="flex justify-end">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
-                >
-                  Close
-                </button>
+              <div className="p-6 border-t border-gray-200 bg-gray-50">
+                <div className="flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    disabled={submitting}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
+                  >
+                    {submitting ? 'Creating...' : 'Create Visa Request'}
+                  </button>
+                </div>
               </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
