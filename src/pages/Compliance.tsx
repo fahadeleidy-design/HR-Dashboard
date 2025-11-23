@@ -579,10 +579,10 @@ export function Compliance() {
                     <td className="px-4 py-3 text-sm text-gray-900">{record.total_employees}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">{record.saudi_employees}</td>
                     <td className="px-4 py-3 text-sm text-gray-900">
-                      {record.effective_saudi_count.toFixed(1)}
+                      {record.effective_saudi_count ? record.effective_saudi_count.toFixed(1) : 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm font-bold text-gray-900">
-                      {record.saudization_percentage.toFixed(2)}%
+                      {record.saudization_percentage ? record.saudization_percentage.toFixed(2) : '0.00'}%
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${
