@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
-import { Shield, TrendingUp, Download, DollarSign, Info, AlertCircle, CheckCircle, Users, Calculator, BookOpen, FileBarChart } from 'lucide-react';
+import { Shield, TrendingUp, Download, DollarSign, Info, AlertCircle, CheckCircle, Users, Calculator, BookOpen, FileBarChart, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Employee {
@@ -48,14 +48,118 @@ export function Compliance() {
   const [historyRecords, setHistoryRecords] = useState<NitaqatHistoryRecord[]>([]);
   const [calculatorEmployees, setCalculatorEmployees] = useState(0);
   const [calculatorSaudis, setCalculatorSaudis] = useState(0);
+  const [gosiSyncing, setGosiSyncing] = useState(false);
+  const [gosiConfigured, setGosiConfigured] = useState(false);
 
   useEffect(() => {
     if (currentCompany) {
       fetchEmployeesAndCalculate();
       fetchGOSIContributions();
       fetchNitaqatHistory();
+      checkGOSIConfiguration();
     }
   }, [currentCompany, selectedMonth]);
+
+  const checkGOSIConfiguration = async () => {
+    if (!currentCompany) return;
+    try {
+      const { data, error } = await supabase
+        .from('gosi_api_config')
+        .select('id, sync_enabled')
+        .eq('company_id', currentCompany.id)
+        .maybeSingle();
+
+      setGosiConfigured(!!data);
+    } catch (error) {
+      console.error('Error checking GOSI config:', error);
+    }
+  };
+
+  const handleGOSISync = async (action: 'test_connection' | 'sync_employees' | 'fetch_contributions') => {
+    if (!currentCompany) return;
+
+    setGosiSyncing(true);
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gosi-api`;
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        alert('Please log in to sync with GOSI');
+        return;
+      }
+
+      const requestData: any = {
+        action,
+        company_id: currentCompany.id,
+      };
+
+      if (action === 'sync_employees') {
+        const { data: employeesData } = await supabase
+          .from('employees')
+          .select('id, iqama_number, first_name_en, last_name_en, nationality, date_of_birth, hire_date, job_title_en')
+          .eq('company_id', currentCompany.id)
+          .eq('status', 'active');
+
+        const { data: payrollData } = await supabase
+          .from('payroll')
+          .select('employee_id, basic_salary')
+          .eq('company_id', currentCompany.id);
+
+        const payrollMap = new Map(payrollData?.map(p => [p.employee_id, p.basic_salary]));
+        const enrichedEmployees = employeesData?.map(emp => ({
+          ...emp,
+          basic_salary: payrollMap.get(emp.id) || 0
+        }));
+
+        requestData.data = { employees: enrichedEmployees };
+      } else if (action === 'fetch_contributions') {
+        requestData.data = { period: selectedMonth };
+      }
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'GOSI sync failed');
+      }
+
+      alert(result.message || 'GOSI sync completed successfully!');
+
+      if (action === 'fetch_contributions') {
+        fetchGOSIContributions();
+      }
+
+      await supabase.from('gosi_sync_logs').insert([{
+        company_id: currentCompany.id,
+        sync_type: action === 'sync_employees' ? 'employee_registration' :
+                  action === 'fetch_contributions' ? 'contribution_fetch' : 'test',
+        status: 'success',
+        records_processed: result.results?.length || 0,
+        completed_at: new Date().toISOString(),
+      }]);
+    } catch (error: any) {
+      console.error('GOSI sync error:', error);
+      alert(error.message || 'Failed to sync with GOSI');
+
+      await supabase.from('gosi_sync_logs').insert([{
+        company_id: currentCompany.id,
+        sync_type: action,
+        status: 'failed',
+        error_message: error.message,
+        completed_at: new Date().toISOString(),
+      }]);
+    } finally {
+      setGosiSyncing(false);
+    }
+  };
 
   const fetchNitaqatHistory = async () => {
     if (!currentCompany) return;
@@ -615,6 +719,17 @@ export function Compliance() {
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
+              {gosiConfigured && (
+                <button
+                  onClick={() => handleGOSISync('fetch_contributions')}
+                  disabled={gosiSyncing}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                  title="Fetch contributions from GOSI"
+                >
+                  <RefreshCw className={`h-4 w-4 ${gosiSyncing ? 'animate-spin' : ''}`} />
+                  <span>{gosiSyncing ? 'Syncing...' : 'Sync GOSI'}</span>
+                </button>
+              )}
               <button
                 onClick={handleExportGOSI}
                 className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
@@ -625,6 +740,20 @@ export function Compliance() {
             </div>
           </div>
         </div>
+
+        {!gosiConfigured && (
+          <div className="p-4 bg-yellow-50 border-b border-yellow-200">
+            <div className="flex items-start space-x-3">
+              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-yellow-900">GOSI API Not Configured</p>
+                <p className="text-sm text-yellow-700">
+                  Configure your GOSI API credentials in Settings to enable automatic synchronization with GOSI.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 border-b border-gray-200">
           <div className="flex items-center space-x-4">

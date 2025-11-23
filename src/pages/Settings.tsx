@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
-import { Building2, Users, Plus } from 'lucide-react';
+import { Building2, Users, Plus, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface Department {
   id: string;
@@ -11,11 +11,30 @@ interface Department {
   created_at: string;
 }
 
+interface GOSIConfig {
+  id: string;
+  establishment_number: string | null;
+  username: string | null;
+  api_key: string | null;
+  environment: 'sandbox' | 'production';
+  last_sync_date: string | null;
+  sync_enabled: boolean;
+}
+
 export function Settings() {
   const { currentCompany, companies } = useCompany();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDeptForm, setShowDeptForm] = useState(false);
+  const [gosiConfig, setGosiConfig] = useState<GOSIConfig | null>(null);
+  const [gosiLoading, setGosiLoading] = useState(false);
+  const [gosiForm, setGosiForm] = useState({
+    establishment_number: '',
+    username: '',
+    api_key: '',
+    environment: 'sandbox' as 'sandbox' | 'production',
+    sync_enabled: false,
+  });
   const [deptForm, setDeptForm] = useState({
     name_en: '',
     name_ar: '',
@@ -25,6 +44,7 @@ export function Settings() {
   useEffect(() => {
     if (currentCompany) {
       fetchDepartments();
+      fetchGOSIConfig();
     }
   }, [currentCompany]);
 
@@ -45,6 +65,73 @@ export function Settings() {
       console.error('Error fetching departments:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchGOSIConfig = async () => {
+    if (!currentCompany) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('gosi_api_config')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .maybeSingle();
+
+      if (error) throw error;
+
+      if (data) {
+        setGosiConfig(data);
+        setGosiForm({
+          establishment_number: data.establishment_number || '',
+          username: data.username || '',
+          api_key: data.api_key || '',
+          environment: data.environment,
+          sync_enabled: data.sync_enabled,
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching GOSI config:', error);
+    }
+  };
+
+  const handleSaveGOSIConfig = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCompany) return;
+
+    setGosiLoading(true);
+    try {
+      const configData = {
+        company_id: currentCompany.id,
+        establishment_number: gosiForm.establishment_number || null,
+        username: gosiForm.username || null,
+        api_key: gosiForm.api_key || null,
+        environment: gosiForm.environment,
+        sync_enabled: gosiForm.sync_enabled,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (gosiConfig) {
+        const { error } = await supabase
+          .from('gosi_api_config')
+          .update(configData)
+          .eq('id', gosiConfig.id);
+        if (error) throw error;
+        alert('GOSI configuration updated successfully!');
+      } else {
+        const { error } = await supabase
+          .from('gosi_api_config')
+          .insert([configData]);
+        if (error) throw error;
+        alert('GOSI configuration saved successfully!');
+      }
+
+      fetchGOSIConfig();
+    } catch (error: any) {
+      console.error('Error saving GOSI config:', error);
+      alert(error.message || 'Failed to save GOSI configuration');
+    } finally {
+      setGosiLoading(false);
     }
   };
 
@@ -171,6 +258,123 @@ export function Settings() {
             </div>
           </div>
         )}
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-6">
+        <div className="flex items-center space-x-4 mb-6">
+          <Shield className="h-12 w-12 text-blue-600" />
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">GOSI API Integration</h2>
+            <p className="text-gray-600">Configure GOSI (General Organization for Social Insurance) API connection</p>
+          </div>
+        </div>
+
+        {gosiConfig && gosiConfig.last_sync_date && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-md flex items-start space-x-3">
+            <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+            <div>
+              <p className="text-sm font-medium text-green-900">Last Sync Successful</p>
+              <p className="text-sm text-green-700">
+                {new Date(gosiConfig.last_sync_date).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md flex items-start space-x-3">
+          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+          <div>
+            <p className="text-sm font-medium text-yellow-900">Important Security Notice</p>
+            <p className="text-sm text-yellow-700">
+              Your GOSI API credentials are encrypted and stored securely. Never share your API key with anyone.
+              Use sandbox environment for testing before switching to production.
+            </p>
+          </div>
+        </div>
+
+        <form onSubmit={handleSaveGOSIConfig}>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                GOSI Establishment Number *
+              </label>
+              <input
+                type="text"
+                required
+                value={gosiForm.establishment_number}
+                onChange={(e) => setGosiForm({ ...gosiForm, establishment_number: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your GOSI establishment number"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                API Username
+              </label>
+              <input
+                type="text"
+                value={gosiForm.username}
+                onChange={(e) => setGosiForm({ ...gosiForm, username: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="GOSI API username"
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                API Key *
+              </label>
+              <input
+                type="password"
+                required
+                value={gosiForm.api_key}
+                onChange={(e) => setGosiForm({ ...gosiForm, api_key: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your GOSI API key"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Obtain your API key from the GOSI portal under API Management section
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Environment
+              </label>
+              <select
+                value={gosiForm.environment}
+                onChange={(e) => setGosiForm({ ...gosiForm, environment: e.target.value as 'sandbox' | 'production' })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="sandbox">Sandbox (Testing)</option>
+                <option value="production">Production (Live)</option>
+              </select>
+            </div>
+
+            <div className="flex items-center">
+              <label className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={gosiForm.sync_enabled}
+                  onChange={(e) => setGosiForm({ ...gosiForm, sync_enabled: e.target.checked })}
+                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <span className="text-sm font-medium text-gray-700">Enable Automatic Sync</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              type="submit"
+              disabled={gosiLoading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+            >
+              {gosiLoading ? 'Saving...' : gosiConfig ? 'Update Configuration' : 'Save Configuration'}
+            </button>
+          </div>
+        </form>
       </div>
 
       <div className="bg-white rounded-lg shadow">
