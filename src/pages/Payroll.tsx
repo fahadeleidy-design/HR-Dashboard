@@ -326,7 +326,7 @@ export function Payroll() {
       const totalNet = payrollItemsToInsert.reduce((sum, item) => sum + item.net_salary, 0);
       const totalDed = payrollItemsToInsert.reduce((sum, item) => sum + item.total_deductions, 0);
 
-      await supabase
+      const { data: updatedBatch } = await supabase
         .from('payroll_batches')
         .update({
           total_employees: payrollItemsToInsert.length,
@@ -334,11 +334,13 @@ export function Payroll() {
           total_net: totalNet,
           total_deductions: totalDed
         })
-        .eq('id', batch.id);
+        .eq('id', batch.id)
+        .select()
+        .single();
 
       alert(`Payroll batch created successfully with ${payrollItemsToInsert.length} employees!`);
       await fetchBatches();
-      setSelectedBatch(batch);
+      setSelectedBatch(updatedBatch || batch);
       await fetchPayrollItems(batch.id);
       setView('items');
     } catch (error: any) {
