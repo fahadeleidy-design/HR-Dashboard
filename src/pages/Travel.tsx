@@ -1,39 +1,743 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
-import { Plane } from 'lucide-react';
+import {
+  Plane, Plus, Eye, Edit, AlertTriangle, CheckCircle, Clock,
+  XCircle, Search, Filter, Download, RefreshCw, MapPin, Calendar,
+  DollarSign, FileText, User, CheckSquare, XSquare
+} from 'lucide-react';
+import { format, differenceInDays } from 'date-fns';
+
+interface TravelRequest {
+  id: string;
+  request_number: string;
+  employee_id: string;
+  destination: string;
+  destination_country: string;
+  purpose: string;
+  departure_date: string;
+  return_date: string;
+  duration_days: number;
+  estimated_cost: number;
+  per_diem_rate: number | null;
+  per_diem_total: number | null;
+  requires_exit_reentry: boolean;
+  exit_reentry_obtained: boolean;
+  visa_required: boolean;
+  visa_obtained: boolean;
+  project_code: string | null;
+  cost_center: string | null;
+  manager_approval: string;
+  manager_approved_at: string | null;
+  hr_approval: string;
+  hr_approved_at: string | null;
+  finance_approval: string;
+  finance_approved_at: string | null;
+  status: string;
+  settlement_status: string | null;
+  actual_cost: number | null;
+  notes: string | null;
+  created_at: string;
+  employees?: { first_name_en: string; last_name_en: string; employee_number: string };
+}
+
+interface PerDiemRate {
+  id: string;
+  destination_country: string;
+  destination_city: string | null;
+  daily_rate_sar: number;
+  accommodation_rate_sar: number | null;
+  effective_from: string;
+  effective_to: string | null;
+}
 
 export function Travel() {
   const { currentCompany } = useCompany();
-  const [trips, setTrips] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'completed' | 'all'>('pending');
+
+  const [travelRequests, setTravelRequests] = useState<TravelRequest[]>([]);
+  const [perDiemRates, setPerDiemRates] = useState<PerDiemRate[]>([]);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<TravelRequest | null>(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
     if (currentCompany) {
-      supabase.from('business_travel').select('*').eq('company_id', currentCompany.id).then(({ data }) => {
-        setTrips(data || []);
-        setLoading(false);
-      });
+      fetchData();
     }
   }, [currentCompany]);
 
-  if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div></div>;
+  const fetchData = async () => {
+    if (!currentCompany) return;
+
+    setLoading(true);
+
+    const [requestsRes, ratesRes] = await Promise.all([
+      supabase
+        .from('business_travel')
+        .select('*, employees(first_name_en, last_name_en, employee_number)')
+        .eq('company_id', currentCompany.id)
+        .order('created_at', { ascending: false }),
+
+      supabase
+        .from('travel_per_diem_rates')
+        .select('*')
+        .order('destination_country', { ascending: true })
+    ]);
+
+    setTravelRequests(requestsRes.data || []);
+    setPerDiemRates(ratesRes.data || []);
+    setLoading(false);
+  };
+
+  const getApprovalStatus = (managerApproval: string, hrApproval: string, financeApproval: string) => {
+    if (managerApproval === 'rejected' || hrApproval === 'rejected' || financeApproval === 'rejected') {
+      return 'rejected';
+    }
+    if (managerApproval === 'approved' && hrApproval === 'approved' && financeApproval === 'approved') {
+      return 'approved';
+    }
+    return 'pending';
+  };
+
+  const getStatusBadge = (request: TravelRequest) => {
+    const approvalStatus = getApprovalStatus(request.manager_approval, request.hr_approval, request.finance_approval);
+
+    if (approvalStatus === 'rejected') {
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Rejected</span>;
+    }
+    if (request.status === 'completed') {
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Completed</span>;
+    }
+    if (request.status === 'cancelled') {
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Cancelled</span>;
+    }
+    if (approvalStatus === 'approved') {
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Approved</span>;
+    }
+    return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">Pending Approval</span>;
+  };
+
+  const getApprovalIcon = (approval: string) => {
+    if (approval === 'approved') {
+      return <CheckCircle className="h-4 w-4 text-green-600" />;
+    }
+    if (approval === 'rejected') {
+      return <XCircle className="h-4 w-4 text-red-600" />;
+    }
+    return <Clock className="h-4 w-4 text-yellow-600" />;
+  };
+
+  const filterRequests = () => {
+    let filtered = travelRequests;
+
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(r => r.status === filterStatus);
+    }
+
+    if (searchTerm) {
+      filtered = filtered.filter(r =>
+        r.request_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        r.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (r.employees &&
+          `${r.employees.first_name_en} ${r.employees.last_name_en}`.toLowerCase().includes(searchTerm.toLowerCase()))
+      );
+    }
+
+    switch (activeTab) {
+      case 'pending':
+        return filtered.filter(r => {
+          const approvalStatus = getApprovalStatus(r.manager_approval, r.hr_approval, r.finance_approval);
+          return approvalStatus === 'pending' && r.status !== 'completed' && r.status !== 'cancelled';
+        });
+      case 'approved':
+        return filtered.filter(r => {
+          const approvalStatus = getApprovalStatus(r.manager_approval, r.hr_approval, r.finance_approval);
+          return approvalStatus === 'approved' && r.status !== 'completed';
+        });
+      case 'completed':
+        return filtered.filter(r => r.status === 'completed');
+      case 'all':
+      default:
+        return filtered;
+    }
+  };
+
+  const filteredRequests = filterRequests();
+
+  const pendingRequests = travelRequests.filter(r => {
+    const approvalStatus = getApprovalStatus(r.manager_approval, r.hr_approval, r.finance_approval);
+    return approvalStatus === 'pending' && r.status !== 'completed' && r.status !== 'cancelled';
+  }).length;
+
+  const approvedRequests = travelRequests.filter(r => {
+    const approvalStatus = getApprovalStatus(r.manager_approval, r.hr_approval, r.finance_approval);
+    return approvalStatus === 'approved' && r.status !== 'completed';
+  }).length;
+
+  const completedRequests = travelRequests.filter(r => r.status === 'completed').length;
+
+  const totalEstimatedCost = travelRequests
+    .filter(r => r.status === 'approved' || r.status === 'completed')
+    .reduce((sum, r) => sum + r.estimated_cost, 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold">Business Travel</h1>
-      <div className="grid grid-cols-3 gap-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Business Travel Management</h1>
+          <p className="text-gray-600 mt-1">Manage travel requests with multi-level approvals and Saudi compliance</p>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+        >
+          <Plus className="h-4 w-4" />
+          <span>New Travel Request</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
-            <div><p className="text-sm text-gray-600">Total Trips</p><p className="text-2xl font-bold">{trips.length}</p></div>
-            <Plane className="h-12 w-12 text-blue-600" />
+            <div>
+              <p className="text-sm text-gray-600">Pending Approval</p>
+              <p className="text-2xl font-bold text-yellow-600 mt-1">{pendingRequests}</p>
+            </div>
+            <Clock className="h-12 w-12 text-yellow-600 opacity-20" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Approved Trips</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{approvedRequests}</p>
+            </div>
+            <CheckCircle className="h-12 w-12 text-green-600 opacity-20" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Completed</p>
+              <p className="text-2xl font-bold text-gray-600 mt-1">{completedRequests}</p>
+            </div>
+            <CheckSquare className="h-12 w-12 text-gray-600 opacity-20" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">Total Budget</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">
+                {totalEstimatedCost.toLocaleString()} SAR
+              </p>
+            </div>
+            <DollarSign className="h-12 w-12 text-blue-600 opacity-20" />
           </div>
         </div>
       </div>
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Travel Requests</h2>
-        <p className="text-gray-600">Travel list will be displayed here</p>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-start space-x-3">
+          <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-semibold text-blue-900">Exit-Reentry Permit Reminder</h3>
+            <p className="text-sm text-blue-800 mt-1">
+              Non-Saudi employees traveling internationally require exit-reentry permits. Ensure permits are obtained before departure to avoid travel complications.
+            </p>
+          </div>
+        </div>
       </div>
+
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b border-gray-200">
+          <div className="flex justify-between items-center p-4">
+            <div className="flex space-x-1">
+              <button
+                onClick={() => setActiveTab('pending')}
+                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                  activeTab === 'pending'
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Pending Approval ({pendingRequests})
+              </button>
+              <button
+                onClick={() => setActiveTab('approved')}
+                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                  activeTab === 'approved'
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Approved ({approvedRequests})
+              </button>
+              <button
+                onClick={() => setActiveTab('completed')}
+                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                  activeTab === 'completed'
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                Completed ({completedRequests})
+              </button>
+              <button
+                onClick={() => setActiveTab('all')}
+                className={`px-4 py-2 text-sm font-medium rounded-md ${
+                  activeTab === 'all'
+                    ? 'bg-primary-100 text-primary-700'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                All ({travelRequests.length})
+              </button>
+            </div>
+            <button
+              onClick={fetchData}
+              className="p-2 text-gray-400 hover:text-gray-600 rounded-md hover:bg-gray-100"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <div className="flex space-x-4">
+              <div className="flex-1 relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by request number, destination, or employee..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                />
+              </div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="all">All Statuses</option>
+                <option value="draft">Draft</option>
+                <option value="submitted">Submitted</option>
+                <option value="approved">Approved</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request #</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Destination</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Travel Dates</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Approvals</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200 bg-white">
+              {filteredRequests.length === 0 ? (
+                <tr>
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
+                    <Plane className="h-12 w-12 mx-auto text-gray-400 mb-3" />
+                    <p className="text-lg font-medium">No travel requests found</p>
+                    <p className="text-sm mt-1">Create your first travel request to get started</p>
+                  </td>
+                </tr>
+              ) : (
+                filteredRequests.map((request) => (
+                  <tr key={request.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center space-x-2">
+                        <Plane className="h-5 w-5 text-blue-600" />
+                        <span className="text-sm font-medium text-gray-900">{request.request_number}</span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm text-gray-900 font-medium">
+                        {request.employees
+                          ? `${request.employees.first_name_en} ${request.employees.last_name_en}`
+                          : 'N/A'}
+                      </div>
+                      {request.employees && (
+                        <div className="text-xs text-gray-500">#{request.employees.employee_number}</div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="h-4 w-4 text-gray-400" />
+                        <div>
+                          <div className="text-sm text-gray-900 font-medium">{request.destination}</div>
+                          <div className="text-xs text-gray-500">{request.destination_country}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {format(new Date(request.departure_date), 'dd MMM yyyy')}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        to {format(new Date(request.return_date), 'dd MMM yyyy')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {request.duration_days} days
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {request.estimated_cost.toLocaleString()} SAR
+                      </div>
+                      {request.per_diem_total && (
+                        <div className="text-xs text-gray-500">
+                          Per diem: {request.per_diem_total.toLocaleString()} SAR
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center space-x-1">
+                        <div title="Manager Approval">
+                          {getApprovalIcon(request.manager_approval)}
+                        </div>
+                        <div title="HR Approval">
+                          {getApprovalIcon(request.hr_approval)}
+                        </div>
+                        <div title="Finance Approval">
+                          {getApprovalIcon(request.finance_approval)}
+                        </div>
+                      </div>
+                      <div className="text-xs text-gray-500 mt-1">
+                        M / HR / F
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {getStatusBadge(request)}
+                      {request.requires_exit_reentry && (
+                        <div className="flex items-center text-xs mt-1">
+                          {request.exit_reentry_obtained ? (
+                            <span className="text-green-600 flex items-center">
+                              <CheckCircle className="h-3 w-3 mr-1" />
+                              Exit permit
+                            </span>
+                          ) : (
+                            <span className="text-red-600 flex items-center">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Exit permit req.
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <div className="flex items-center space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedRequest(request);
+                            setShowDetailsModal(true);
+                          }}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button className="text-gray-600 hover:text-gray-800" title="Edit">
+                          <Edit className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {showDetailsModal && selectedRequest && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{selectedRequest.request_number}</h2>
+                  <p className="text-gray-600 mt-1">
+                    {selectedRequest.employees
+                      ? `${selectedRequest.employees.first_name_en} ${selectedRequest.employees.last_name_en}`
+                      : 'N/A'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDetailsModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Destination</label>
+                  <p className="text-gray-900 font-semibold">{selectedRequest.destination}</p>
+                  <p className="text-sm text-gray-600">{selectedRequest.destination_country}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Purpose</label>
+                  <p className="text-gray-900">{selectedRequest.purpose}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Departure Date</label>
+                  <p className="text-gray-900">{format(new Date(selectedRequest.departure_date), 'dd MMM yyyy')}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Return Date</label>
+                  <p className="text-gray-900">{format(new Date(selectedRequest.return_date), 'dd MMM yyyy')}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                  <p className="text-gray-900">{selectedRequest.duration_days} days</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <p>{getStatusBadge(selectedRequest)}</p>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Cost Breakdown</h3>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Cost</label>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {selectedRequest.estimated_cost.toLocaleString()} SAR
+                    </p>
+                  </div>
+                  {selectedRequest.actual_cost && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Actual Cost</label>
+                      <p className="text-2xl font-bold text-green-600">
+                        {selectedRequest.actual_cost.toLocaleString()} SAR
+                      </p>
+                    </div>
+                  )}
+                  {selectedRequest.per_diem_rate && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Per Diem Rate</label>
+                      <p className="text-gray-900">{selectedRequest.per_diem_rate.toLocaleString()} SAR/day</p>
+                    </div>
+                  )}
+                  {selectedRequest.per_diem_total && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Total Per Diem</label>
+                      <p className="text-gray-900">{selectedRequest.per_diem_total.toLocaleString()} SAR</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {(selectedRequest.project_code || selectedRequest.cost_center) && (
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Allocation</h3>
+                  <div className="grid grid-cols-2 gap-6">
+                    {selectedRequest.project_code && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Project Code</label>
+                        <p className="text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded">
+                          {selectedRequest.project_code}
+                        </p>
+                      </div>
+                    )}
+                    {selectedRequest.cost_center && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Cost Center</label>
+                        <p className="text-gray-900 font-mono bg-gray-50 px-3 py-2 rounded">
+                          {selectedRequest.cost_center}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Approval Workflow</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {getApprovalIcon(selectedRequest.manager_approval)}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Manager Approval</p>
+                        {selectedRequest.manager_approved_at && (
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(selectedRequest.manager_approved_at), 'dd MMM yyyy HH:mm')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                      selectedRequest.manager_approval === 'approved' ? 'bg-green-100 text-green-800' :
+                      selectedRequest.manager_approval === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedRequest.manager_approval}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {getApprovalIcon(selectedRequest.hr_approval)}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">HR Approval</p>
+                        {selectedRequest.hr_approved_at && (
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(selectedRequest.hr_approved_at), 'dd MMM yyyy HH:mm')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                      selectedRequest.hr_approval === 'approved' ? 'bg-green-100 text-green-800' :
+                      selectedRequest.hr_approval === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedRequest.hr_approval}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {getApprovalIcon(selectedRequest.finance_approval)}
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">Finance Approval</p>
+                        {selectedRequest.finance_approved_at && (
+                          <p className="text-xs text-gray-500">
+                            {format(new Date(selectedRequest.finance_approved_at), 'dd MMM yyyy HH:mm')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                      selectedRequest.finance_approval === 'approved' ? 'bg-green-100 text-green-800' :
+                      selectedRequest.finance_approval === 'rejected' ? 'bg-red-100 text-red-800' :
+                      'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {selectedRequest.finance_approval}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-200 pt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Travel Requirements</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {selectedRequest.requires_exit_reentry ? (
+                        <AlertTriangle className="h-5 w-5 text-orange-600" />
+                      ) : (
+                        <CheckCircle className="h-5 w-5 text-gray-400" />
+                      )}
+                      <span className="text-sm text-gray-900">Exit-Reentry Permit Required</span>
+                    </div>
+                    {selectedRequest.requires_exit_reentry && (
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        selectedRequest.exit_reentry_obtained
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedRequest.exit_reentry_obtained ? 'Obtained' : 'Pending'}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      {selectedRequest.visa_required ? (
+                        <FileText className="h-5 w-5 text-blue-600" />
+                      ) : (
+                        <CheckCircle className="h-5 w-5 text-gray-400" />
+                      )}
+                      <span className="text-sm text-gray-900">Visa Required</span>
+                    </div>
+                    {selectedRequest.visa_required && (
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        selectedRequest.visa_obtained
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedRequest.visa_obtained ? 'Obtained' : 'Pending'}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {selectedRequest.settlement_status && (
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Settlement</h3>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm font-medium text-blue-900">
+                      Settlement Status: <span className="capitalize">{selectedRequest.settlement_status}</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {selectedRequest.notes && (
+                <div className="border-t border-gray-200 pt-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Notes</h3>
+                  <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded">{selectedRequest.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="p-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex justify-between items-center">
+                <div className="text-sm text-gray-500">
+                  Created: {format(new Date(selectedRequest.created_at), 'dd MMM yyyy HH:mm')}
+                </div>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setShowDetailsModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
+                  >
+                    Close
+                  </button>
+                  <button className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
+                    Edit Request
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
