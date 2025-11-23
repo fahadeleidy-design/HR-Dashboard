@@ -188,10 +188,10 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
         let gosiEmployer = 0;
 
         if (formData.is_saudi) {
-          gosiEmployee = gosiWage * 0.10;
-          gosiEmployer = gosiWage * 0.12;
+          gosiEmployee = gosiWage * 0.0975;
+          gosiEmployer = gosiWage * 0.1175;
         } else {
-          gosiEmployee = gosiWage * 0.02;
+          gosiEmployee = 0;
           gosiEmployer = gosiWage * 0.02;
         }
 
@@ -212,10 +212,18 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
         };
 
         if (payroll) {
-          await supabase
+          const { data: allPayrollRecords } = await supabase
             .from('payroll')
-            .update(payrollRecord)
-            .eq('id', payroll.id);
+            .select('id')
+            .eq('employee_id', employeeId);
+
+          if (allPayrollRecords && allPayrollRecords.length > 0) {
+            const payrollIds = allPayrollRecords.map(p => p.id);
+            await supabase
+              .from('payroll')
+              .update(payrollRecord)
+              .in('id', payrollIds);
+          }
         } else {
           await supabase
             .from('payroll')
