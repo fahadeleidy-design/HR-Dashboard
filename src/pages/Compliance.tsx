@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
-import { Shield, TrendingUp, Download, DollarSign, Info, AlertCircle, CheckCircle } from 'lucide-react';
+import { Shield, TrendingUp, Download, DollarSign, Info, AlertCircle, CheckCircle, Users, Calculator, BookOpen, FileBarChart } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Employee {
@@ -23,6 +23,17 @@ interface NitaqatCalculation {
   colorZone: string;
   requirements: string;
   nextZonePercentage?: number;
+  employeesNeededForNextZone?: number;
+}
+
+interface NitaqatHistoryRecord {
+  id: string;
+  calculation_date: string;
+  total_employees: number;
+  saudi_employees: number;
+  effective_saudi_count: number;
+  saudization_percentage: number;
+  nitaqat_color: string;
 }
 
 export function Compliance() {
@@ -33,13 +44,34 @@ export function Compliance() {
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [showNitaqatInfo, setShowNitaqatInfo] = useState(false);
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [historyRecords, setHistoryRecords] = useState<NitaqatHistoryRecord[]>([]);
+  const [calculatorEmployees, setCalculatorEmployees] = useState(0);
+  const [calculatorSaudis, setCalculatorSaudis] = useState(0);
 
   useEffect(() => {
     if (currentCompany) {
       fetchEmployeesAndCalculate();
       fetchGOSIContributions();
+      fetchNitaqatHistory();
     }
   }, [currentCompany, selectedMonth]);
+
+  const fetchNitaqatHistory = async () => {
+    if (!currentCompany) return;
+    try {
+      const { data, error } = await supabase
+        .from('nitaqat_tracking')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .order('calculation_date', { ascending: false })
+        .limit(12);
+      if (error) throw error;
+      setHistoryRecords(data || []);
+    } catch (error) {
+      console.error('Error fetching Nitaqat history:', error);
+    }
+  };
 
   const calculateNitaqatColor = (totalEmp: number, saudizationPercent: number): { color: string; zone: string } => {
     if (totalEmp < 6) {
@@ -126,21 +158,30 @@ export function Compliance() {
 
       let requirements = '';
       let nextZonePercentage: number | undefined;
+      let employeesNeededForNextZone: number | undefined;
 
       if (totalEmployees < 6) {
         requirements = 'Your company has fewer than 6 employees and is exempt from Nitaqat classification. However, you must employ at least 1 Saudi national.';
       } else if (color === 'red') {
         requirements = 'Your company is in the Red Zone. You cannot hire new expatriates, renew work permits, or transfer employees. Immediate action required to increase Saudization.';
         nextZonePercentage = 16.22;
+        const targetCount = Math.ceil((totalEmployees * nextZonePercentage) / 100);
+        employeesNeededForNextZone = Math.max(0, targetCount - effectiveSaudiCount);
       } else if (color === 'low-green') {
         requirements = 'Your company is in the Low Green Zone. You have basic compliance but limited flexibility for visa services.';
         nextZonePercentage = 19.26;
+        const targetCount = Math.ceil((totalEmployees * nextZonePercentage) / 100);
+        employeesNeededForNextZone = Math.max(0, targetCount - effectiveSaudiCount);
       } else if (color === 'mid-green') {
         requirements = 'Your company is in the Medium Green Zone. You have good compliance with standard visa services available.';
         nextZonePercentage = 23.12;
+        const targetCount = Math.ceil((totalEmployees * nextZonePercentage) / 100);
+        employeesNeededForNextZone = Math.max(0, targetCount - effectiveSaudiCount);
       } else if (color === 'high-green') {
         requirements = 'Your company is in the High Green Zone. Excellent compliance with full access to visa services.';
         nextZonePercentage = 26.52;
+        const targetCount = Math.ceil((totalEmployees * nextZonePercentage) / 100);
+        employeesNeededForNextZone = Math.max(0, targetCount - effectiveSaudiCount);
       } else if (color === 'platinum') {
         requirements = 'Congratulations! Your company is in the Platinum Zone with the highest Saudization rate. You have priority access to all government services.';
       }
@@ -156,8 +197,24 @@ export function Compliance() {
         nitaqatColor: color,
         colorZone: zone,
         requirements,
-        nextZonePercentage
+        nextZonePercentage,
+        employeesNeededForNextZone
       });
+
+      // Save to tracking table
+      try {
+        await supabase.from('nitaqat_tracking').insert([{
+          company_id: currentCompany.id,
+          calculation_date: new Date().toISOString().split('T')[0],
+          total_employees: totalEmployees,
+          saudi_employees: saudiCount,
+          effective_saudi_count: effectiveSaudiCount,
+          saudization_percentage: saudizationPercentage,
+          nitaqat_color: color
+        }]);
+      } catch (error) {
+        console.error('Error saving Nitaqat tracking:', error);
+      }
     } catch (error) {
       console.error('Error calculating Nitaqat:', error);
     } finally {
@@ -207,6 +264,35 @@ export function Compliance() {
     } catch (error) {
       console.error('Error fetching GOSI contributions:', error);
     }
+  };
+
+  const handleExportNitaqat = () => {
+    if (!nitaqatCalc) return;
+
+    const exportData = [{
+      'Calculation Date': new Date().toLocaleDateString(),
+      'Total Employees': nitaqatCalc.totalEmployees,
+      'Saudi Employees': nitaqatCalc.saudiCount,
+      'Full Count Saudis (SAR 4000+)': nitaqatCalc.fullCountSaudis,
+      'Half Count Saudis (< SAR 4000)': nitaqatCalc.halfCountSaudis,
+      'Disabled Employees (x4)': nitaqatCalc.disabledSaudis,
+      'Effective Saudi Count': nitaqatCalc.effectiveSaudiCount,
+      'Saudization Percentage': `${nitaqatCalc.saudizationPercentage.toFixed(2)}%`,
+      'Nitaqat Zone': nitaqatCalc.colorZone,
+      'Status': nitaqatCalc.requirements
+    }];
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Nitaqat Report');
+    XLSX.writeFile(wb, `nitaqat_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
+
+  const calculateScenario = () => {
+    if (calculatorEmployees <= 0) return null;
+    const percentage = (calculatorSaudis / calculatorEmployees) * 100;
+    const { color, zone } = calculateNitaqatColor(calculatorEmployees, percentage);
+    return { percentage, color, zone };
   };
 
   const handleExportGOSI = () => {
@@ -268,14 +354,77 @@ export function Compliance() {
           <h1 className="text-3xl font-bold text-gray-900">Compliance & Reporting</h1>
           <p className="text-gray-600 mt-1">Nitaqat, GOSI, and WPS compliance tracking</p>
         </div>
-        <button
-          onClick={() => setShowNitaqatInfo(!showNitaqatInfo)}
-          className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
-        >
-          <Info className="h-4 w-4" />
-          <span>Nitaqat Info</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowCalculator(!showCalculator)}
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            <Calculator className="h-4 w-4" />
+            <span>Calculator</span>
+          </button>
+          <button
+            onClick={() => setShowNitaqatInfo(!showNitaqatInfo)}
+            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+          >
+            <Info className="h-4 w-4" />
+            <span>Info</span>
+          </button>
+        </div>
       </div>
+
+      {showCalculator && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900">Nitaqat Calculator</h3>
+            <button onClick={() => setShowCalculator(false)} className="text-gray-400 hover:text-gray-600">
+              ×
+            </button>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Calculate what zone your company would be in with different employee counts</p>
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Total Employees</label>
+              <input
+                type="number"
+                min="0"
+                value={calculatorEmployees}
+                onChange={(e) => setCalculatorEmployees(parseInt(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Effective Saudi Count</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={calculatorSaudis}
+                onChange={(e) => setCalculatorSaudis(parseFloat(e.target.value) || 0)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+          </div>
+          {calculatorEmployees > 0 && (
+            <div className="bg-gray-50 rounded-lg p-4">
+              <p className="text-sm font-semibold text-gray-900 mb-2">Result:</p>
+              {(() => {
+                const result = calculateScenario();
+                if (!result) return null;
+                return (
+                  <div className="space-y-2">
+                    <p className="text-lg font-bold text-gray-900">
+                      Saudization: {result.percentage.toFixed(2)}%
+                    </p>
+                    <p className={`text-lg font-bold ${getColorClass(result.color)}`}>
+                      Zone: {result.zone}
+                    </p>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
+      )}
 
       {showNitaqatInfo && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
@@ -328,9 +477,16 @@ export function Compliance() {
                   {nitaqatCalc.saudizationPercentage.toFixed(2)}%
                 </p>
                 {nitaqatCalc.nextZonePercentage && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    Next zone at {nitaqatCalc.nextZonePercentage}%
-                  </p>
+                  <div className="mt-1">
+                    <p className="text-xs text-gray-500">
+                      Next zone at {nitaqatCalc.nextZonePercentage}%
+                    </p>
+                    {nitaqatCalc.employeesNeededForNextZone !== undefined && nitaqatCalc.employeesNeededForNextZone > 0 && (
+                      <p className="text-xs text-blue-600 font-semibold">
+                        Need {nitaqatCalc.employeesNeededForNextZone.toFixed(1)} more Saudi employees
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
 
@@ -372,6 +528,16 @@ export function Compliance() {
               </div>
             </div>
 
+            <div className="flex justify-end space-x-3 mb-4">
+              <button
+                onClick={handleExportNitaqat}
+                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                <Download className="h-4 w-4" />
+                <span>Export Report</span>
+              </button>
+            </div>
+
             <div className={`border-l-4 p-4 rounded ${
               nitaqatCalc.nitaqatColor === 'red' ? 'bg-red-50 border-red-500' :
               nitaqatCalc.nitaqatColor === 'platinum' ? 'bg-slate-50 border-slate-500' :
@@ -385,6 +551,58 @@ export function Compliance() {
           <p className="text-gray-500">No employee data available to calculate Nitaqat status</p>
         )}
       </div>
+
+      {historyRecords.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900">Historical Trend (Last 12 Months)</h2>
+            <TrendingUp className="h-6 w-6 text-gray-400" />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Employees</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saudi Employees</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Effective Count</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Saudization %</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Zone</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {historyRecords.map((record) => (
+                  <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {new Date(record.calculation_date).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{record.total_employees}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{record.saudi_employees}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">
+                      {record.effective_saudi_count.toFixed(1)}
+                    </td>
+                    <td className="px-4 py-3 text-sm font-bold text-gray-900">
+                      {record.saudization_percentage.toFixed(2)}%
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium capitalize ${
+                        record.nitaqat_color === 'red' ? 'bg-red-100 text-red-800' :
+                        record.nitaqat_color === 'platinum' ? 'bg-slate-100 text-slate-800' :
+                        record.nitaqat_color === 'high-green' ? 'bg-emerald-100 text-emerald-800' :
+                        record.nitaqat_color === 'mid-green' ? 'bg-green-100 text-green-800' :
+                        record.nitaqat_color === 'low-green' ? 'bg-lime-100 text-lime-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {record.nitaqat_color.replace('-', ' ')}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
