@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatInteger } from '@/lib/formatters';
 import {
   Users, UserCheck, UserX, TrendingUp, Calendar, AlertCircle,
   DollarSign, Clock, FileText, Car, Home, Shield, Plane,
@@ -39,6 +41,7 @@ interface DashboardStats {
 
 export function Dashboard() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
@@ -372,21 +375,23 @@ export function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-600 mt-1">Welcome to {currentCompany?.name_en || 'Saudi HR Management System'}</p>
+        <h1 className="text-3xl font-bold text-gray-900">{t.dashboard.title}</h1>
+        <p className="text-gray-600 mt-1">
+          {t.common.welcome} {isRTL ? (currentCompany?.name_ar || currentCompany?.name_en || 'نظام إدارة الموارد البشرية') : (currentCompany?.name_en || 'Saudi HR Management System')}
+        </p>
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Employee Overview</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">{isRTL ? 'نظرة عامة على الموظفين' : 'Employee Overview'}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
             onClick={() => navigate('/employees')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Employees</p>
-                <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalEmployees}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.totalEmployees}</p>
+                <p className="text-3xl font-bold text-gray-900 mt-1">{formatInteger(stats.totalEmployees, language)}</p>
               </div>
               <div className="p-3 bg-blue-50 rounded-full">
                 <Users className="h-8 w-8 text-blue-600" />
@@ -398,10 +403,10 @@ export function Dashboard() {
             onClick={() => navigate('/employees?status=active')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Active Employees</p>
-                <p className="text-3xl font-bold text-green-600 mt-1">{stats.activeEmployees}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.activeEmployees}</p>
+                <p className="text-3xl font-bold text-green-600 mt-1">{formatInteger(stats.activeEmployees, language)}</p>
               </div>
               <div className="p-3 bg-green-50 rounded-full">
                 <UserCheck className="h-8 w-8 text-green-600" />

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export function Register() {
   const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ export function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signUp } = useAuth();
+  const { t, isRTL } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -16,12 +18,12 @@ export function Register() {
     setError('');
 
     if (password !== confirmPassword) {
-      setError('Passwords do not match');
+      setError(isRTL ? 'كلمات المرور غير متطابقة' : 'Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
-      setError('Password must be at least 6 characters');
+      setError(isRTL ? 'يجب أن تكون كلمة المرور 6 أحرف على الأقل' : 'Password must be at least 6 characters');
       return;
     }
 
@@ -51,20 +53,24 @@ export function Register() {
             alt="Special Offices Company"
             className="h-16 w-auto mx-auto mb-4"
           />
-          <h1 className="text-3xl font-bold text-gray-900">HR Management System</h1>
-          <p className="text-gray-600 mt-2">Create your account</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isRTL ? 'نظام إدارة الموارد البشرية' : 'HR Management System'}
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {t.auth.register}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className={`bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded ${isRTL ? 'text-right' : 'text-left'}`}>
               {error}
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+            <label htmlFor="email" className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t.auth.emailAddress}
             </label>
             <input
               id="email"
@@ -73,13 +79,13 @@ export function Register() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="you@example.com"
+              placeholder={t.auth.enterEmail}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
+            <label htmlFor="password" className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t.auth.password}
             </label>
             <input
               id="password"
@@ -93,8 +99,8 @@ export function Register() {
           </div>
 
           <div>
-            <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-              Confirm Password
+            <label htmlFor="confirmPassword" className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t.auth.confirmPassword}
             </label>
             <input
               id="confirmPassword"
@@ -110,15 +116,15 @@ export function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
-            {loading ? 'Creating account...' : 'Register'}
+            {loading ? (isRTL ? 'جاري إنشاء الحساب...' : 'Creating account...') : t.auth.signUp}
           </button>
 
           <p className="text-center text-sm text-gray-600">
-            Already have an account?{' '}
+            {t.auth.alreadyHaveAccount}{' '}
             <Link to="/login" className="text-primary-600 hover:text-primary-700 font-medium">
-              Sign in
+              {t.auth.signIn}
             </Link>
           </p>
         </form>

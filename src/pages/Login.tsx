@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export function Login() {
   const [email, setEmail] = useState('');
@@ -8,6 +9,7 @@ export function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
+  const { t, isRTL } = useLanguage();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,20 +41,24 @@ export function Login() {
             alt="Special Offices Company"
             className="h-16 w-auto mx-auto mb-4"
           />
-          <h1 className="text-3xl font-bold text-gray-900">HR Management System</h1>
-          <p className="text-gray-600 mt-2">Sign in to your account</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isRTL ? 'نظام إدارة الموارد البشرية' : 'HR Management System'}
+          </h1>
+          <p className="text-gray-600 mt-2">
+            {isRTL ? 'تسجيل الدخول إلى حسابك' : 'Sign in to your account'}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+            <div className={`bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded ${isRTL ? 'text-right' : 'text-left'}`}>
               {error}
             </div>
           )}
 
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+            <label htmlFor="email" className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t.auth.emailAddress}
             </label>
             <input
               id="email"
@@ -61,13 +67,13 @@ export function Login() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="you@example.com"
+              placeholder={t.auth.enterEmail}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-              Password
+            <label htmlFor="password" className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+              {t.auth.password}
             </label>
             <input
               id="password"
@@ -83,15 +89,15 @@ export function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full bg-primary-600 text-white py-2 px-4 rounded-md hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? (isRTL ? 'جاري تسجيل الدخول...' : 'Signing in...') : t.auth.signIn}
           </button>
 
           <p className="text-center text-sm text-gray-600">
-            Don't have an account?{' '}
+            {t.auth.dontHaveAccount}{' '}
             <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-              Register
+              {t.auth.signUp}
             </Link>
           </p>
         </form>
