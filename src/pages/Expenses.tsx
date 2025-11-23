@@ -12,19 +12,38 @@ interface Employee {
 
 const VAT_RATE = 15;
 
-const EXPENSE_CATEGORIES = [
-  'Travel',
-  'Meals',
-  'Fuel',
-  'Accommodation',
-  'Office Supplies',
-  'Communication',
-  'Training',
-  'Marketing',
-  'Entertainment',
-  'Transportation',
-  'Other'
+const EXPENSE_CATEGORIES = {
+  'Travel': ['Flight', 'Train', 'Bus', 'Taxi', 'Parking', 'Toll Fees', 'Other'],
+  'Meals': ['Breakfast', 'Lunch', 'Dinner', 'Team Meal', 'Client Entertainment', 'Other'],
+  'Fuel': ['Petrol', 'Diesel', 'Vehicle Maintenance', 'Car Wash', 'Other'],
+  'Accommodation': ['Hotel', 'Serviced Apartment', 'Guest House', 'Other'],
+  'Office Supplies': ['Stationery', 'Printing', 'Equipment', 'Furniture', 'Other'],
+  'Communication': ['Mobile', 'Internet', 'Postage', 'Courier', 'Other'],
+  'Training': ['Course Fees', 'Materials', 'Certification', 'Conference', 'Other'],
+  'Marketing': ['Advertising', 'Promotional Materials', 'Events', 'Sponsorship', 'Other'],
+  'Entertainment': ['Client Meeting', 'Team Event', 'Gift', 'Other'],
+  'Transportation': ['Car Rental', 'Driver', 'Public Transport', 'Other'],
+  'Professional Services': ['Legal', 'Consulting', 'Audit', 'Other'],
+  'IT & Software': ['Software License', 'Cloud Services', 'Hardware', 'Other'],
+  'Other': ['Miscellaneous']
+};
+
+const PAYMENT_METHODS = [
+  { value: 'personal_card', label: 'Personal Credit Card' },
+  { value: 'company_card', label: 'Company Credit Card' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'cheque', label: 'Cheque' }
 ];
+
+const REIMBURSEMENT_METHODS = [
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'salary', label: 'With Salary' },
+  { value: 'cheque', label: 'Cheque' }
+];
+
+const CURRENCIES = ['SAR', 'USD', 'EUR', 'GBP', 'AED', 'KWD', 'BHD', 'OMR', 'QAR'];
 
 export function Expenses() {
   const { currentCompany } = useCompany();
@@ -37,6 +56,7 @@ export function Expenses() {
   const [formData, setFormData] = useState({
     employee_id: '',
     expense_category: '',
+    subcategory: '',
     description: '',
     amount: '',
     vat_inclusive: true,
@@ -45,8 +65,21 @@ export function Expenses() {
     vendor_vat_number: '',
     is_vat_reclaimable: false,
     expense_date: '',
+    payment_method: 'personal_card',
+    currency: 'SAR',
+    exchange_rate: '1',
     cost_center: '',
     project_code: '',
+    business_purpose: '',
+    related_travel_id: '',
+    billable_to_client: false,
+    client_name: '',
+    requires_receipt: true,
+    receipt_attached: false,
+    policy_compliant: true,
+    policy_violation_reason: '',
+    advance_deducted: '',
+    reimbursement_method: 'bank_transfer',
     notes: '',
   });
 
@@ -108,26 +141,47 @@ export function Expenses() {
       const calculations = calculateVAT();
       const claimNumber = `EXP-${Date.now().toString().slice(-8)}`;
 
+      const amountInSAR = formData.currency === 'SAR'
+        ? parseFloat(calculations.totalAmount)
+        : parseFloat(calculations.totalAmount) * parseFloat(formData.exchange_rate);
+
       const { error } = await supabase.from('expense_claims').insert({
         company_id: currentCompany.id,
         claim_number: claimNumber,
         employee_id: formData.employee_id,
         expense_category: formData.expense_category,
+        subcategory: formData.subcategory || null,
         description: formData.description,
         expense_date: formData.expense_date,
+        claim_date: new Date().toISOString().split('T')[0],
         amount: parseFloat(calculations.totalAmount),
         amount_excluding_vat: parseFloat(calculations.amountExcludingVat),
         vat_amount: parseFloat(calculations.vatAmount),
         vat_rate: VAT_RATE,
+        currency: formData.currency,
+        exchange_rate: formData.currency === 'SAR' ? 1 : parseFloat(formData.exchange_rate),
+        amount_in_sar: amountInSAR,
+        payment_method: formData.payment_method,
         receipt_number: formData.receipt_number || null,
         vendor_name: formData.vendor_name || null,
         vendor_vat_number: formData.vendor_vat_number || null,
         is_vat_reclaimable: formData.is_vat_reclaimable,
+        business_purpose: formData.business_purpose || null,
+        related_travel_id: formData.related_travel_id || null,
+        billable_to_client: formData.billable_to_client,
+        client_name: formData.billable_to_client ? formData.client_name : null,
         cost_center: formData.cost_center || null,
         project_code: formData.project_code || null,
-        status: 'pending',
+        policy_compliant: formData.policy_compliant,
+        policy_violation_reason: !formData.policy_compliant ? formData.policy_violation_reason : null,
+        advance_deducted: formData.advance_deducted ? parseFloat(formData.advance_deducted) : null,
+        reimbursement_method: formData.reimbursement_method,
+        approval_status: 'pending',
+        manager_approval_id: null,
+        finance_approval_id: null,
+        receipt_attached: formData.receipt_attached,
         notes: formData.notes || null,
-        net_reimbursement: parseFloat(calculations.totalAmount),
+        net_reimbursement: amountInSAR - (formData.advance_deducted ? parseFloat(formData.advance_deducted) : 0),
       });
 
       if (error) throw error;
@@ -136,6 +190,7 @@ export function Expenses() {
       setFormData({
         employee_id: '',
         expense_category: '',
+        subcategory: '',
         description: '',
         amount: '',
         vat_inclusive: true,
@@ -144,8 +199,21 @@ export function Expenses() {
         vendor_vat_number: '',
         is_vat_reclaimable: false,
         expense_date: '',
+        payment_method: 'personal_card',
+        currency: 'SAR',
+        exchange_rate: '1',
         cost_center: '',
         project_code: '',
+        business_purpose: '',
+        related_travel_id: '',
+        billable_to_client: false,
+        client_name: '',
+        requires_receipt: true,
+        receipt_attached: false,
+        policy_compliant: true,
+        policy_violation_reason: '',
+        advance_deducted: '',
+        reimbursement_method: 'bank_transfer',
         notes: '',
       });
 
@@ -192,12 +260,12 @@ export function Expenses() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full my-8">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">New Expense Claim</h2>
-                  <p className="text-gray-600 mt-1">Create a new expense claim with VAT tracking</p>
+                  <p className="text-gray-600 mt-1">Comprehensive expense claim with VAT, currency, and policy compliance</p>
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}
@@ -237,17 +305,38 @@ export function Expenses() {
                   <select
                     required
                     value={formData.expense_category}
-                    onChange={(e) => setFormData({ ...formData, expense_category: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, expense_category: e.target.value, subcategory: '' })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
                     <option value="">Select Category</option>
-                    {EXPENSE_CATEGORIES.map((cat) => (
-                      <option key={cat} value={cat.toLowerCase()}>
+                    {Object.keys(EXPENSE_CATEGORIES).map((cat) => (
+                      <option key={cat} value={cat}>
                         {cat}
                       </option>
                     ))}
                   </select>
                 </div>
+
+                {formData.expense_category && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Subcategory <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.subcategory}
+                      onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    >
+                      <option value="">Select Subcategory</option>
+                      {EXPENSE_CATEGORIES[formData.expense_category as keyof typeof EXPENSE_CATEGORIES]?.map((sub) => (
+                        <option key={sub} value={sub}>
+                          {sub}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -270,15 +359,49 @@ export function Expenses() {
                     required
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    rows={3}
+                    rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Describe the expense..."
+                    placeholder="Brief description of the expense..."
                   />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Business Purpose <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.business_purpose}
+                    onChange={(e) => setFormData({ ...formData, business_purpose: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="e.g., Client meeting, Project materials, Team training"
+                  />
+                </div>
+
+                <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Amount & Payment Details</h3>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Amount (SAR) <span className="text-red-500">*</span>
+                    Currency <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.currency}
+                    onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    {CURRENCIES.map((curr) => (
+                      <option key={curr} value={curr}>{curr}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Amount <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -289,6 +412,42 @@ export function Expenses() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="0.00"
                   />
+                </div>
+
+                {formData.currency !== 'SAR' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Exchange Rate to SAR <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      step="0.0001"
+                      value={formData.exchange_rate}
+                      onChange={(e) => setFormData({ ...formData, exchange_rate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="1.0000"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      1 {formData.currency} = {formData.exchange_rate} SAR
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Method <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.payment_method}
+                    onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    {PAYMENT_METHODS.map((method) => (
+                      <option key={method.value} value={method.value}>{method.label}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
@@ -405,16 +564,125 @@ export function Expenses() {
                   />
                 </div>
 
+                <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Client Billing & Reimbursement</h3>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.billable_to_client}
+                      onChange={(e) => setFormData({ ...formData, billable_to_client: e.target.checked })}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">This expense is billable to client</span>
+                  </label>
+                </div>
+
+                {formData.billable_to_client && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Client Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.client_name}
+                      onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Client/Project name"
+                    />
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Advance Amount Deducted (SAR)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={formData.advance_deducted}
+                    onChange={(e) => setFormData({ ...formData, advance_deducted: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    placeholder="0.00"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">If you received travel advance</p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Preferred Reimbursement Method
+                  </label>
+                  <select
+                    value={formData.reimbursement_method}
+                    onChange={(e) => setFormData({ ...formData, reimbursement_method: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    {REIMBURSEMENT_METHODS.map((method) => (
+                      <option key={method.value} value={method.value}>{method.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Receipt & Policy Compliance</h3>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.receipt_attached}
+                      onChange={(e) => setFormData({ ...formData, receipt_attached: e.target.checked })}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Receipt/Invoice is attached</span>
+                  </label>
+                  <p className="text-xs text-gray-500 ml-6 mt-1">
+                    Required for all expenses above SAR 100 and mandatory for VAT reclaim
+                  </p>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.policy_compliant}
+                      onChange={(e) => setFormData({ ...formData, policy_compliant: e.target.checked })}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">This expense is policy compliant</span>
+                  </label>
+                </div>
+
+                {!formData.policy_compliant && (
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Policy Violation Reason <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      required
+                      value={formData.policy_violation_reason}
+                      onChange={(e) => setFormData({ ...formData, policy_violation_reason: e.target.value })}
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder="Explain why this expense exceeds policy limits or violates guidelines..."
+                    />
+                  </div>
+                )}
+
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes
+                    Additional Notes
                   </label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Additional notes..."
+                    placeholder="Any additional information..."
                   />
                 </div>
 
