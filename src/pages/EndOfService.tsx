@@ -6,13 +6,14 @@ import { format, differenceInYears, differenceInMonths, differenceInDays } from 
 
 interface Employee {
   id: string;
-  employee_code: string;
-  full_name: string;
-  basic_salary: number;
+  employee_number: string;
+  first_name_en: string;
+  last_name_en: string;
   hire_date: string;
   employment_type: string;
   contract_start_date: string | null;
   contract_end_date: string | null;
+  basic_salary?: number;
 }
 
 interface Loan {
@@ -79,15 +80,31 @@ export function EndOfService() {
   const loadEmployees = async () => {
     if (!currentCompany) return;
 
-    const { data, error } = await supabase
+    const { data: employeesData, error: empError } = await supabase
       .from('employees')
-      .select('id, employee_code, full_name, basic_salary, hire_date, employment_type, contract_start_date, contract_end_date')
+      .select('id, employee_number, first_name_en, last_name_en, hire_date, employment_type, contract_start_date, contract_end_date')
       .eq('company_id', currentCompany.id)
-      .eq('employment_status', 'active')
-      .order('full_name');
+      .eq('status', 'active')
+      .order('first_name_en');
 
-    if (!error && data) {
-      setEmployees(data);
+    if (!empError && employeesData) {
+      const employeeIds = employeesData.map(e => e.id);
+
+      const { data: payrollData } = await supabase
+        .from('payroll')
+        .select('employee_id, basic_salary')
+        .in('employee_id', employeeIds)
+        .is('effective_to', null);
+
+      const employeesWithSalary = employeesData.map(emp => {
+        const payroll = payrollData?.find(p => p.employee_id === emp.id);
+        return {
+          ...emp,
+          basic_salary: payroll?.basic_salary || 0
+        };
+      });
+
+      setEmployees(employeesWithSalary);
     }
   };
 
@@ -111,7 +128,7 @@ export function EndOfService() {
         net_benefit_amount,
         status,
         created_at,
-        employees (employee_code, full_name)
+        employees (employee_number, first_name_en, last_name_en)
       `)
       .eq('company_id', currentCompany.id)
       .order('created_at', { ascending: false });
@@ -120,8 +137,8 @@ export function EndOfService() {
       const formattedData = data.map((calc: any) => ({
         id: calc.id,
         employee_id: calc.employee_id,
-        employee_name: calc.employees.full_name,
-        employee_code: calc.employees.employee_code,
+        employee_name: `${calc.employees.first_name_en} ${calc.employees.last_name_en}`,
+        employee_code: calc.employees.employee_number,
         calculation_date: calc.calculation_date,
         termination_date: calc.termination_date,
         termination_reason: calc.termination_reason,
@@ -396,7 +413,7 @@ export function EndOfService() {
                 <option value="">Choose an employee...</option>
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
-                    {emp.employee_code} - {emp.full_name}
+                    {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
                   </option>
                 ))}
               </select>
@@ -467,8 +484,8 @@ export function EndOfService() {
                     Employee Information
                   </h4>
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Name:</span> {calculationResult.employee.full_name}</p>
-                    <p><span className="font-medium">Code:</span> {calculationResult.employee.employee_code}</p>
+                    <p><span className="font-medium">Name:</span> {calculationResult.employee.first_name_en} {calculationResult.employee.last_name_en}</p>
+                    <p><span className="font-medium">Code:</span> {calculationResult.employee.employee_number}</p>
                     <p><span className="font-medium">Basic Salary:</span> {calculationResult.basicSalary.toLocaleString()} SAR</p>
                     <p><span className="font-medium">Contract Type:</span> {calculationResult.contractType === 'limited' ? 'Fixed Term' : 'Indefinite'}</p>
                   </div>
