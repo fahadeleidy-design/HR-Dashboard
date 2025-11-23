@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Building2, Users, Plus, Shield, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserRoleManagement } from '@/components/UserRoleManagement';
 
 interface Department {
   id: string;
@@ -803,6 +804,10 @@ export function Settings() {
           </div>
         </div>
       )}
+
+      <div className="mt-6">
+        <UserRoleManagement />
+      </div>
     </div>
   );
 }
