@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Calendar, Clock, Download } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
@@ -23,6 +24,7 @@ interface AttendanceRecord {
 
 export function Attendance() {
   const { currentCompany } = useCompany();
+  const { t, isRTL } = useLanguage();
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
