@@ -65,6 +65,12 @@ export function Compliance() {
 
     setLoading(true);
     try {
+      const startDate = `${selectedMonth}-01`;
+      const [year, month] = selectedMonth.split('-');
+      const nextMonth = month === '12' ? '01' : String(Number(month) + 1).padStart(2, '0');
+      const nextYear = month === '12' ? String(Number(year) + 1) : year;
+      const endDate = `${nextYear}-${nextMonth}-01`;
+
       const { data, error } = await supabase
         .from('payroll')
         .select(`
@@ -77,8 +83,8 @@ export function Compliance() {
           employee:employees(employee_number, first_name_en, last_name_en, is_saudi)
         `)
         .eq('company_id', currentCompany.id)
-        .gte('effective_from', `${selectedMonth}-01`)
-        .lt('effective_from', `${selectedMonth}-32`)
+        .gte('effective_from', startDate)
+        .lt('effective_from', endDate)
         .order('effective_from', { ascending: false });
 
       if (error) throw error;
