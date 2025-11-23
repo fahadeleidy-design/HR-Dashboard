@@ -75,7 +75,7 @@ export function Compliance() {
     }
   };
 
-  const handleGOSISync = async (action: 'test_connection' | 'sync_employees' | 'fetch_contributions') => {
+  const handleGOSISync = async (action: 'test_connection' | 'fetch_all_contributors') => {
     if (!currentCompany) return;
 
     setGosiSyncing(true);
@@ -93,27 +93,14 @@ export function Compliance() {
         company_id: currentCompany.id,
       };
 
-      if (action === 'sync_employees') {
+      if (action === 'fetch_all_contributors') {
         const { data: employeesData } = await supabase
           .from('employees')
-          .select('id, iqama_number, first_name_en, last_name_en, nationality, date_of_birth, hire_date, job_title_en')
+          .select('id, iqama_number')
           .eq('company_id', currentCompany.id)
           .eq('status', 'active');
 
-        const { data: payrollData } = await supabase
-          .from('payroll')
-          .select('employee_id, basic_salary')
-          .eq('company_id', currentCompany.id);
-
-        const payrollMap = new Map(payrollData?.map(p => [p.employee_id, p.basic_salary]));
-        const enrichedEmployees = employeesData?.map(emp => ({
-          ...emp,
-          basic_salary: payrollMap.get(emp.id) || 0
-        }));
-
-        requestData.data = { employees: enrichedEmployees };
-      } else if (action === 'fetch_contributions') {
-        requestData.data = { period: selectedMonth };
+        requestData.data = { employees: employeesData };
       }
 
       const response = await fetch(apiUrl, {
@@ -133,14 +120,9 @@ export function Compliance() {
 
       alert(result.message || 'GOSI sync completed successfully!');
 
-      if (action === 'fetch_contributions') {
-        fetchGOSIContributions();
-      }
-
       await supabase.from('gosi_sync_logs').insert([{
         company_id: currentCompany.id,
-        sync_type: action === 'sync_employees' ? 'employee_registration' :
-                  action === 'fetch_contributions' ? 'contribution_fetch' : 'test',
+        sync_type: action === 'fetch_all_contributors' ? 'contribution_fetch' : 'test',
         status: 'success',
         records_processed: result.results?.length || 0,
         completed_at: new Date().toISOString(),
@@ -721,10 +703,10 @@ export function Compliance() {
               />
               {gosiConfigured && (
                 <button
-                  onClick={() => handleGOSISync('fetch_contributions')}
+                  onClick={() => handleGOSISync('fetch_all_contributors')}
                   disabled={gosiSyncing}
                   className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-                  title="Fetch contributions from GOSI"
+                  title="Fetch contributor data from GOSI"
                 >
                   <RefreshCw className={`h-4 w-4 ${gosiSyncing ? 'animate-spin' : ''}`} />
                   <span>{gosiSyncing ? 'Syncing...' : 'Sync GOSI'}</span>

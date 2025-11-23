@@ -17,6 +17,7 @@ interface GOSIConfig {
   client_id: string | null;
   client_secret: string | null;
   private_key: string | null;
+  x_apikey: string | null;
   environment: 'sandbox' | 'production';
   last_sync_date: string | null;
   sync_enabled: boolean;
@@ -34,6 +35,7 @@ export function Settings() {
     client_id: '',
     client_secret: '',
     private_key: '',
+    x_apikey: 'L6LK4GEAAIVrQbVo4AOVrQk781kvIT3X',
     environment: 'sandbox' as 'sandbox' | 'production',
     sync_enabled: false,
   });
@@ -89,6 +91,7 @@ export function Settings() {
           client_id: data.client_id || '',
           client_secret: data.client_secret || '',
           private_key: data.private_key || '',
+          x_apikey: data.x_apikey || 'L6LK4GEAAIVrQbVo4AOVrQk781kvIT3X',
           environment: data.environment,
           sync_enabled: data.sync_enabled,
         });
@@ -110,6 +113,7 @@ export function Settings() {
         client_id: gosiForm.client_id || null,
         client_secret: gosiForm.client_secret || null,
         private_key: gosiForm.private_key || null,
+        x_apikey: gosiForm.x_apikey || null,
         environment: gosiForm.environment,
         sync_enabled: gosiForm.sync_enabled,
         updated_at: new Date().toISOString(),
@@ -353,7 +357,23 @@ export function Settings() {
                 placeholder="Paste your GOSI Private Key here (RSA or PEM format)"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Paste the entire private key including BEGIN and END markers. This key is used to sign API requests.
+                Paste the entire private key including BEGIN and END markers. This key is used to generate DPoP tokens.
+              </p>
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                x-apikey
+              </label>
+              <input
+                type="text"
+                value={gosiForm.x_apikey}
+                onChange={(e) => setGosiForm({ ...gosiForm, x_apikey: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="L6LK4GEAAIVrQbVo4AOVrQk781kvIT3X"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Default x-apikey is pre-filled. Same for both Sandbox and Production environments.
               </p>
             </div>
 

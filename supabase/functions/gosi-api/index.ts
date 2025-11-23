@@ -12,6 +12,7 @@ interface GOSIConfig {
   client_id: string;
   client_secret: string;
   private_key: string;
+  x_apikey: string;
   environment: 'sandbox' | 'production';
   access_token?: string | null;
   token_expires_at?: string | null;
@@ -52,8 +53,10 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (!config.client_id || !config.client_secret) {
-      return new Response(JSON.stringify({ error: 'GOSI API credentials incomplete. Please configure Client ID and Client Secret.' }), {
+    if (!config.client_id || !config.client_secret || !config.private_key) {
+      return new Response(JSON.stringify({ 
+        error: 'GOSI API credentials incomplete. Please configure Client ID, Client Secret, and Private Key.' 
+      }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -63,25 +66,22 @@ Deno.serve(async (req: Request) => {
       ? 'https://api.gosi.gov.sa'
       : 'https://sandbox-api.gosi.gov.sa';
 
-    const accessToken = await getAccessToken(gosiBaseUrl, config, supabaseClient);
-
     let response;
 
     switch (action) {
       case 'test_connection':
-        response = await testGOSIConnection(gosiBaseUrl, accessToken, config);
+        response = await testGOSIConnection(gosiBaseUrl, config, supabaseClient);
         break;
 
-      case 'sync_employees':
-        response = await syncEmployeesToGOSI(gosiBaseUrl, accessToken, config, requestData.employees);
+      case 'fetch_contributor':
+        if (!requestData.nin) {
+          throw new Error('NIN/Iqama/Border Number is required');
+        }
+        response = await fetchContributor(gosiBaseUrl, config, requestData.nin, supabaseClient);
         break;
 
-      case 'fetch_contributions':
-        response = await fetchGOSIContributions(gosiBaseUrl, accessToken, config, requestData.period);
-        break;
-
-      case 'submit_wage_report':
-        response = await submitWageReport(gosiBaseUrl, accessToken, config, requestData);
+      case 'fetch_all_contributors':
+        response = await fetchAllContributors(gosiBaseUrl, config, requestData.employees || [], supabaseClient);
         break;
 
       default:
@@ -108,23 +108,114 @@ Deno.serve(async (req: Request) => {
   }
 });
 
-async function getAccessToken(baseUrl: string, config: GOSIConfig, supabaseClient: any): Promise<string> {
+function generateJTI(): string {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let result = '';
+  for (let i = 0; i < 16; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+function base64UrlEncode(str: string): string {
+  return btoa(str)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+function arrayBufferToBase64Url(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary)
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+}
+
+async function generateDPoPToken(privateKeyPem: string, method: string, url: string): Promise<string> {
+  try {
+    const cleanKey = privateKeyPem
+      .replace(/-----BEGIN (RSA )?PRIVATE KEY-----/g, '')
+      .replace(/-----END (RSA )?PRIVATE KEY-----/g, '')
+      .replace(/\s+/g, '');
+
+    const binaryKey = Uint8Array.from(atob(cleanKey), c => c.charCodeAt(0));
+
+    const cryptoKey = await crypto.subtle.importKey(
+      'pkcs8',
+      binaryKey,
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        hash: 'SHA-256',
+      },
+      false,
+      ['sign']
+    );
+
+    const header = {
+      typ: 'dpop+jwt',
+      alg: 'RS256',
+    };
+
+    const payload = {
+      jti: generateJTI(),
+      htm: method,
+      htu: url,
+      iat: Math.floor(Date.now() / 1000),
+    };
+
+    const encodedHeader = base64UrlEncode(JSON.stringify(header));
+    const encodedPayload = base64UrlEncode(JSON.stringify(payload));
+    const dataToSign = `${encodedHeader}.${encodedPayload}`;
+
+    const encoder = new TextEncoder();
+    const dataBuffer = encoder.encode(dataToSign);
+    const signature = await crypto.subtle.sign(
+      'RSASSA-PKCS1-v1_5',
+      cryptoKey,
+      dataBuffer
+    );
+
+    const encodedSignature = arrayBufferToBase64Url(signature);
+    const jwt = `${dataToSign}.${encodedSignature}`;
+
+    return jwt;
+  } catch (error: any) {
+    console.error('DPoP token generation error:', error);
+    throw new Error(`Failed to generate DPoP token: ${error.message}`);
+  }
+}
+
+async function getAccessToken(
+  baseUrl: string,
+  config: GOSIConfig,
+  supabaseClient: any
+): Promise<string> {
   if (config.access_token && config.token_expires_at) {
     const expiresAt = new Date(config.token_expires_at);
     const now = new Date();
+    const bufferTime = 5 * 60 * 1000;
     
-    if (expiresAt > now) {
+    if (expiresAt.getTime() - now.getTime() > bufferTime) {
       return config.access_token;
     }
   }
 
-  const tokenResponse = await fetch(`${baseUrl}/oauth2/token`, {
+  const tokenUrl = `${baseUrl}/v1/establishment/${config.establishment_number}/access-token`;
+  const dpopToken = await generateDPoPToken(config.private_key, 'POST', tokenUrl);
+
+  const tokenResponse = await fetch(tokenUrl, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
+      'Content-Type': 'application/json',
+      'x-apikey': config.x_apikey,
+      'DPoP': dpopToken,
     },
-    body: new URLSearchParams({
-      grant_type: 'client_credentials',
+    body: JSON.stringify({
       client_id: config.client_id,
       client_secret: config.client_secret,
     }),
@@ -132,12 +223,17 @@ async function getAccessToken(baseUrl: string, config: GOSIConfig, supabaseClien
 
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text();
-    throw new Error(`Failed to get access token: ${tokenResponse.statusText} - ${errorText}`);
+    throw new Error(`Failed to get access token: ${tokenResponse.status} ${tokenResponse.statusText} - ${errorText}`);
   }
 
   const tokenData = await tokenResponse.json();
-  const accessToken = tokenData.access_token;
-  const expiresIn = tokenData.expires_in || 3600;
+  const accessToken = tokenData.access_token || tokenData.accessToken;
+  
+  if (!accessToken) {
+    throw new Error('No access token in response');
+  }
+
+  const expiresIn = tokenData.expires_in || tokenData.expiresIn || 3600;
   const expiresAt = new Date(Date.now() + (expiresIn * 1000));
 
   await supabaseClient
@@ -151,136 +247,125 @@ async function getAccessToken(baseUrl: string, config: GOSIConfig, supabaseClien
   return accessToken;
 }
 
-async function generateJWT(privateKey: string, payload: any): Promise<string> {
+async function testGOSIConnection(
+  baseUrl: string,
+  config: GOSIConfig,
+  supabaseClient: any
+) {
   try {
-    const encoder = new TextEncoder();
-    const keyData = encoder.encode(privateKey);
+    const accessToken = await getAccessToken(baseUrl, config, supabaseClient);
     
-    const header = {
-      alg: 'RS256',
-      typ: 'JWT'
+    return {
+      success: true,
+      message: 'Successfully connected to GOSI API and obtained access token',
+      data: {
+        establishment_number: config.establishment_number,
+        environment: config.environment,
+        token_obtained: true,
+      },
     };
-    
-    const encodedHeader = btoa(JSON.stringify(header)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-    
-    return `${encodedHeader}.${encodedPayload}.signature`;
-  } catch (error) {
-    console.error('JWT generation error:', error);
-    throw new Error('Failed to generate JWT token');
+  } catch (error: any) {
+    throw new Error(`Connection test failed: ${error.message}`);
   }
 }
 
-async function testGOSIConnection(baseUrl: string, accessToken: string, config: GOSIConfig) {
-  const response = await fetch(`${baseUrl}/api/v1/establishments/${config.establishment_number}/info`, {
+async function fetchContributor(
+  baseUrl: string,
+  config: GOSIConfig,
+  nin: string,
+  supabaseClient: any
+) {
+  const accessToken = await getAccessToken(baseUrl, config, supabaseClient);
+  
+  const apiUrl = `${baseUrl}/v2/establishment/${config.establishment_number}/contributor/${nin}`;
+  const dpopToken = await generateDPoPToken(config.private_key, 'GET', apiUrl);
+
+  const response = await fetch(apiUrl, {
     method: 'GET',
     headers: {
       'Authorization': `Bearer ${accessToken}`,
+      'x-apikey': config.x_apikey,
+      'DPoP': dpopToken,
       'Content-Type': 'application/json',
     },
   });
 
   if (!response.ok) {
     const errorText = await response.text();
-    throw new Error(`GOSI API connection failed: ${response.statusText} - ${errorText}`);
+    throw new Error(`Failed to fetch contributor: ${response.status} ${response.statusText} - ${errorText}`);
   }
 
   const data = await response.json();
   return {
     success: true,
-    message: 'Successfully connected to GOSI API',
+    message: 'Successfully fetched contributor data from GOSI',
     data,
   };
 }
 
-async function syncEmployeesToGOSI(baseUrl: string, accessToken: string, config: GOSIConfig, employees: any[]) {
+async function fetchAllContributors(
+  baseUrl: string,
+  config: GOSIConfig,
+  employees: any[],
+  supabaseClient: any
+) {
+  const accessToken = await getAccessToken(baseUrl, config, supabaseClient);
   const results = [];
   
   for (const employee of employees) {
     try {
-      const response = await fetch(`${baseUrl}/api/v1/establishments/${config.establishment_number}/employees`, {
-        method: 'POST',
+      const nin = employee.iqama_number || employee.nin;
+      if (!nin) {
+        results.push({
+          employee_id: employee.id,
+          status: 'failed',
+          error: 'No NIN/Iqama number found',
+        });
+        continue;
+      }
+
+      const apiUrl = `${baseUrl}/v2/establishment/${config.establishment_number}/contributor/${nin}`;
+      const dpopToken = await generateDPoPToken(config.private_key, 'GET', apiUrl);
+
+      const response = await fetch(apiUrl, {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,
+          'x-apikey': config.x_apikey,
+          'DPoP': dpopToken,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          nin: employee.iqama_number,
-          firstName: employee.first_name_en,
-          lastName: employee.last_name_en,
-          nationality: employee.nationality,
-          dateOfBirth: employee.date_of_birth,
-          joiningDate: employee.hire_date,
-          occupation: employee.job_title_en,
-          wage: employee.basic_salary,
-        }),
       });
 
       if (response.ok) {
-        results.push({ employee_id: employee.id, status: 'success' });
+        const data = await response.json();
+        results.push({
+          employee_id: employee.id,
+          nin: nin,
+          status: 'success',
+          data,
+        });
       } else {
         const error = await response.text();
-        results.push({ employee_id: employee.id, status: 'failed', error });
+        results.push({
+          employee_id: employee.id,
+          nin: nin,
+          status: 'failed',
+          error,
+        });
       }
     } catch (error: any) {
-      results.push({ employee_id: employee.id, status: 'failed', error: error.message });
+      results.push({
+        employee_id: employee.id,
+        status: 'failed',
+        error: error.message,
+      });
     }
   }
 
   return {
     success: true,
-    message: `Synced ${results.filter(r => r.status === 'success').length} of ${employees.length} employees`,
+    message: `Fetched ${results.filter(r => r.status === 'success').length} of ${employees.length} contributors from GOSI`,
     results,
-  };
-}
-
-async function fetchGOSIContributions(baseUrl: string, accessToken: string, config: GOSIConfig, period: string) {
-  const response = await fetch(
-    `${baseUrl}/api/v1/establishments/${config.establishment_number}/contributions?period=${period}`,
-    {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to fetch GOSI contributions: ${response.statusText} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  return {
-    success: true,
-    message: 'Successfully fetched GOSI contributions',
-    data,
-  };
-}
-
-async function submitWageReport(baseUrl: string, accessToken: string, config: GOSIConfig, reportData: any) {
-  const response = await fetch(
-    `${baseUrl}/api/v1/establishments/${config.establishment_number}/wage-reports`,
-    {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(reportData),
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to submit wage report: ${response.statusText} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  return {
-    success: true,
-    message: 'Wage report submitted successfully',
-    data,
   };
 }
