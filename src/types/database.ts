@@ -37,6 +37,7 @@ export interface Employee {
   phone?: string;
   nationality: string;
   is_saudi: boolean;
+  has_disability?: boolean;
   gender: 'male' | 'female';
   date_of_birth?: string;
   hire_date: string;

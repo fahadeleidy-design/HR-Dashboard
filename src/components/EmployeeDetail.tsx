@@ -18,6 +18,7 @@ interface EmployeeData {
   phone: string | null;
   nationality: string;
   is_saudi: boolean;
+  has_disability: boolean | null;
   gender: string;
   date_of_birth: string | null;
   hire_date: string;
@@ -358,6 +359,12 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
                 <div className="bg-white rounded-lg p-4">
                   <p className="text-sm text-gray-600">Nationality Status</p>
                   <p className="text-lg font-bold text-gray-900">{employee.is_saudi ? 'Saudi National' : 'Expat'}</p>
+                  {employee.is_saudi && employee.has_disability && (
+                    <div className="mt-2 flex items-center space-x-1 text-xs text-blue-600">
+                      <span className="font-semibold">Has Disability</span>
+                      <span className="text-gray-500">(Counts as 4.0 for Nitaqat)</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

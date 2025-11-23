@@ -28,6 +28,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     phone: employee?.phone || '',
     nationality: employee?.nationality || '',
     is_saudi: employee?.is_saudi || false,
+    has_disability: employee?.has_disability || false,
     gender: employee?.gender || 'male',
     date_of_birth: employee?.date_of_birth || '',
     hire_date: employee?.hire_date || new Date().toISOString().split('T')[0],
@@ -456,17 +457,38 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
               </select>
             </div>
 
-            <div>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  name="is_saudi"
-                  checked={formData.is_saudi}
-                  onChange={handleChange}
-                  className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                />
-                <span className="text-sm font-medium text-gray-700">Is Saudi National</span>
-              </label>
+            <div className="md:col-span-2 border border-gray-200 rounded-lg p-4 bg-gray-50">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="flex items-center space-x-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      name="is_saudi"
+                      checked={formData.is_saudi}
+                      onChange={handleChange}
+                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Is Saudi National</span>
+                  </label>
+                </div>
+                {formData.is_saudi && (
+                  <div>
+                    <label className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        name="has_disability"
+                        checked={formData.has_disability}
+                        onChange={handleChange}
+                        className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Has Disability</span>
+                    </label>
+                    <p className="text-xs text-gray-500 mt-1 ml-6">
+                      Counts as 4.0 employees for Nitaqat (if salary ≥ SAR 4,000)
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>
