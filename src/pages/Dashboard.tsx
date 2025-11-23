@@ -158,13 +158,16 @@ export function Dashboard() {
       const activeEmployees = employees.filter(e => e.status === 'active').length;
       const onLeaveEmployees = employees.filter(e => e.status === 'on_leave').length;
       const terminatedEmployees = employees.filter(e => e.status === 'terminated').length;
-      const saudiEmployees = employees.filter(e => e.is_saudi && e.status === 'active').length;
-      const nonSaudiEmployees = activeEmployees - saudiEmployees;
+
+      const saudiEmployees = employees.filter(e => e.is_saudi === true && e.status === 'active').length;
+      const nonSaudiEmployees = employees.filter(e => e.is_saudi === false && e.status === 'active').length;
+
       const maleEmployees = employees.filter(e => e.gender === 'male' && e.status === 'active').length;
       const femaleEmployees = employees.filter(e => e.gender === 'female' && e.status === 'active').length;
 
-      const saudizationPercentage = activeEmployees > 0
-        ? Math.round((saudiEmployees / activeEmployees) * 100)
+      const totalActiveForSaudization = saudiEmployees + nonSaudiEmployees;
+      const saudizationPercentage = totalActiveForSaudization > 0
+        ? Math.round((saudiEmployees / totalActiveForSaudization) * 100)
         : 0;
 
       let nitaqatColor = 'red';
