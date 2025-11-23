@@ -15,6 +15,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
   const { currentCompany } = useCompany();
   const [companies, setCompanies] = useState<any[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [managers, setManagers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [payroll, setPayroll] = useState<any>(null);
   const [selectedCompanyId, setSelectedCompanyId] = useState(employee?.company_id || currentCompany?.id || '');
@@ -44,6 +45,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     passport_number: employee?.passport_number || '',
     passport_expiry: employee?.passport_expiry || '',
     department_id: employee?.department_id || '',
+    manager_id: employee?.manager_id || '',
   });
   const [payrollData, setPayrollData] = useState({
     basic_salary: '0',
@@ -64,6 +66,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
   useEffect(() => {
     if (selectedCompanyId) {
       fetchDepartments();
+      fetchManagers();
     }
   }, [selectedCompanyId]);
 
@@ -95,6 +98,24 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       setDepartments(data || []);
     } catch (error) {
       console.error('Error fetching departments:', error);
+    }
+  };
+
+  const fetchManagers = async () => {
+    if (!selectedCompanyId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, employee_number, first_name_en, last_name_en, job_title_en')
+        .eq('company_id', selectedCompanyId)
+        .eq('status', 'active')
+        .order('first_name_en');
+
+      if (error) throw error;
+      setManagers(data || []);
+    } catch (error) {
+      console.error('Error fetching managers:', error);
     }
   };
 
@@ -311,6 +332,30 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                 onChange={(value) => setFormData(prev => ({ ...prev, department_id: value }))}
                 placeholder="Select Department"
               />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Direct Manager
+              </label>
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'No Manager (Top Level)' },
+                  ...managers
+                    .filter(m => m.id !== employee?.id)
+                    .map(manager => ({
+                      value: manager.id,
+                      label: `${manager.first_name_en} ${manager.last_name_en}`,
+                      searchText: `${manager.first_name_en} ${manager.last_name_en} ${manager.employee_number} ${manager.job_title_en || ''}`
+                    }))
+                ]}
+                value={formData.manager_id}
+                onChange={(value) => setFormData(prev => ({ ...prev, manager_id: value }))}
+                placeholder="Select Manager"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Select the direct manager this employee reports to
+              </p>
             </div>
 
             <div>
