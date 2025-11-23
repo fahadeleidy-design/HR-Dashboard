@@ -14,8 +14,9 @@ interface Department {
 interface GOSIConfig {
   id: string;
   establishment_number: string | null;
-  username: string | null;
-  api_key: string | null;
+  client_id: string | null;
+  client_secret: string | null;
+  private_key: string | null;
   environment: 'sandbox' | 'production';
   last_sync_date: string | null;
   sync_enabled: boolean;
@@ -30,8 +31,9 @@ export function Settings() {
   const [gosiLoading, setGosiLoading] = useState(false);
   const [gosiForm, setGosiForm] = useState({
     establishment_number: '',
-    username: '',
-    api_key: '',
+    client_id: '',
+    client_secret: '',
+    private_key: '',
     environment: 'sandbox' as 'sandbox' | 'production',
     sync_enabled: false,
   });
@@ -84,8 +86,9 @@ export function Settings() {
         setGosiConfig(data);
         setGosiForm({
           establishment_number: data.establishment_number || '',
-          username: data.username || '',
-          api_key: data.api_key || '',
+          client_id: data.client_id || '',
+          client_secret: data.client_secret || '',
+          private_key: data.private_key || '',
           environment: data.environment,
           sync_enabled: data.sync_enabled,
         });
@@ -104,8 +107,9 @@ export function Settings() {
       const configData = {
         company_id: currentCompany.id,
         establishment_number: gosiForm.establishment_number || null,
-        username: gosiForm.username || null,
-        api_key: gosiForm.api_key || null,
+        client_id: gosiForm.client_id || null,
+        client_secret: gosiForm.client_secret || null,
+        private_key: gosiForm.private_key || null,
         environment: gosiForm.environment,
         sync_enabled: gosiForm.sync_enabled,
         updated_at: new Date().toISOString(),
@@ -310,31 +314,46 @@ export function Settings() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                API Username
+                Client ID *
               </label>
               <input
                 type="text"
-                value={gosiForm.username}
-                onChange={(e) => setGosiForm({ ...gosiForm, username: e.target.value })}
+                required
+                value={gosiForm.client_id}
+                onChange={(e) => setGosiForm({ ...gosiForm, client_id: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="GOSI API username"
+                placeholder="Enter your GOSI Client ID"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Client Secret *
+              </label>
+              <input
+                type="password"
+                required
+                value={gosiForm.client_secret}
+                onChange={(e) => setGosiForm({ ...gosiForm, client_secret: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter your GOSI Client Secret"
               />
             </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                API Key *
+                Private Key *
               </label>
-              <input
-                type="password"
+              <textarea
+                rows={6}
                 required
-                value={gosiForm.api_key}
-                onChange={(e) => setGosiForm({ ...gosiForm, api_key: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your GOSI API key"
+                value={gosiForm.private_key}
+                onChange={(e) => setGosiForm({ ...gosiForm, private_key: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
+                placeholder="Paste your GOSI Private Key here (RSA or PEM format)"
               />
               <p className="text-xs text-gray-500 mt-1">
-                Obtain your API key from the GOSI portal under API Management section
+                Paste the entire private key including BEGIN and END markers. This key is used to sign API requests.
               </p>
             </div>
 
