@@ -80,11 +80,11 @@ export function Compliance() {
     try {
       const { data, error } = await supabase
         .from('gosi_api_config')
-        .select('id, sync_enabled')
+        .select('id, client_id, client_secret, establishment_number')
         .eq('company_id', currentCompany.id)
         .maybeSingle();
 
-      setGosiConfigured(!!data);
+      setGosiConfigured(!!data && !!data.client_id && !!data.client_secret && !!data.establishment_number);
     } catch (error) {
       console.error('Error checking GOSI config:', error);
     }
@@ -738,17 +738,28 @@ export function Compliance() {
                 onChange={(e) => setSelectedMonth(e.target.value)}
                 className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               />
-              {gosiConfigured && (
-                <button
-                  onClick={() => handleGOSISync('fetch_all_contributors')}
-                  disabled={gosiSyncing}
-                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
-                  title="Fetch contributor data from GOSI"
-                >
-                  <RefreshCw className={`h-4 w-4 ${gosiSyncing ? 'animate-spin' : ''}`} />
-                  <span>{gosiSyncing ? 'Syncing...' : 'Sync GOSI'}</span>
-                </button>
-              )}
+              {gosiConfigured ? (
+                <>
+                  <button
+                    onClick={() => handleGOSISync('test_connection')}
+                    disabled={gosiSyncing}
+                    className="flex items-center space-x-2 px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition-colors disabled:bg-gray-200"
+                    title="Test GOSI connection"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${gosiSyncing ? 'animate-spin' : ''}`} />
+                    <span>{gosiSyncing ? 'Testing...' : 'Test'}</span>
+                  </button>
+                  <button
+                    onClick={() => handleGOSISync('fetch_all_contributors')}
+                    disabled={gosiSyncing}
+                    className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:bg-gray-400"
+                    title="Fetch contributor data from GOSI"
+                  >
+                    <RefreshCw className={`h-4 w-4 ${gosiSyncing ? 'animate-spin' : ''}`} />
+                    <span>{gosiSyncing ? 'Syncing...' : 'Sync GOSI'}</span>
+                  </button>
+                </>
+              ) : null}
               <button
                 onClick={handleExportGOSI}
                 className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
