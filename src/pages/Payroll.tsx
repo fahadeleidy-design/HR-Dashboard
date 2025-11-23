@@ -195,10 +195,10 @@ export function Payroll() {
     );
   }
 
-  const totalGrossSalary = payrollRecords.reduce((sum, record) => sum + (record.gross_salary || 0), 0);
-  const totalNetSalary = payrollRecords.reduce((sum, record) => sum + (record.net_salary || 0), 0);
+  const totalGrossSalary = payrollRecords.reduce((sum, record) => sum + (Number(record.gross_salary) || 0), 0);
+  const totalNetSalary = payrollRecords.reduce((sum, record) => sum + (Number(record.net_salary) || 0), 0);
   const totalGOSI = payrollRecords.reduce((sum, record) =>
-    sum + (record.gosi_employee || 0) + (record.gosi_employer || 0), 0
+    sum + (Number(record.gosi_employee) || 0) + (Number(record.gosi_employer) || 0), 0
   );
 
   return (
@@ -316,7 +316,7 @@ export function Payroll() {
                 </tr>
               ) : (
                 sortedData.map((record) => {
-                  const totalGosi = (record.gosi_employee || 0) + (record.gosi_employer || 0);
+                  const totalGosi = (Number(record.gosi_employee) || 0) + (Number(record.gosi_employer) || 0);
 
                   return (
                     <tr key={record.id} className="hover:bg-gray-50">
@@ -329,19 +329,19 @@ export function Payroll() {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        SAR {(record.basic_salary || 0).toLocaleString()}
+                        SAR {Number(record.basic_salary || 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        SAR {((record.housing_allowance || 0) + (record.transportation_allowance || 0) + (record.other_allowances || 0)).toLocaleString()}
+                        SAR {(Number(record.housing_allowance || 0) + Number(record.transportation_allowance || 0) + Number(record.other_allowances || 0)).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        SAR {(record.gross_salary || 0).toLocaleString()}
+                        SAR {Number(record.gross_salary || 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         SAR {totalGosi.toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-green-600">
-                        SAR {(record.net_salary || 0).toLocaleString()}
+                        SAR {Number(record.net_salary || 0).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {record.effective_from ? new Date(record.effective_from).toLocaleDateString() : 'N/A'}
