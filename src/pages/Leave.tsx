@@ -90,10 +90,12 @@ export function Leave() {
   };
 
   const fetchLeaveTypes = async () => {
+    if (!currentCompany) return;
     try {
       const { data, error } = await supabase
         .from('leave_types')
         .select('*')
+        .eq('company_id', currentCompany.id)
         .order('name_en');
 
       if (error) throw error;
