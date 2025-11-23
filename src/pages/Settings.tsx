@@ -30,6 +30,8 @@ export function Settings() {
   const [showDeptForm, setShowDeptForm] = useState(false);
   const [gosiConfig, setGosiConfig] = useState<GOSIConfig | null>(null);
   const [gosiLoading, setGosiLoading] = useState(false);
+  const [gosiTesting, setGosiTesting] = useState(false);
+  const [gosiTestResult, setGosiTestResult] = useState<{success: boolean; message: string} | null>(null);
   const [gosiForm, setGosiForm] = useState({
     establishment_number: '',
     client_id: '',
@@ -101,11 +103,65 @@ export function Settings() {
     }
   };
 
+  const handleTestGOSIConnection = async () => {
+    if (!currentCompany || !gosiConfig) {
+      alert('Please save your GOSI configuration first');
+      return;
+    }
+
+    setGosiTesting(true);
+    setGosiTestResult(null);
+    try {
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/gosi-api`;
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        alert('Please log in to test GOSI connection');
+        return;
+      }
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          action: 'test_connection',
+          company_id: currentCompany.id,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        setGosiTestResult({
+          success: true,
+          message: result.message || 'Connection successful!'
+        });
+      } else {
+        setGosiTestResult({
+          success: false,
+          message: result.error || 'Connection failed'
+        });
+      }
+    } catch (error: any) {
+      console.error('GOSI test error:', error);
+      setGosiTestResult({
+        success: false,
+        message: error.message || 'Failed to test connection'
+      });
+    } finally {
+      setGosiTesting(false);
+    }
+  };
+
   const handleSaveGOSIConfig = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCompany) return;
 
     setGosiLoading(true);
+    setGosiTestResult(null);
     try {
       const configData = {
         company_id: currentCompany.id,
@@ -404,7 +460,19 @@ export function Settings() {
             </div>
           </div>
 
-          <div className="mt-6 flex justify-end">
+          <div className="mt-6 flex justify-between items-center">
+            <div>
+              {gosiConfig && (
+                <button
+                  type="button"
+                  onClick={handleTestGOSIConnection}
+                  disabled={gosiTesting}
+                  className="px-6 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  {gosiTesting ? 'Testing...' : 'Test Connection'}
+                </button>
+              )}
+            </div>
             <button
               type="submit"
               disabled={gosiLoading}
@@ -413,6 +481,34 @@ export function Settings() {
               {gosiLoading ? 'Saving...' : gosiConfig ? 'Update Configuration' : 'Save Configuration'}
             </button>
           </div>
+
+          {gosiTestResult && (
+            <div className={`mt-4 p-4 rounded-md ${
+              gosiTestResult.success
+                ? 'bg-green-50 border border-green-200'
+                : 'bg-red-50 border border-red-200'
+            }`}>
+              <div className="flex items-start space-x-3">
+                {gosiTestResult.success ? (
+                  <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                )}
+                <div>
+                  <p className={`text-sm font-medium ${
+                    gosiTestResult.success ? 'text-green-900' : 'text-red-900'
+                  }`}>
+                    {gosiTestResult.success ? 'Connection Successful!' : 'Connection Failed'}
+                  </p>
+                  <p className={`text-sm mt-1 ${
+                    gosiTestResult.success ? 'text-green-700' : 'text-red-700'
+                  }`}>
+                    {gosiTestResult.message}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </form>
       </div>
 

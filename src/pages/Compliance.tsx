@@ -36,6 +36,17 @@ interface NitaqatHistoryRecord {
   nitaqat_color: string;
 }
 
+interface GOSISyncLog {
+  id: string;
+  sync_type: string;
+  status: string;
+  records_processed: number;
+  records_failed: number;
+  error_message: string | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
 export function Compliance() {
   const { currentCompany } = useCompany();
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -50,6 +61,9 @@ export function Compliance() {
   const [calculatorSaudis, setCalculatorSaudis] = useState(0);
   const [gosiSyncing, setGosiSyncing] = useState(false);
   const [gosiConfigured, setGosiConfigured] = useState(false);
+  const [gosiSyncLogs, setGosiSyncLogs] = useState<GOSISyncLog[]>([]);
+  const [showSyncLogs, setShowSyncLogs] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
 
   useEffect(() => {
     if (currentCompany) {
@@ -57,6 +71,7 @@ export function Compliance() {
       fetchGOSIContributions();
       fetchNitaqatHistory();
       checkGOSIConfiguration();
+      fetchGOSISyncLogs();
     }
   }, [currentCompany, selectedMonth]);
 
@@ -72,6 +87,23 @@ export function Compliance() {
       setGosiConfigured(!!data);
     } catch (error) {
       console.error('Error checking GOSI config:', error);
+    }
+  };
+
+  const fetchGOSISyncLogs = async () => {
+    if (!currentCompany) return;
+    try {
+      const { data, error } = await supabase
+        .from('gosi_sync_logs')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .order('started_at', { ascending: false })
+        .limit(10);
+
+      if (error) throw error;
+      setGosiSyncLogs(data || []);
+    } catch (error) {
+      console.error('Error fetching GOSI sync logs:', error);
     }
   };
 
@@ -118,6 +150,7 @@ export function Compliance() {
         throw new Error(result.error || 'GOSI sync failed');
       }
 
+      setSyncResult(result);
       alert(result.message || 'GOSI sync completed successfully!');
 
       await supabase.from('gosi_sync_logs').insert([{
@@ -127,6 +160,8 @@ export function Compliance() {
         records_processed: result.results?.length || 0,
         completed_at: new Date().toISOString(),
       }]);
+
+      fetchGOSISyncLogs();
     } catch (error: any) {
       console.error('GOSI sync error:', error);
       alert(error.message || 'Failed to sync with GOSI');
@@ -138,6 +173,8 @@ export function Compliance() {
         error_message: error.message,
         completed_at: new Date().toISOString(),
       }]);
+
+      fetchGOSISyncLogs();
     } finally {
       setGosiSyncing(false);
     }
@@ -734,6 +771,84 @@ export function Compliance() {
                 </p>
               </div>
             </div>
+          </div>
+        )}
+
+        {gosiConfigured && gosiSyncLogs.length > 0 && (
+          <div className="p-4 bg-gray-50 border-b border-gray-200">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Recent GOSI Sync Activity</h3>
+              <button
+                onClick={() => setShowSyncLogs(!showSyncLogs)}
+                className="text-sm text-blue-600 hover:text-blue-700"
+              >
+                {showSyncLogs ? 'Hide Details' : 'Show Details'}
+              </button>
+            </div>
+
+            <div className="flex items-center space-x-4 mb-2">
+              <div className="flex items-center space-x-2">
+                {gosiSyncLogs[0].status === 'success' ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : (
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                )}
+                <span className="text-sm font-medium text-gray-900">
+                  Last Sync: {gosiSyncLogs[0].status === 'success' ? 'Successful' : 'Failed'}
+                </span>
+              </div>
+              <span className="text-sm text-gray-600">
+                {new Date(gosiSyncLogs[0].started_at).toLocaleString()}
+              </span>
+              {gosiSyncLogs[0].records_processed > 0 && (
+                <span className="text-sm text-gray-600">
+                  {gosiSyncLogs[0].records_processed} records processed
+                </span>
+              )}
+            </div>
+
+            {showSyncLogs && (
+              <div className="mt-3 space-y-2">
+                {gosiSyncLogs.map((log) => (
+                  <div key={log.id} className="p-3 bg-white rounded border border-gray-200">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-2">
+                          {log.status === 'success' ? (
+                            <CheckCircle className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <AlertCircle className="h-4 w-4 text-red-600" />
+                          )}
+                          <span className="text-sm font-medium text-gray-900 capitalize">
+                            {log.sync_type.replace(/_/g, ' ')}
+                          </span>
+                          <span className={`text-xs px-2 py-1 rounded ${
+                            log.status === 'success'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {log.status}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {new Date(log.started_at).toLocaleString()}
+                        </p>
+                        {log.records_processed > 0 && (
+                          <p className="text-xs text-gray-600 mt-1">
+                            Processed: {log.records_processed} | Failed: {log.records_failed || 0}
+                          </p>
+                        )}
+                        {log.error_message && (
+                          <p className="text-xs text-red-600 mt-1">
+                            Error: {log.error_message}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
