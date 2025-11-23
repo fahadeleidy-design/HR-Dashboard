@@ -113,8 +113,10 @@ export function Dashboard() {
           .gte('expiry_date', new Date().toISOString()),
         supabase
           .from('payroll')
-          .select('gross_salary, employee_id')
-          .eq('company_id', currentCompany.id),
+          .select('gross_salary, employee_id, effective_from')
+          .eq('company_id', currentCompany.id)
+          .gte('effective_from', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
+          .lt('effective_from', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split('T')[0]),
         supabase
           .from('vehicles')
           .select('id, status')
