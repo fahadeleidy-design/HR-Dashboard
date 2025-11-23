@@ -46,6 +46,8 @@ export function Layout({ children }: LayoutProps) {
     { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
     { path: '/employees', icon: Users, label: 'Employees' },
     { path: '/payroll', icon: DollarSign, label: 'Payroll' },
+    { path: '/loans', icon: CreditCard, label: 'Loans' },
+    { path: '/advances', icon: Receipt, label: 'Advances' },
     { path: '/leave', icon: Calendar, label: 'Leave' },
     { path: '/attendance', icon: Clock, label: 'Attendance' },
     { path: '/performance', icon: TrendingUp, label: 'Performance' },
