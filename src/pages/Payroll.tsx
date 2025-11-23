@@ -217,12 +217,12 @@ export function Payroll() {
 
     if (isSaudi) {
       return {
-        employee: gosiBase * 0.10,
-        employer: gosiBase * 0.12,
+        employee: gosiBase * 0.0975,
+        employer: gosiBase * 0.1175,
       };
     } else {
       return {
-        employee: gosiBase * 0.02,
+        employee: 0,
         employer: gosiBase * 0.02,
       };
     }
