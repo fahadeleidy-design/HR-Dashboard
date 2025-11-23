@@ -23,6 +23,7 @@ interface PayrollRecord {
     first_name_en: string;
     last_name_en: string;
     is_saudi: boolean;
+    iqama_number: string;
   };
 }
 
@@ -59,7 +60,7 @@ export function Payroll() {
         .from('payroll')
         .select(`
           *,
-          employee:employees(employee_number, first_name_en, last_name_en, is_saudi)
+          employee:employees(employee_number, first_name_en, last_name_en, is_saudi, iqama_number)
         `)
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
@@ -79,7 +80,7 @@ export function Payroll() {
     try {
       const { data, error } = await supabase
         .from('employees')
-        .select('id, employee_number, first_name_en, last_name_en, is_saudi')
+        .select('id, employee_number, first_name_en, last_name_en, is_saudi, iqama_number')
         .eq('company_id', currentCompany.id)
         .eq('status', 'active')
         .order('employee_number');
@@ -105,6 +106,20 @@ export function Payroll() {
 
     const employee = employees.find(e => e.id === selectedEmployee);
     if (!employee) return;
+
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    const { data: existingPayroll } = await supabase
+      .from('payroll')
+      .select('id')
+      .eq('employee_id', selectedEmployee)
+      .gte('effective_from', `${currentMonth}-01`)
+      .lt('effective_from', `${currentMonth}-32`)
+      .maybeSingle();
+
+    if (existingPayroll) {
+      alert(`Payroll already exists for ${employee.first_name_en} ${employee.last_name_en} (${employee.iqama_number}) for the current month.`);
+      return;
+    }
 
     const grossSalary =
       salaryForm.basic_salary +
@@ -152,6 +167,7 @@ export function Payroll() {
   const handleExport = () => {
     const exportData = payrollRecords.map((record) => ({
       'Employee Number': record.employee.employee_number,
+      'IQAMA Number': record.employee.iqama_number,
       'Employee Name': `${record.employee.first_name_en} ${record.employee.last_name_en}`,
       'Basic Salary': record.basic_salary,
       'Housing Allowance': record.housing_allowance,
@@ -308,7 +324,9 @@ export function Payroll() {
                         <div className="text-sm font-medium text-gray-900">
                           {record.employee.first_name_en} {record.employee.last_name_en}
                         </div>
-                        <div className="text-sm text-gray-500">{record.employee.employee_number}</div>
+                        <div className="text-sm text-gray-500">
+                          {record.employee.employee_number} | {record.employee.iqama_number}
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         SAR {(record.basic_salary || 0).toLocaleString()}
@@ -357,7 +375,7 @@ export function Payroll() {
                   <option value="">Choose an employee</option>
                   {employees.map((emp) => (
                     <option key={emp.id} value={emp.id}>
-                      {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
+                      {emp.employee_number} - {emp.first_name_en} {emp.last_name_en} ({emp.iqama_number})
                     </option>
                   ))}
                 </select>
