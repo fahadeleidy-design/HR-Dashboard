@@ -212,20 +212,39 @@ export function Payroll() {
     }
   };
 
-  const calculateGOSI = (basicSalary: number, housingAllowance: number, isSaudi: boolean) => {
-    const gosiBase = Math.min(basicSalary + housingAllowance, 45000);
+  const getEmployeeGOSIRates = async (employeeId: string) => {
+    if (!currentCompany) return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
 
-    if (isSaudi) {
-      return {
-        employee: gosiBase * 0.0975,
-        employer: gosiBase * 0.1175,
-      };
-    } else {
-      return {
-        employee: 0,
-        employer: gosiBase * 0.02,
-      };
+    try {
+      const { data, error } = await supabase.rpc('get_employee_gosi_rates', {
+        p_employee_id: employeeId,
+        p_company_id: currentCompany.id,
+      });
+
+      if (error) {
+        console.error('Error fetching GOSI rates:', error);
+        return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
+      }
+
+      if (data && data.length > 0) {
+        return data[0];
+      }
+
+      return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
+    } catch (error) {
+      console.error('Error in getEmployeeGOSIRates:', error);
+      return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
     }
+  };
+
+  const calculateGOSI = async (basicSalary: number, housingAllowance: number, employeeId: string) => {
+    const rates = await getEmployeeGOSIRates(employeeId);
+    const gosiBase = Math.min(basicSalary + housingAllowance, rates.max_wage_ceiling);
+
+    return {
+      employee: gosiBase * Number(rates.employee_rate),
+      employer: gosiBase * Number(rates.employer_rate),
+    };
   };
 
   const createBatch = async () => {
@@ -287,7 +306,7 @@ export function Payroll() {
         const advance = advances.find(a => a.employee_id === emp.id && a.status === 'approved');
 
         const totalEarnings = basicSalary + housingAllowance + transportationAllowance + otherAllowances;
-        const gosi = calculateGOSI(basicSalary, housingAllowance, emp.is_saudi);
+        const gosi = await calculateGOSI(basicSalary, housingAllowance, emp.id);
         const loanDeduction = loan?.monthly_installment || 0;
         const advanceDeduction = advance?.deduction_amount || 0;
         const totalDeductions = gosi.employee + loanDeduction + advanceDeduction;
