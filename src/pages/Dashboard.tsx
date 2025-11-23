@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 import {
   Users, UserCheck, UserX, TrendingUp, Calendar, AlertCircle,
   DollarSign, Clock, FileText, Car, Home, Shield, Plane,
-  CreditCard, Briefcase, Award, UserCog, TrendingDown
+  CreditCard, Briefcase, Award, UserCog, TrendingDown, Building2
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 
