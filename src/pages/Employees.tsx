@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types/database';
@@ -11,6 +12,7 @@ import * as XLSX from 'xlsx';
 
 export function Employees() {
   const { currentCompany } = useCompany();
+  const [searchParams] = useSearchParams();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,7 +32,7 @@ export function Employees() {
 
   useEffect(() => {
     filterEmployees();
-  }, [searchTerm, employees]);
+  }, [searchTerm, employees, searchParams]);
 
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredEmployees);
 
@@ -89,21 +91,39 @@ export function Employees() {
   };
 
   const filterEmployees = () => {
-    if (!searchTerm) {
-      setFilteredEmployees(employees);
-      return;
+    let filtered = [...employees];
+
+    const statusFilter = searchParams.get('status');
+    const nationalityFilter = searchParams.get('nationality');
+    const genderFilter = searchParams.get('gender');
+
+    if (statusFilter) {
+      filtered = filtered.filter(emp => emp.status === statusFilter);
     }
 
-    const term = searchTerm.toLowerCase();
-    const filtered = employees.filter(
-      (emp) =>
-        emp.first_name_en.toLowerCase().includes(term) ||
-        emp.last_name_en.toLowerCase().includes(term) ||
-        emp.employee_number.toLowerCase().includes(term) ||
-        emp.email?.toLowerCase().includes(term) ||
-        emp.nationality.toLowerCase().includes(term) ||
-        emp.job_title_en.toLowerCase().includes(term)
-    );
+    if (nationalityFilter === 'saudi') {
+      filtered = filtered.filter(emp => emp.is_saudi === true);
+    } else if (nationalityFilter === 'non-saudi') {
+      filtered = filtered.filter(emp => emp.is_saudi === false);
+    }
+
+    if (genderFilter) {
+      filtered = filtered.filter(emp => emp.gender === genderFilter);
+    }
+
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (emp) =>
+          emp.first_name_en.toLowerCase().includes(term) ||
+          emp.last_name_en.toLowerCase().includes(term) ||
+          emp.employee_number.toLowerCase().includes(term) ||
+          emp.email?.toLowerCase().includes(term) ||
+          emp.nationality.toLowerCase().includes(term) ||
+          emp.job_title_en.toLowerCase().includes(term)
+      );
+    }
+
     setFilteredEmployees(filtered);
   };
 
@@ -172,12 +192,39 @@ export function Employees() {
     );
   }
 
+  const getActiveFilters = () => {
+    const filters = [];
+    const statusFilter = searchParams.get('status');
+    const nationalityFilter = searchParams.get('nationality');
+    const genderFilter = searchParams.get('gender');
+
+    if (statusFilter) filters.push({ key: 'status', label: `Status: ${statusFilter}` });
+    if (nationalityFilter) filters.push({ key: 'nationality', label: `Nationality: ${nationalityFilter}` });
+    if (genderFilter) filters.push({ key: 'gender', label: `Gender: ${genderFilter}` });
+
+    return filters;
+  };
+
+  const activeFilters = getActiveFilters();
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Employees</h1>
           <p className="text-gray-600 mt-1">Manage your employee records</p>
+          {activeFilters.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {activeFilters.map(filter => (
+                <span
+                  key={filter.key}
+                  className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-primary-100 text-primary-800"
+                >
+                  {filter.label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex space-x-3">
           <button
