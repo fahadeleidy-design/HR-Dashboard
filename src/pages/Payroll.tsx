@@ -92,8 +92,8 @@ export function Payroll() {
     }
   };
 
-  const calculateGOSI = (grossSalary: number, isSaudi: boolean) => {
-    const gosiBase = Math.min(grossSalary, 45000);
+  const calculateGOSI = (basicSalary: number, housingAllowance: number, isSaudi: boolean) => {
+    const gosiBase = Math.min(basicSalary + housingAllowance, 45000);
 
     return {
       employee: isSaudi ? gosiBase * 0.10 : gosiBase * 0.02,
@@ -127,7 +127,7 @@ export function Payroll() {
       salaryForm.transportation_allowance +
       salaryForm.other_allowances;
 
-    const gosi = calculateGOSI(grossSalary, employee.is_saudi);
+    const gosi = calculateGOSI(salaryForm.basic_salary, salaryForm.housing_allowance, employee.is_saudi);
     const totalDeductions = gosi.employee;
     const netSalary = grossSalary - totalDeductions;
 
