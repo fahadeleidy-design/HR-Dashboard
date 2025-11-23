@@ -199,13 +199,26 @@ async function getAccessToken(
     const expiresAt = new Date(config.token_expires_at);
     const now = new Date();
     const bufferTime = 5 * 60 * 1000;
-    
+
     if (expiresAt.getTime() - now.getTime() > bufferTime) {
       return config.access_token;
     }
   }
 
+  if (!config.establishment_number || !config.client_id || !config.client_secret || !config.private_key) {
+    throw new Error('Missing required credentials: establishment_number, client_id, client_secret, or private_key');
+  }
+
+  if (!config.private_key.includes('BEGIN') || !config.private_key.includes('PRIVATE KEY')) {
+    throw new Error('Invalid private key format. Key must include BEGIN and END markers');
+  }
+
   const tokenUrl = `${baseUrl}/v1/establishment/${config.establishment_number}/access-token`;
+
+  console.log('Requesting access token from:', tokenUrl);
+  console.log('Using establishment:', config.establishment_number);
+  console.log('Using environment:', config.environment);
+
   const dpopToken = await generateDPoPToken(config.private_key, 'POST', tokenUrl);
 
   const tokenResponse = await fetch(tokenUrl, {
@@ -223,12 +236,40 @@ async function getAccessToken(
 
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text();
-    throw new Error(`Failed to get access token: ${tokenResponse.status} ${tokenResponse.statusText} - ${errorText}`);
+    console.error('Token request failed:', {
+      status: tokenResponse.status,
+      statusText: tokenResponse.statusText,
+      error: errorText,
+    });
+
+    let errorMessage = `Failed to get access token: ${tokenResponse.status} ${tokenResponse.statusText}`;
+
+    try {
+      const errorJson = JSON.parse(errorText);
+      if (errorJson.message) {
+        const englishMsg = errorJson.message.english || errorJson.message;
+        errorMessage += `\n\nGOSI Error: ${englishMsg}`;
+      }
+      if (errorJson.code) {
+        errorMessage += `\nError Code: ${errorJson.code}`;
+      }
+    } catch {
+      errorMessage += `\nResponse: ${errorText}`;
+    }
+
+    errorMessage += '\n\nPossible causes:\n';
+    errorMessage += '1. Invalid Client ID or Client Secret\n';
+    errorMessage += '2. Establishment number does not match the credentials\n';
+    errorMessage += '3. Credentials are for different environment (sandbox vs production)\n';
+    errorMessage += '4. Private key format is incorrect\n';
+    errorMessage += '5. x-apikey is invalid or expired';
+
+    throw new Error(errorMessage);
   }
 
   const tokenData = await tokenResponse.json();
   const accessToken = tokenData.access_token || tokenData.accessToken;
-  
+
   if (!accessToken) {
     throw new Error('No access token in response');
   }
