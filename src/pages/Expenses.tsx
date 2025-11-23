@@ -52,6 +52,8 @@ export function Expenses() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     employee_id: '',
@@ -131,6 +133,57 @@ export function Expenses() {
     }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const filesArray = Array.from(e.target.files);
+      setUploadedFiles(prev => [...prev, ...filesArray]);
+      setFormData({ ...formData, receipt_attached: true });
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+    if (uploadedFiles.length <= 1) {
+      setFormData({ ...formData, receipt_attached: false });
+    }
+  };
+
+  const uploadFilesToStorage = async (claimNumber: string) => {
+    if (uploadedFiles.length === 0) return [];
+
+    setUploading(true);
+    const uploadedUrls: string[] = [];
+
+    try {
+      for (const file of uploadedFiles) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${claimNumber}_${Date.now()}_${Math.random().toString(36).substring(7)}.${fileExt}`;
+        const filePath = `expense-receipts/${currentCompany?.id}/${fileName}`;
+
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .upload(filePath, file);
+
+        if (error) {
+          console.error('Error uploading file:', error);
+          continue;
+        }
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('documents')
+          .getPublicUrl(filePath);
+
+        uploadedUrls.push(publicUrl);
+      }
+    } catch (error) {
+      console.error('Error in file upload:', error);
+    } finally {
+      setUploading(false);
+    }
+
+    return uploadedUrls;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCompany) return;
@@ -144,6 +197,8 @@ export function Expenses() {
       const amountInSAR = formData.currency === 'SAR'
         ? parseFloat(calculations.totalAmount)
         : parseFloat(calculations.totalAmount) * parseFloat(formData.exchange_rate);
+
+      const receiptUrls = await uploadFilesToStorage(claimNumber);
 
       const { error } = await supabase.from('expense_claims').insert({
         company_id: currentCompany.id,
@@ -180,6 +235,8 @@ export function Expenses() {
         manager_approval_id: null,
         finance_approval_id: null,
         receipt_attached: formData.receipt_attached,
+        receipt_file_url: receiptUrls.length > 0 ? receiptUrls[0] : null,
+        receipt_files: receiptUrls.length > 0 ? receiptUrls : null,
         notes: formData.notes || null,
         net_reimbursement: amountInSAR - (formData.advance_deducted ? parseFloat(formData.advance_deducted) : 0),
       });
@@ -187,6 +244,7 @@ export function Expenses() {
       if (error) throw error;
 
       setShowAddModal(false);
+      setUploadedFiles([]);
       setFormData({
         employee_id: '',
         expense_category: '',
@@ -631,18 +689,57 @@ export function Expenses() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.receipt_attached}
-                      onChange={(e) => setFormData({ ...formData, receipt_attached: e.target.checked })}
-                      className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700">Receipt/Invoice is attached</span>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Receipt/Invoice {parseFloat(formData.amount) > 100 && <span className="text-red-500">*</span>}
                   </label>
-                  <p className="text-xs text-gray-500 ml-6 mt-1">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-500 transition-colors">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*,.pdf"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="receipt-upload"
+                    />
+                    <label htmlFor="receipt-upload" className="cursor-pointer">
+                      <Receipt className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                      <p className="text-sm text-gray-600 mb-1">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        PDF, PNG, JPG up to 10MB (Multiple files allowed)
+                      </p>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
                     Required for all expenses above SAR 100 and mandatory for VAT reclaim
                   </p>
+
+                  {uploadedFiles.length > 0 && (
+                    <div className="mt-4 space-y-2">
+                      <p className="text-sm font-medium text-gray-700">Uploaded Files:</p>
+                      {uploadedFiles.map((file, index) => (
+                        <div key={index} className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <Receipt className="h-5 w-5 text-gray-400" />
+                            <div>
+                              <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {(file.size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removeFile(index)}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="md:col-span-2">
