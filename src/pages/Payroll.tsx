@@ -56,6 +56,8 @@ export function Payroll() {
 
     setLoading(true);
     try {
+      const currentMonth = new Date().toISOString().slice(0, 7);
+
       const { data, error } = await supabase
         .from('payroll')
         .select(`
@@ -63,6 +65,8 @@ export function Payroll() {
           employee:employees(employee_number, first_name_en, last_name_en, is_saudi, iqama_number)
         `)
         .eq('company_id', currentCompany.id)
+        .gte('effective_from', `${currentMonth}-01`)
+        .lt('effective_from', `${currentMonth}-32`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
