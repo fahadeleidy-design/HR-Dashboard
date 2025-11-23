@@ -797,7 +797,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                 </div>
                 <div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Employee GOSI ({formData.is_saudi ? '10%' : '2%'}):</span>
+                    <span className="text-gray-600">Employee GOSI ({formData.is_saudi ? '9.75%' : '0%'}):</span>
                     <span className="font-medium text-red-600">
                       {(() => {
                         const grossSalary = (parseFloat(payrollData.basic_salary) || 0) +
@@ -805,13 +805,13 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                           (parseFloat(payrollData.transportation_allowance) || 0) +
                           (parseFloat(payrollData.other_allowances) || 0);
                         const gosiWage = Math.min(grossSalary, 45000);
-                        const rate = formData.is_saudi ? 0.10 : 0.02;
+                        const rate = formData.is_saudi ? 0.0975 : 0;
                         return (gosiWage * rate).toLocaleString('en-SA', { minimumFractionDigits: 2 });
                       })()} SAR
                     </span>
                   </div>
                   <div className="flex justify-between mb-2">
-                    <span className="text-gray-600">Employer GOSI ({formData.is_saudi ? '12%' : '2%'}):</span>
+                    <span className="text-gray-600">Employer GOSI ({formData.is_saudi ? '11.75%' : '2%'}):</span>
                     <span className="font-medium text-orange-600">
                       {(() => {
                         const grossSalary = (parseFloat(payrollData.basic_salary) || 0) +
@@ -819,7 +819,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                           (parseFloat(payrollData.transportation_allowance) || 0) +
                           (parseFloat(payrollData.other_allowances) || 0);
                         const gosiWage = Math.min(grossSalary, 45000);
-                        const rate = formData.is_saudi ? 0.12 : 0.02;
+                        const rate = formData.is_saudi ? 0.1175 : 0.02;
                         return (gosiWage * rate).toLocaleString('en-SA', { minimumFractionDigits: 2 });
                       })()} SAR
                     </span>
@@ -833,7 +833,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                           (parseFloat(payrollData.transportation_allowance) || 0) +
                           (parseFloat(payrollData.other_allowances) || 0);
                         const gosiWage = Math.min(grossSalary, 45000);
-                        const rate = formData.is_saudi ? 0.10 : 0.02;
+                        const rate = formData.is_saudi ? 0.0975 : 0;
                         const netSalary = grossSalary - (gosiWage * rate);
                         return netSalary.toLocaleString('en-SA', { minimumFractionDigits: 2 });
                       })()} SAR
@@ -843,8 +843,8 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
               </div>
               <p className="text-xs text-gray-500 mt-3">
                 {formData.is_saudi
-                  ? 'Saudi employees: 10% employee + 12% employer (pension 9%, occupational hazards 2%, unemployment insurance 1%)'
-                  : 'Non-Saudi employees: 2% employee + 2% employer (occupational hazards only)'}
+                  ? 'Saudi employees: 9.75% employee + 11.75% employer (per Saudi Labor Law 2024)'
+                  : 'Non-Saudi employees: 0% employee + 2% employer (occupational hazards only)'}
               </p>
               <p className="text-xs text-gray-500 mt-1">
                 Maximum GOSI wage ceiling: 45,000 SAR per month
