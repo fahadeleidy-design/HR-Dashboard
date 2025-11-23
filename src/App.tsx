@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CompanyProvider } from './contexts/CompanyContext';
+import { LanguageProvider } from './contexts/LanguageContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
@@ -35,9 +36,10 @@ import { EmployeeHandbook } from './pages/EmployeeHandbook';
 function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <CompanyProvider>
-          <Routes>
+      <LanguageProvider>
+        <AuthProvider>
+          <CompanyProvider>
+            <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route
@@ -176,8 +178,9 @@ function App() {
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </CompanyProvider>
-      </AuthProvider>
+          </CompanyProvider>
+        </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }

@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   LayoutDashboard,
   Users,
@@ -29,6 +30,8 @@ import {
   Calculator,
   ScrollText,
   BookOpen,
+  UserPlus,
+  Languages,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -39,6 +42,7 @@ interface LayoutProps {
 export function Layout({ children }: LayoutProps) {
   const { user, signOut } = useAuth();
   const { currentCompany, companies, setCurrentCompany } = useCompany();
+  const { language, setLanguage, t, isRTL } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [showCompanyMenu, setShowCompanyMenu] = useState(false);
@@ -170,7 +174,15 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : ''} space-x-2 sm:space-x-4`}>
+              <button
+                onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
+                className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all duration-200"
+                title={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
+              >
+                <Languages className="h-5 w-5" />
+                <span className="text-sm font-medium">{language === 'en' ? 'العربية' : 'English'}</span>
+              </button>
               <div className="hidden sm:flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg">
                 <div className="h-8 w-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                   {user?.email?.charAt(0).toUpperCase()}
@@ -182,7 +194,7 @@ export function Layout({ children }: LayoutProps) {
                 className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200"
               >
                 <LogOut className="h-5 w-5" />
-                <span className="text-sm hidden sm:inline">Sign Out</span>
+                <span className="text-sm hidden sm:inline">{t.auth.signOut}</span>
               </button>
             </div>
           </div>
