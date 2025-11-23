@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Employee, Department } from '@/types/database';
 import { X } from 'lucide-react';
+import { SearchableSelect } from '@/components/SearchableSelect';
 
 interface EmployeeFormProps {
   employee: Employee | null;
@@ -265,41 +266,41 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Company *
               </label>
-              <select
-                required
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'Select Company' },
+                  ...companies.map(company => ({
+                    value: company.id,
+                    label: company.name_en,
+                    searchText: `${company.name_en} ${company.name_ar || ''}`
+                  }))
+                ]}
                 value={selectedCompanyId}
-                onChange={(e) => {
-                  setSelectedCompanyId(e.target.value);
+                onChange={(value) => {
+                  setSelectedCompanyId(value);
                   setFormData(prev => ({ ...prev, department_id: '' }));
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Select Company</option>
-                {companies.map((company) => (
-                  <option key={company.id} value={company.id}>
-                    {company.name_en}
-                  </option>
-                ))}
-              </select>
+                placeholder="Select Company"
+              />
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Department
               </label>
-              <select
-                name="department_id"
+              <SearchableSelect
+                options={[
+                  { value: '', label: 'Select Department' },
+                  ...departments.map(dept => ({
+                    value: dept.id,
+                    label: dept.name_en,
+                    searchText: `${dept.name_en} ${dept.name_ar || ''}`
+                  }))
+                ]}
                 value={formData.department_id}
-                onChange={handleChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <option value="">Select Department</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name_en}
-                  </option>
-                ))}
-              </select>
+                onChange={(value) => setFormData(prev => ({ ...prev, department_id: value }))}
+                placeholder="Select Department"
+              />
             </div>
 
             <div>

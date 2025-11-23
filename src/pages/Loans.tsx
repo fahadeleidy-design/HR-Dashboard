@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, DollarSign, TrendingDown, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
+import { SearchableSelect } from '@/components/SearchableSelect';
 
 interface Loan {
   id: string;
@@ -427,19 +428,19 @@ export function Loans() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Employee *
                 </label>
-                <select
+                <SearchableSelect
+                  options={[
+                    { value: '', label: 'Select Employee' },
+                    ...employees.map(emp => ({
+                      value: emp.id,
+                      label: `${emp.employee_number} - ${emp.first_name_en} ${emp.last_name_en}`,
+                      searchText: `${emp.employee_number} ${emp.first_name_en} ${emp.last_name_en}`
+                    }))
+                  ]}
                   value={formData.employee_id}
-                  onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  required
-                >
-                  <option value="">Select Employee</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setFormData({ ...formData, employee_id: value })}
+                  placeholder="Select Employee"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

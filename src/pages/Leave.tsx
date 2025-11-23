@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Calendar, Check, X, Clock } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
+import { SearchableSelect } from '@/components/SearchableSelect';
 
 interface LeaveRequest {
   id: string;
@@ -455,38 +456,38 @@ export function Leave() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Employee *
                 </label>
-                <select
-                  required
+                <SearchableSelect
+                  options={[
+                    { value: '', label: 'Select Employee' },
+                    ...employees.map(emp => ({
+                      value: emp.id,
+                      label: `${emp.employee_number} - ${emp.first_name_en} ${emp.last_name_en}`,
+                      searchText: `${emp.employee_number} ${emp.first_name_en} ${emp.last_name_en}`
+                    }))
+                  ]}
                   value={requestForm.employee_id}
-                  onChange={(e) => setRequestForm({...requestForm, employee_id: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Select Employee</option>
-                  {employees.map((emp) => (
-                    <option key={emp.id} value={emp.id}>
-                      {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setRequestForm({...requestForm, employee_id: value})}
+                  placeholder="Select Employee"
+                />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Leave Type *
                 </label>
-                <select
-                  required
+                <SearchableSelect
+                  options={[
+                    { value: '', label: 'Select Leave Type' },
+                    ...leaveTypes.map(type => ({
+                      value: type.id,
+                      label: `${type.name_en}`,
+                      searchText: `${type.name_en} ${type.name_ar}`
+                    }))
+                  ]}
                   value={requestForm.leave_type_id}
-                  onChange={(e) => setRequestForm({...requestForm, leave_type_id: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="">Select Leave Type</option>
-                  {leaveTypes.map((type) => (
-                    <option key={type.id} value={type.id}>
-                      {type.name_en} ({type.days_allowed} days)
-                    </option>
-                  ))}
-                </select>
+                  onChange={(value) => setRequestForm({...requestForm, leave_type_id: value})}
+                  placeholder="Select Leave Type"
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
