@@ -44,9 +44,14 @@ export function Register() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 px-4">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-xl p-8">
+      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Saudi HR System</h1>
+          <img
+            src="/image.png"
+            alt="Special Offices Company"
+            className="h-16 w-auto mx-auto mb-4"
+          />
+          <h1 className="text-3xl font-bold text-gray-900">HR Management System</h1>
           <p className="text-gray-600 mt-2">Create your account</p>
         </div>
 

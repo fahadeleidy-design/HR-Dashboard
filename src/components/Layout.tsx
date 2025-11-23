@@ -117,11 +117,13 @@ export function Layout({ children }: LayoutProps) {
               </button>
 
               <div className="flex items-center space-x-3">
-                <div className="bg-gradient-to-br from-primary-600 to-primary-700 p-2 rounded-xl shadow-lg">
-                  <Building2 className="h-6 w-6 text-white" />
-                </div>
+                <img
+                  src="/image.png"
+                  alt="Special Offices Company"
+                  className="h-10 sm:h-12 w-auto object-contain"
+                />
                 <div>
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">Saudi HR System</h1>
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">HR Management</h1>
                   {currentCompany && (
                     <div className="relative">
                       <button
