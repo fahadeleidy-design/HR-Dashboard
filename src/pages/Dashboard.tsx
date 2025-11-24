@@ -418,10 +418,10 @@ export function Dashboard() {
             onClick={() => navigate('/employees?status=on_leave')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">On Leave</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.onLeaveEmployees}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.onLeave}</p>
+                <p className="text-3xl font-bold text-yellow-600 mt-1">{formatInteger(stats.onLeaveEmployees, language)}</p>
               </div>
               <div className="p-3 bg-yellow-50 rounded-full">
                 <Calendar className="h-8 w-8 text-yellow-600" />
@@ -432,10 +432,10 @@ export function Dashboard() {
           <div
             onClick={() => navigate('/employees?status=terminated')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Terminated</p>
-                <p className="text-3xl font-bold text-red-600 mt-1">{stats.terminatedEmployees}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.terminated}</p>
+                <p className="text-3xl font-bold text-red-600 mt-1">{formatInteger(stats.terminatedEmployees, language)}</p>
               </div>
               <div className="p-3 bg-red-50 rounded-full">
                 <TrendingDown className="h-8 w-8 text-red-600" />
@@ -446,16 +446,16 @@ export function Dashboard() {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Workforce Composition</h2>
+        <h2 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.dashboard.workforceComposition}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
             onClick={() => navigate('/employees?nationality=saudi')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Saudi Employees</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1">{stats.saudiEmployees}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.saudiEmployees}</p>
+                <p className="text-3xl font-bold text-blue-600 mt-1">{formatInteger(stats.saudiEmployees, language)}</p>
               </div>
               <div className="p-3 bg-blue-50 rounded-full">
                 <UserCheck className="h-8 w-8 text-blue-600" />
@@ -467,10 +467,10 @@ export function Dashboard() {
             onClick={() => navigate('/employees?nationality=non-saudi')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Non-Saudi</p>
-                <p className="text-3xl font-bold text-orange-600 mt-1">{stats.nonSaudiEmployees}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.nonSaudiEmployees}</p>
+                <p className="text-3xl font-bold text-orange-600 mt-1">{formatInteger(stats.nonSaudiEmployees, language)}</p>
               </div>
               <div className="p-3 bg-orange-50 rounded-full">
                 <UserX className="h-8 w-8 text-orange-600" />
@@ -482,10 +482,10 @@ export function Dashboard() {
             onClick={() => navigate('/employees?gender=male')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Male</p>
-                <p className="text-3xl font-bold text-indigo-600 mt-1">{stats.maleEmployees}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.maleEmployees}</p>
+                <p className="text-3xl font-bold text-indigo-600 mt-1">{formatInteger(stats.maleEmployees, language)}</p>
               </div>
               <div className="p-3 bg-indigo-50 rounded-full">
                 <Users className="h-8 w-8 text-indigo-600" />
@@ -497,10 +497,10 @@ export function Dashboard() {
             onClick={() => navigate('/employees?gender=female')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Female</p>
-                <p className="text-3xl font-bold text-pink-600 mt-1">{stats.femaleEmployees}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.femaleEmployees}</p>
+                <p className="text-3xl font-bold text-pink-600 mt-1">{formatInteger(stats.femaleEmployees, language)}</p>
               </div>
               <div className="p-3 bg-pink-50 rounded-full">
                 <Users className="h-8 w-8 text-pink-600" />
@@ -511,16 +511,16 @@ export function Dashboard() {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Payroll & Finance</h2>
+        <h2 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.dashboard.payrollMetrics}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             onClick={() => navigate('/payroll')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Total Monthly Payroll</p>
-                <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalPayroll)}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.totalMonthlyPayroll}</p>
+                <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(stats.totalPayroll, language)}</p>
               </div>
               <div className="p-3 bg-green-50 rounded-full">
                 <DollarSign className="h-8 w-8 text-green-600" />
@@ -532,10 +532,10 @@ export function Dashboard() {
             onClick={() => navigate('/payroll')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Average Salary</p>
-                <p className="text-2xl font-bold text-blue-600 mt-1">{formatCurrency(stats.averageSalary)}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.averageSalary}</p>
+                <p className="text-2xl font-bold text-blue-600 mt-1">{formatCurrency(stats.averageSalary, language)}</p>
               </div>
               <div className="p-3 bg-blue-50 rounded-full">
                 <TrendingUp className="h-8 w-8 text-blue-600" />
@@ -547,11 +547,11 @@ export function Dashboard() {
             onClick={() => navigate('/employees')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Departments</p>
-                <p className="text-3xl font-bold text-purple-600 mt-1">{stats.totalDepartments}</p>
-                <p className="text-xs text-gray-500 mt-1">Avg: {stats.avgEmployeesPerDept} emp/dept</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.totalDepartments}</p>
+                <p className="text-3xl font-bold text-purple-600 mt-1">{formatInteger(stats.totalDepartments, language)}</p>
+                <p className="text-xs text-gray-500 mt-1">{t.dashboard.avgEmployeesPerDept}: {formatInteger(stats.avgEmployeesPerDept, language)}</p>
               </div>
               <div className="p-3 bg-purple-50 rounded-full">
                 <UserCog className="h-8 w-8 text-purple-600" />
@@ -562,16 +562,16 @@ export function Dashboard() {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Leave & Attendance</h2>
+        <h2 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.dashboard.hrMetrics}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div
             onClick={() => navigate('/leave')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending Leave Requests</p>
-                <p className="text-3xl font-bold text-yellow-600 mt-1">{stats.pendingLeaveRequests}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.pendingLeaveRequests}</p>
+                <p className="text-3xl font-bold text-yellow-600 mt-1">{formatInteger(stats.pendingLeaveRequests, language)}</p>
               </div>
               <div className="p-3 bg-yellow-50 rounded-full">
                 <Calendar className="h-8 w-8 text-yellow-600" />
@@ -583,10 +583,10 @@ export function Dashboard() {
             onClick={() => navigate('/attendance')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">On Leave Today</p>
-                <p className="text-3xl font-bold text-blue-600 mt-1">{stats.approvedLeaveToday}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.approvedLeaveToday}</p>
+                <p className="text-3xl font-bold text-blue-600 mt-1">{formatInteger(stats.approvedLeaveToday, language)}</p>
               </div>
               <div className="p-3 bg-blue-50 rounded-full">
                 <Clock className="h-8 w-8 text-blue-600" />
@@ -598,10 +598,10 @@ export function Dashboard() {
             onClick={() => navigate('/travel')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending Travel</p>
-                <p className="text-3xl font-bold text-indigo-600 mt-1">{stats.pendingTravelRequests}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.pendingTravelRequests}</p>
+                <p className="text-3xl font-bold text-indigo-600 mt-1">{formatInteger(stats.pendingTravelRequests, language)}</p>
               </div>
               <div className="p-3 bg-indigo-50 rounded-full">
                 <Plane className="h-8 w-8 text-indigo-600" />
@@ -612,17 +612,17 @@ export function Dashboard() {
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Document Compliance</h2>
+        <h2 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.dashboard.complianceAlerts}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
             onClick={() => navigate('/documents')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Expiring Documents</p>
-                <p className="text-xs text-gray-500">Next 90 days</p>
-                <p className="text-3xl font-bold text-red-600 mt-1">{stats.expiringDocuments}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.expiringDocuments}</p>
+                <p className="text-xs text-gray-500">{language === 'ar' ? 'خلال ٩٠ يوماً' : 'Next 90 days'}</p>
+                <p className="text-3xl font-bold text-red-600 mt-1">{formatInteger(stats.expiringDocuments, language)}</p>
               </div>
               <div className="p-3 bg-red-50 rounded-full">
                 <FileText className="h-8 w-8 text-red-600" />
@@ -634,11 +634,11 @@ export function Dashboard() {
             onClick={() => navigate('/employees')}
             className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Expiring Iqamas</p>
-                <p className="text-xs text-gray-500">Next 90 days</p>
-                <p className="text-3xl font-bold text-orange-600 mt-1">{stats.expiringIqamas}</p>
+            <div className={`flex items-center ${isRTL ? 'flex-row-reverse' : ''} justify-between`}>
+              <div className={isRTL ? 'text-right' : 'text-left'}>
+                <p className="text-sm font-medium text-gray-600">{t.dashboard.expiringIqamas}</p>
+                <p className="text-xs text-gray-500">{language === 'ar' ? 'خلال ٩٠ يوماً' : 'Next 90 days'}</p>
+                <p className="text-3xl font-bold text-orange-600 mt-1">{formatInteger(stats.expiringIqamas, language)}</p>
               </div>
               <div className="p-3 bg-orange-50 rounded-full">
                 <CreditCard className="h-8 w-8 text-orange-600" />
