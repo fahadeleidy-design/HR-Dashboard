@@ -46,8 +46,8 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     iqama_expiry: employee?.iqama_expiry || '',
     passport_number: employee?.passport_number || '',
     passport_expiry: employee?.passport_expiry || '',
-    department_id: employee?.department_id || '',
-    manager_id: employee?.manager_id || '',
+    department_id: employee?.department_id || null,
+    manager_id: employee?.manager_id || null,
   });
   const [payrollData, setPayrollData] = useState({
     basic_salary: '0',
@@ -161,6 +161,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
         ...formData,
         company_id: selectedCompanyId,
         department_id: formData.department_id || null,
+        manager_id: formData.manager_id || null,
         first_name_ar: formData.first_name_ar || null,
         last_name_ar: formData.last_name_ar || null,
         email: formData.email || null,
@@ -311,7 +312,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                 value={selectedCompanyId}
                 onChange={(value) => {
                   setSelectedCompanyId(value);
-                  setFormData(prev => ({ ...prev, department_id: '' }));
+                  setFormData(prev => ({ ...prev, department_id: null }));
                 }}
                 placeholder={t.employees.selectCompany}
               />
@@ -323,15 +324,14 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
               </label>
               <SearchableSelect
                 options={[
-                  { value: '', label: t.employees.selectDepartment },
                   ...departments.map(dept => ({
                     value: dept.id,
                     label: dept.name_en,
                     searchText: `${dept.name_en} ${dept.name_ar || ''}`
                   }))
                 ]}
-                value={formData.department_id}
-                onChange={(value) => setFormData(prev => ({ ...prev, department_id: value }))}
+                value={formData.department_id || ''}
+                onChange={(value) => setFormData(prev => ({ ...prev, department_id: value || null }))}
                 placeholder={t.employees.selectDepartment}
               />
             </div>
@@ -342,7 +342,6 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
               </label>
               <SearchableSelect
                 options={[
-                  { value: '', label: t.employees.noManager },
                   ...managers
                     .filter(m => m.id !== employee?.id)
                     .map(manager => ({
@@ -351,8 +350,8 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                       searchText: `${manager.first_name_en} ${manager.last_name_en} ${manager.employee_number} ${manager.job_title_en || ''}`
                     }))
                 ]}
-                value={formData.manager_id}
-                onChange={(value) => setFormData(prev => ({ ...prev, manager_id: value }))}
+                value={formData.manager_id || ''}
+                onChange={(value) => setFormData(prev => ({ ...prev, manager_id: value || null }))}
                 placeholder={t.employees.selectManager}
               />
               <p className={`mt-1 text-xs text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>

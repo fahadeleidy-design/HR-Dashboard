@@ -185,7 +185,7 @@ export function Employees() {
     }
 
     // Department filter (new)
-    if (filterDepartment) {
+    if (filterDepartment && filterDepartment !== '') {
       filtered = filtered.filter(emp => emp.department_id === filterDepartment);
     }
 
