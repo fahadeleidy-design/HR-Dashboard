@@ -64,18 +64,33 @@ export function Employees() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch employees
+      const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
-        .select(`
-          *,
-          department:departments(name_en, name_ar),
-          payroll(basic_salary)
-        `)
+        .select('*')
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setEmployees(data || []);
+      if (employeesError) throw employeesError;
+
+      // Fetch payroll data separately
+      const { data: payrollData, error: payrollError } = await supabase
+        .from('payroll')
+        .select('employee_id, basic_salary')
+        .eq('company_id', currentCompany.id);
+
+      if (payrollError) console.error('Error fetching payroll:', payrollError);
+
+      // Merge payroll data with employees
+      const enrichedEmployees = (employeesData || []).map(emp => {
+        const payroll = payrollData?.filter(p => p.employee_id === emp.id) || [];
+        return {
+          ...emp,
+          payroll: payroll
+        };
+      });
+
+      setEmployees(enrichedEmployees);
     } catch (error) {
       console.error('Error fetching employees:', error);
     } finally {
@@ -198,9 +213,14 @@ export function Employees() {
     // Salary range filter (new)
     if (filterSalaryMin || filterSalaryMax) {
       filtered = filtered.filter(emp => {
+        // Get the most recent salary or 0 if no payroll data
         const salary = emp.payroll && emp.payroll.length > 0 ? emp.payroll[0].basic_salary : 0;
         const min = filterSalaryMin ? parseFloat(filterSalaryMin) : 0;
         const max = filterSalaryMax ? parseFloat(filterSalaryMax) : Infinity;
+
+        // If no salary data and min is set, exclude this employee
+        if (salary === 0 && filterSalaryMin) return false;
+
         return salary >= min && salary <= max;
       });
     }
@@ -219,6 +239,11 @@ export function Employees() {
       );
     }
 
+    console.log('Filter results:', {
+      total: employees.length,
+      filtered: filtered.length,
+      filters: { filterNationality, filterDepartment, filterIqamaExpiry, filterSalaryMin, filterSalaryMax }
+    });
     setFilteredEmployees(filtered);
   };
 
@@ -517,6 +542,13 @@ export function Employees() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Results Count */}
+        <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
+          <p className={`text-sm text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`}>
+            {t.common.showing} <span className="font-semibold text-gray-900">{filteredEmployees.length}</span> {t.common.of} <span className="font-semibold text-gray-900">{employees.length}</span> {t.employees.totalRecords}
+          </p>
         </div>
 
         <div className="overflow-x-auto">

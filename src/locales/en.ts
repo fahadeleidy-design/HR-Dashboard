@@ -79,6 +79,8 @@ export const enTranslations = {
     clearFilters: 'Clear Filters',
     activeFilters: 'Active Filters',
     statuses: 'Statuses',
+    showing: 'Showing',
+    of: 'of',
   },
 
   nav: {
