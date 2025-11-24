@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { formatNumber } from '@/lib/formatters';
+import { useToast } from '@/contexts/ToastContext';
+import { PageSkeleton } from '@/components/LoadingSkeleton';
+import { EmptyState } from '@/components/EmptyState';
 import {
   Network,
   Search,
@@ -20,7 +22,12 @@ import {
   Briefcase,
   X,
   ChevronRight,
-  TrendingUp
+  TrendingUp,
+  Grid3x3,
+  GitBranch,
+  Printer,
+  Share2,
+  RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { OrgChartNode } from '@/components/OrgChartNode';
@@ -53,6 +60,8 @@ interface Department {
 export function OrgChart() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const { showToast } = useToast();
+  const chartRef = useRef<HTMLDivElement>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -206,131 +215,210 @@ export function OrgChart() {
     a.href = url;
     a.download = `org-chart-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
+
+    showToast({
+      type: 'success',
+      title: 'Export Successful',
+      message: `Organization chart exported with ${filteredEmployees.length} employees`
+    });
+  };
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleRefresh = async () => {
+    showToast({
+      type: 'info',
+      title: 'Refreshing',
+      message: 'Loading latest organization data...'
+    });
+    await loadOrgData();
+    showToast({
+      type: 'success',
+      title: 'Refreshed',
+      message: 'Organization chart updated'
+    });
   };
 
   const topLevelEmployees = getTopLevelEmployees();
   const departmentGroups = getDepartmentGroups();
 
+  if (loading) {
+    return <PageSkeleton />;
+  }
+
   return (
-    <div className="p-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
-          <Network className="h-8 w-8 text-primary-600" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Organization Chart</h1>
-            <p className="text-sm text-gray-600">Interactive company structure and reporting relationships</p>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary-600 to-primary-400 rounded-xl blur opacity-25 group-hover:opacity-40 transition-opacity"></div>
+              <div className="relative h-14 w-14 rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 flex items-center justify-center text-white shadow-lg">
+                <Network className="h-7 w-7" />
+              </div>
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">Organization Chart</h1>
+              <p className="text-gray-600 mt-1">Interactive company structure and reporting relationships</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleRefresh}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg font-medium transition-all duration-200 hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 hover:scale-105 hover:shadow-sm"
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+            <button
+              onClick={handlePrint}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg font-medium transition-all duration-200 hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 hover:scale-105 hover:shadow-sm"
+            >
+              <Printer className="h-4 w-4" />
+              <span className="hidden sm:inline">Print</span>
+            </button>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-md border border-gray-200 p-4">
-          <div className="flex flex-wrap gap-4 items-center justify-between">
-            <div className="flex flex-wrap gap-4 items-center flex-1">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-all duration-300">
+          <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-stretch sm:items-center flex-1">
               <div className="relative flex-1 min-w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder={t.employees.searchEmployees}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all duration-200 hover:border-gray-300 bg-white"
                 />
               </div>
 
-              <select
-                value={selectedDepartment}
-                onChange={(e) => setSelectedDepartment(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Departments</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>{dept.name_en}</option>
-                ))}
-              </select>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                <select
+                  value={selectedDepartment}
+                  onChange={(e) => setSelectedDepartment(e.target.value)}
+                  className="pl-10 pr-8 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all duration-200 hover:border-gray-300 bg-white appearance-none cursor-pointer min-w-48"
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((dept) => (
+                    <option key={dept.id} value={dept.id}>{dept.name_en}</option>
+                  ))}
+                </select>
+              </div>
 
-              <div className="flex gap-2">
+              <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
                 <button
                   onClick={() => setViewMode('hierarchy')}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                     viewMode === 'hierarchy'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-white text-primary-700 shadow-sm scale-105'
+                      : 'text-gray-700 hover:text-gray-900'
                   }`}
                 >
-                  Hierarchy
+                  <GitBranch className="h-4 w-4" />
+                  <span>Hierarchy</span>
                 </button>
                 <button
                   onClick={() => setViewMode('department')}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
                     viewMode === 'department'
-                      ? 'bg-primary-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-white text-primary-700 shadow-sm scale-105'
+                      : 'text-gray-700 hover:text-gray-900'
                   }`}
                 >
-                  By Department
+                  <Grid3x3 className="h-4 w-4" />
+                  <span>By Department</span>
                 </button>
               </div>
             </div>
 
             <div className="flex gap-2">
-              <button
-                onClick={handleZoomOut}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Zoom Out"
-              >
-                <ZoomOut className="h-5 w-5 text-gray-600" />
-              </button>
-              <button
-                onClick={handleResetZoom}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Reset Zoom"
-              >
-                <Maximize2 className="h-5 w-5 text-gray-600" />
-              </button>
-              <button
-                onClick={handleZoomIn}
-                className="p-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-                title="Zoom In"
-              >
-                <ZoomIn className="h-5 w-5 text-gray-600" />
-              </button>
+              <div className="flex gap-1 bg-gray-100 p-1 rounded-lg">
+                <button
+                  onClick={handleZoomOut}
+                  className="p-2 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-sm"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="h-5 w-5 text-gray-600 hover:text-primary-600" />
+                </button>
+                <button
+                  onClick={handleResetZoom}
+                  className="p-2 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-sm"
+                  title="Reset Zoom"
+                >
+                  <Maximize2 className="h-5 w-5 text-gray-600 hover:text-primary-600" />
+                </button>
+                <button
+                  onClick={handleZoomIn}
+                  className="p-2 rounded-lg hover:bg-white transition-all duration-200 hover:shadow-sm"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="h-5 w-5 text-gray-600 hover:text-primary-600" />
+                </button>
+              </div>
               <button
                 onClick={exportOrgChart}
-                className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                disabled={filteredEmployees.length === 0}
+                className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-200 hover:shadow-xl hover:scale-105"
               >
-                <Download className="h-5 w-5" />
-                Export
+                <Download className="h-4 w-4" />
+                <span>Export</span>
               </button>
             </div>
           </div>
 
-          <div className="mt-4 flex gap-4 text-sm">
-            <div className="flex items-center gap-2 text-gray-600">
-              <Users className="h-4 w-4" />
-              <span>{filteredEmployees.length} Employees</span>
+          <div className="mt-6 flex gap-4">
+            <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-blue-600">Employees</p>
+                <p className="text-lg font-bold text-blue-900">{filteredEmployees.length}</p>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-gray-600">
-              <Building2 className="h-4 w-4" />
-              <span>{departmentGroups.length} Departments</span>
+            <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
+              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-medium text-green-600">Departments</p>
+                <p className="text-lg font-bold text-green-900">{departmentGroups.length}</p>
+              </div>
             </div>
+            {viewMode === 'hierarchy' && (
+              <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
+                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+                  <TrendingUp className="h-5 w-5 text-white" />
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-purple-600">Zoom Level</p>
+                  <p className="text-lg font-bold text-purple-900">{(zoom * 100).toFixed(0)}%</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 p-8 overflow-auto">
-        {loading ? (
-          <div className="text-center py-12 text-gray-500">Loading organization chart...</div>
-        ) : filteredEmployees.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <Network className="h-16 w-16 mx-auto mb-4 text-gray-400" />
-            <p>No employees found</p>
-          </div>
-        ) : (
+      {filteredEmployees.length === 0 ? (
+        <EmptyState
+          icon={Network}
+          title="No Employees in Organization Chart"
+          description="Start building your organization structure by adding employees with reporting relationships"
+        />
+      ) : (
+        <div ref={chartRef} className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 overflow-auto hover:shadow-md transition-all duration-300 print:shadow-none">
           <div
             className="inline-block min-w-full"
             style={{
               transform: `scale(${zoom})`,
-              transformOrigin: 'top left',
-              transition: 'transform 0.2s'
+              transformOrigin: 'top center',
+              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
             }}
           >
             {viewMode === 'hierarchy' ? (
@@ -348,32 +436,41 @@ export function OrgChart() {
             ) : (
               <div className="space-y-8">
                 {departmentGroups.map((group) => (
-                  <div key={group.name} className="border border-gray-200 rounded-lg p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                      <Building2 className="h-5 w-5 text-primary-600" />
-                      {group.name} ({group.employees.length})
-                    </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div key={group.name} className="border-2 border-gray-200 rounded-xl p-6 bg-gradient-to-br from-white to-gray-50 hover:shadow-lg transition-all duration-300">
+                    <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-gray-200">
+                      <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center shadow-lg">
+                        <Building2 className="h-6 w-6 text-white" />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900">{group.name}</h3>
+                        <p className="text-sm text-gray-600">{group.employees.length} {group.employees.length === 1 ? 'Employee' : 'Employees'}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {group.employees.map((emp) => (
                         <div
                           key={emp.id}
                           onClick={() => loadEmployeeDetails(emp)}
-                          className="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 hover:shadow-md transition-all"
+                          className="bg-white rounded-xl p-4 cursor-pointer hover:bg-gradient-to-br hover:from-primary-50 hover:to-blue-50 border-2 border-gray-200 hover:border-primary-400 hover:shadow-lg transition-all duration-200 hover:-translate-y-1 group"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="bg-primary-600 rounded-full p-2 text-white">
-                              <User className="h-4 w-4" />
+                            <div className="relative">
+                              <div className="absolute inset-0 bg-primary-600 rounded-full blur opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                              <div className="relative bg-gradient-to-br from-primary-600 to-primary-700 rounded-full p-2.5 text-white shadow-lg group-hover:scale-110 transition-transform duration-200">
+                                <User className="h-5 w-5" />
+                              </div>
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-gray-900 truncate">
+                              <h4 className="font-semibold text-gray-900 truncate group-hover:text-primary-700 transition-colors">
                                 {emp.first_name_en} {emp.last_name_en}
                               </h4>
-                              <p className="text-sm text-gray-600 truncate">{emp.job_title_en}</p>
+                              <p className="text-sm text-gray-600 truncate mt-0.5">{emp.job_title_en}</p>
                               <p className="text-xs text-gray-500 mt-1">{emp.employee_number}</p>
                               {emp.direct_reports_count > 0 && (
-                                <p className="text-xs text-primary-600 font-medium mt-2">
-                                  {emp.direct_reports_count} report{emp.direct_reports_count !== 1 ? 's' : ''}
-                                </p>
+                                <div className="inline-flex items-center gap-1 mt-2 px-2 py-1 bg-gradient-to-r from-primary-100 to-primary-200 text-primary-800 rounded-full text-xs font-semibold">
+                                  <Users className="h-3 w-3" />
+                                  <span>{emp.direct_reports_count} {emp.direct_reports_count === 1 ? 'report' : 'reports'}</span>
+                                </div>
                               )}
                             </div>
                           </div>
@@ -385,29 +482,33 @@ export function OrgChart() {
               </div>
             )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {showDetails && selectedEmployee && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-600 to-primary-700 text-white">
-              <div className="flex justify-between items-start">
+        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            <div className="p-8 border-b border-gray-200 bg-gradient-to-r from-primary-600 via-primary-700 to-primary-800 text-white relative overflow-hidden">
+              <div className="absolute inset-0 bg-white/5 backdrop-blur-3xl"></div>
+              <div className="relative flex justify-between items-start">
                 <div className="flex items-center gap-4">
-                  <div className="bg-white bg-opacity-20 rounded-full p-4">
-                    <User className="h-8 w-8" />
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-white rounded-2xl blur opacity-30"></div>
+                    <div className="relative bg-white/20 backdrop-blur-sm rounded-2xl p-4 shadow-2xl">
+                      <User className="h-10 w-10" />
+                    </div>
                   </div>
                   <div>
-                    <h3 className="text-2xl font-bold">
+                    <h3 className="text-3xl font-bold drop-shadow-lg">
                       {selectedEmployee.first_name_en} {selectedEmployee.last_name_en}
                     </h3>
-                    <p className="text-primary-100 mt-1">{selectedEmployee.job_title_en}</p>
-                    <p className="text-sm text-primary-200 mt-1">{selectedEmployee.employee_number}</p>
+                    <p className="text-primary-100 mt-2 text-lg">{selectedEmployee.job_title_en}</p>
+                    <p className="text-sm text-primary-200 mt-1 font-medium">{selectedEmployee.employee_number}</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setShowDetails(false)}
-                  className="text-white hover:text-primary-100 transition-colors"
+                  className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all duration-200 hover:scale-110"
                 >
                   <X className="h-6 w-6" />
                 </button>
