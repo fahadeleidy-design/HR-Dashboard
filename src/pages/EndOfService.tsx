@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { Calculator, Plus, FileText, CheckCircle, XCircle, Clock, AlertCircle, DollarSign, Calendar, User } from 'lucide-react';
 import { format, differenceInYears, differenceInMonths, differenceInDays } from 'date-fns';
 
@@ -59,6 +61,7 @@ const TERMINATION_REASONS = {
 
 export function EndOfService() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [calculations, setCalculations] = useState<EOSCalculation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -378,39 +381,39 @@ export function EndOfService() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+          <h1 className={`text-2xl font-bold text-gray-900 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <Calculator className="h-7 w-7 text-primary-600" />
-            End of Service Benefits
+            {t.endOfService.title}
           </h1>
-          <p className="text-gray-600 mt-1">Calculate end of service benefits per Saudi Labor Law</p>
+          <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.endOfService.subtitle}</p>
         </div>
         <button
           onClick={() => setShowCalculator(!showCalculator)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <Plus className="h-5 w-5" />
-          New Calculation
+          {t.endOfService.newCalculation}
         </button>
       </div>
 
       {showCalculator && (
         <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <h2 className={`text-xl font-semibold mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <Calculator className="h-6 w-6 text-primary-600" />
-            Calculate End of Service Benefits
+            {t.endOfService.calculateTitle}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Select Employee *
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.endOfService.selectEmployee} *
               </label>
               <select
                 value={selectedEmployee}
                 onChange={(e) => setSelectedEmployee(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">Choose an employee...</option>
+                <option value="">{t.endOfService.chooseEmployee}</option>
                 {employees.map((emp) => (
                   <option key={emp.id} value={emp.id}>
                     {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
@@ -420,8 +423,8 @@ export function EndOfService() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Termination Date *
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.endOfService.terminationDate} *
               </label>
               <input
                 type="date"
@@ -432,15 +435,15 @@ export function EndOfService() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Termination Reason *
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.endOfService.terminationReason} *
               </label>
               <select
                 value={terminationReason}
                 onChange={(e) => setTerminationReason(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
-                <option value="">Choose a reason...</option>
+                <option value="">{t.endOfService.chooseReason}</option>
                 {Object.entries(TERMINATION_REASONS).map(([key, info]) => (
                   <option key={key} value={key}>
                     {info.label} - {info.description}

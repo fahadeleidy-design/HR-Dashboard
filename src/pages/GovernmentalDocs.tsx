@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { FileText, AlertCircle, CheckCircle, Clock, Plus, Edit, Trash2, X } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 
@@ -22,6 +24,7 @@ interface GovDocument {
 
 export function GovernmentalDocs() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [documents, setDocuments] = useState<GovDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -177,17 +180,17 @@ export function GovernmentalDocs() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Governmental Documents</h1>
-          <p className="text-gray-600 mt-1">Track CR, licenses, permits, and certificates</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.governmentalDocs.title}</h1>
+          <p className="text-gray-600 mt-1">{t.governmentalDocs.subtitle}</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <Plus className="h-4 w-4" />
-          <span>Add Document</span>
+          <span>{t.governmentalDocs.addDocument}</span>
         </button>
       </div>
 
@@ -195,8 +198,8 @@ export function GovernmentalDocs() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Documents</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{activeCount}</p>
+              <p className="text-sm text-gray-600">{t.governmentalDocs.activeDocuments}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(activeCount, language)}</p>
             </div>
             <CheckCircle className="h-12 w-12 text-green-600" />
           </div>
@@ -205,8 +208,8 @@ export function GovernmentalDocs() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Expiring Soon</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">{expiringSoon}</p>
+              <p className="text-sm text-gray-600">{t.common.expiringSoon}</p>
+              <p className="text-2xl font-bold text-yellow-600 mt-1">{formatNumber(expiringSoon, language)}</p>
             </div>
             <Clock className="h-12 w-12 text-yellow-600" />
           </div>
@@ -215,8 +218,8 @@ export function GovernmentalDocs() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Expired</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{expired}</p>
+              <p className="text-sm text-gray-600">{t.common.expired}</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{formatNumber(expired, language)}</p>
             </div>
             <AlertCircle className="h-12 w-12 text-red-600" />
           </div>
@@ -225,8 +228,8 @@ export function GovernmentalDocs() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Annual Cost</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">SAR {totalCost.toLocaleString()}</p>
+              <p className="text-sm text-gray-600">{t.governmentalDocs.annualCost}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(totalCost, language)}</p>
             </div>
             <FileText className="h-12 w-12 text-gray-600" />
           </div>
@@ -239,43 +242,43 @@ export function GovernmentalDocs() {
             <thead className="bg-gray-50">
               <tr>
                 <SortableTableHeader
-                  label="Document Type"
+                  label={t.documents.documentType}
                   sortKey="document_type"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Document Number"
+                  label={t.documents.documentNumber}
                   sortKey="document_number"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Issuing Authority"
+                  label={t.governmentalDocs.issuingAuthority}
                   sortKey="issuing_authority"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Issue Date"
+                  label={t.documents.issueDate}
                   sortKey="issue_date"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Expiry Date"
+                  label={t.documents.expiryDate}
                   sortKey="expiry_date"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Status"
+                  label={t.common.status}
                   sortKey="status"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.common.actions}
                 </th>
               </tr>
             </thead>
@@ -283,7 +286,7 @@ export function GovernmentalDocs() {
               {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    No governmental documents found. Click "Add Document" to get started.
+                    {t.messages.noResults}
                   </td>
                 </tr>
               ) : (
