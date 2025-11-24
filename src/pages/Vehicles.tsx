@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Car, Plus, AlertTriangle, Wrench, DollarSign } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 interface Vehicle {
   id: string;
@@ -26,6 +28,7 @@ interface ViolationSummary {
 
 export function Vehicles() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [violations, setViolations] = useState<ViolationSummary>({ total_violations: 0, total_fines: 0, pending_fines: 0 });
   const [maintenanceDue, setMaintenanceDue] = useState(0);
@@ -115,17 +118,17 @@ export function Vehicles() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Vehicle Management</h1>
-          <p className="text-gray-600 mt-1">Fleet management, violations, and maintenance tracking</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.vehicles.title}</h1>
+          <p className="text-gray-600 mt-1">{t.vehicles.subtitle}</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <Plus className="h-4 w-4" />
-          <span>Add Vehicle</span>
+          <span>{t.vehicles.addVehicle}</span>
         </button>
       </div>
 
@@ -133,7 +136,7 @@ export function Vehicles() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Vehicles</p>
+              <p className="text-sm text-gray-600">{t.common.total} {t.vehicles.title}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{vehicles.length}</p>
             </div>
             <Car className="h-12 w-12 text-blue-600" />
@@ -143,7 +146,7 @@ export function Vehicles() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Vehicles</p>
+              <p className="text-sm text-gray-600">{t.vehicles.available}</p>
               <p className="text-2xl font-bold text-green-600 mt-1">{activeVehicles}</p>
             </div>
             <Car className="h-12 w-12 text-green-600" />
@@ -153,9 +156,9 @@ export function Vehicles() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending Violations</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{violations.total_violations}</p>
-              <p className="text-xs text-gray-500">SAR {violations.pending_fines.toLocaleString()}</p>
+              <p className="text-sm text-gray-600">{t.common.pending} {t.common.violations}</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{formatNumber(violations.total_violations, language)}</p>
+              <p className="text-xs text-gray-500">{formatCurrency(violations.pending_fines, language)}</p>
             </div>
             <AlertTriangle className="h-12 w-12 text-red-600" />
           </div>
@@ -164,7 +167,7 @@ export function Vehicles() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Maintenance Due</p>
+              <p className="text-sm text-gray-600">{t.vehicles.maintenance}</p>
               <p className="text-2xl font-bold text-orange-600 mt-1">{maintenanceDue}</p>
             </div>
             <Wrench className="h-12 w-12 text-orange-600" />
@@ -174,32 +177,32 @@ export function Vehicles() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Expiring Insurance</h2>
+          <h2 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.vehicles.insuranceExpiry}</h2>
           {expiringInsurance > 0 ? (
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+            <div className={`bg-yellow-50 border border-yellow-200 rounded-lg p-4 ${isRTL ? 'text-right' : 'text-left'}`}>
               <p className="text-yellow-800">
-                <span className="font-bold">{expiringInsurance}</span> vehicle(s) have insurance expiring within 30 days
+                <span className="font-bold">{formatNumber(expiringInsurance, language)}</span> {t.common.vehicles} {t.common.expiringWithin30Days}
               </p>
             </div>
           ) : (
-            <p className="text-gray-500">All insurance policies are current</p>
+            <p className={`text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t.common.allCurrent}</p>
           )}
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Traffic Violations Summary</h2>
+          <h2 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.common.violationsSummary}</h2>
           <div className="space-y-2">
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Violations:</span>
-              <span className="font-bold">{violations.total_violations}</span>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-gray-600">{t.common.total} {t.common.violations}:</span>
+              <span className="font-bold">{formatNumber(violations.total_violations, language)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Total Fines:</span>
-              <span className="font-bold">SAR {violations.total_fines.toLocaleString()}</span>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-gray-600">{t.common.totalFines}:</span>
+              <span className="font-bold">{formatCurrency(violations.total_fines, language)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-600">Pending Fines:</span>
-              <span className="font-bold text-red-600">SAR {violations.pending_fines.toLocaleString()}</span>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-gray-600">{t.common.pendingFines}:</span>
+              <span className="font-bold text-red-600">{formatCurrency(violations.pending_fines, language)}</span>
             </div>
           </div>
         </div>
@@ -211,37 +214,37 @@ export function Vehicles() {
             <thead className="bg-gray-50">
               <tr>
                 <SortableTableHeader
-                  label="Vehicle Number"
+                  label={t.common.number}
                   sortKey="vehicle_number"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Plate Number"
+                  label={t.vehicles.plateNumber}
                   sortKey="plate_number"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Make & Model"
+                  label={`${t.vehicles.make} & ${t.vehicles.model}`}
                   sortKey="make"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Type"
+                  label={t.common.type}
                   sortKey="vehicle_type"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Mileage"
+                  label={t.vehicles.mileage}
                   sortKey="current_mileage"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Status"
+                  label={t.common.status}
                   sortKey="status"
                   currentSort={sortConfig}
                   onSort={requestSort}
@@ -252,7 +255,7 @@ export function Vehicles() {
               {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    No vehicles found. Click "Add Vehicle" to register a vehicle.
+                    {t.messages.noResults}. {t.common.clickToAdd} "{t.vehicles.addVehicle}".
                   </td>
                 </tr>
               ) : (
@@ -271,7 +274,7 @@ export function Vehicles() {
                       {vehicle.vehicle_type.replace('_', ' ')}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {vehicle.current_mileage.toLocaleString()} km
+                      {formatNumber(vehicle.current_mileage, language)} {t.common.km}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -296,7 +299,7 @@ export function Vehicles() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Add New Vehicle</h2>
+              <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{t.vehicles.addVehicle}</h2>
             </div>
 
             <form onSubmit={async (e) => {
@@ -347,8 +350,8 @@ export function Vehicles() {
             }} className="p-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Vehicle Number *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.common.number} *
                   </label>
                   <input
                     type="text"
@@ -360,8 +363,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Plate Number *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.vehicles.plateNumber} *
                   </label>
                   <input
                     type="text"
@@ -373,8 +376,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Make *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.vehicles.make} *
                   </label>
                   <input
                     type="text"
@@ -386,8 +389,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Model *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.vehicles.model} *
                   </label>
                   <input
                     type="text"
@@ -399,8 +402,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Year *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.vehicles.year} *
                   </label>
                   <input
                     type="number"
@@ -414,8 +417,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Vehicle Type *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.common.type} *
                   </label>
                   <select
                     required
@@ -434,8 +437,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Current Mileage (km) *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.vehicles.mileage} ({t.common.km}) *
                   </label>
                   <input
                     type="number"
@@ -448,8 +451,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.common.status} *
                   </label>
                   <select
                     required
@@ -464,8 +467,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Purchase Date
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.realEstate.purchaseDate}
                   </label>
                   <input
                     type="date"
@@ -476,8 +479,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Purchase Price (SAR)
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.realEstate.purchasePrice} ({t.numbers.currency})
                   </label>
                   <input
                     type="number"
@@ -490,8 +493,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Ownership Type *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.realEstate.ownershipType} *
                   </label>
                   <select
                     required
@@ -506,8 +509,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Insurance Provider
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.insurance.provider}
                   </label>
                   <input
                     type="text"
@@ -518,8 +521,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Insurance Policy Number
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.insurance.policyNumber}
                   </label>
                   <input
                     type="text"
@@ -530,8 +533,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Insurance Expiry
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.vehicles.insuranceExpiry}
                   </label>
                   <input
                     type="date"
@@ -542,8 +545,8 @@ export function Vehicles() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Registration Expiry
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.vehicles.registrationExpiry}
                   </label>
                   <input
                     type="date"
@@ -554,8 +557,8 @@ export function Vehicles() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.common.notes}
                   </label>
                   <textarea
                     value={formData.notes}
@@ -573,7 +576,7 @@ export function Vehicles() {
                 onClick={() => setShowForm(false)}
                 className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
               >
-                Cancel
+                {t.common.cancel}
               </button>
               <button
                 type="submit"
@@ -587,7 +590,7 @@ export function Vehicles() {
                 }}
                 className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
               >
-                Add Vehicle
+                {t.vehicles.addVehicle}
               </button>
             </div>
           </div>
