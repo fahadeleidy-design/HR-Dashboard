@@ -63,6 +63,16 @@ export const enTranslations = {
     pending: 'Pending',
     completed: 'Completed',
     switchCompany: 'Switch Company',
+    employee: 'Employee',
+    reviewDate: 'Review Date',
+    averageRating: 'Average Rating',
+    excellent: 'Excellent',
+    good: 'Good',
+    needsImprovement: 'Needs Improvement',
+    hours: 'hours',
+    participants: 'Participants',
+    totalParticipants: 'Total Participants',
+    programName: 'Program Name',
   },
 
   nav: {

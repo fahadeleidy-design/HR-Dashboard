@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Star, TrendingUp, Plus } from 'lucide-react';
+import { formatNumber } from '@/lib/formatters';
 
 interface PerformanceReview {
   id: string;
@@ -22,6 +24,7 @@ interface PerformanceReview {
 
 export function Performance() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [reviews, setReviews] = useState<PerformanceReview[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,14 +75,14 @@ export function Performance() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Performance Management</h1>
-          <p className="text-gray-600 mt-1">Track employee performance and reviews</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.performance.title}</h1>
+          <p className="text-gray-600 mt-1">{t.performance.subtitle}</p>
         </div>
-        <button className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors">
+        <button className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}>
           <Plus className="h-4 w-4" />
-          <span>Add Review</span>
+          <span>{t.performance.createReview}</span>
         </button>
       </div>
 
@@ -87,8 +90,8 @@ export function Performance() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Average Rating</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{averageRating} / 5.0</p>
+              <p className="text-sm text-gray-600">{t.common.averageRating}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(parseFloat(averageRating), language)} / {formatNumber(5.0, language)}</p>
             </div>
             <Star className="h-12 w-12 text-yellow-500" />
           </div>
@@ -97,8 +100,8 @@ export function Performance() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Excellent</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{excellentCount}</p>
+              <p className="text-sm text-gray-600">{t.common.excellent}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(excellentCount, language)}</p>
             </div>
             <TrendingUp className="h-12 w-12 text-green-600" />
           </div>
@@ -107,8 +110,8 @@ export function Performance() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Good</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">{goodCount}</p>
+              <p className="text-sm text-gray-600">{t.common.good}</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">{formatNumber(goodCount, language)}</p>
             </div>
             <TrendingUp className="h-12 w-12 text-blue-600" />
           </div>
@@ -117,8 +120,8 @@ export function Performance() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Needs Improvement</p>
-              <p className="text-2xl font-bold text-orange-600 mt-1">{needsImprovementCount}</p>
+              <p className="text-sm text-gray-600">{t.common.needsImprovement}</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{formatNumber(needsImprovementCount, language)}</p>
             </div>
             <TrendingUp className="h-12 w-12 text-orange-600" />
           </div>
@@ -130,17 +133,17 @@ export function Performance() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Employee
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.common.employee}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Review Period
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.performance.reviewPeriod}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Rating
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.performance.rating}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Review Date
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.common.reviewDate}
                 </th>
               </tr>
             </thead>
@@ -148,7 +151,7 @@ export function Performance() {
               {reviews.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                    No performance reviews found.
+                    {t.messages.noResults}
                   </td>
                 </tr>
               ) : (
@@ -166,7 +169,7 @@ export function Performance() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <Star className="h-5 w-5 text-yellow-500 mr-1" />
-                        <span className="text-sm font-bold text-gray-900">{review.overall_rating.toFixed(1)}</span>
+                        <span className="text-sm font-bold text-gray-900">{formatNumber(review.overall_rating, language)}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">

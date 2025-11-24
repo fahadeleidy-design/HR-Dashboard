@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { BookOpen, Users, Award } from 'lucide-react';
+import { formatNumber } from '@/lib/formatters';
 
 interface TrainingProgram {
   id: string;
@@ -18,6 +20,7 @@ interface TrainingProgram {
 
 export function Training() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [programs, setPrograms] = useState<TrainingProgram[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,10 +68,10 @@ export function Training() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Training Management</h1>
-          <p className="text-gray-600 mt-1">Manage training programs and enrollments</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.training.title}</h1>
+          <p className="text-gray-600 mt-1">{t.training.subtitle}</p>
         </div>
       </div>
 
@@ -76,8 +79,8 @@ export function Training() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Programs</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{programs.length}</p>
+              <p className="text-sm text-gray-600">{t.training.trainingPrograms}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(programs.length, language)}</p>
             </div>
             <BookOpen className="h-12 w-12 text-blue-600" />
           </div>
@@ -86,8 +89,8 @@ export function Training() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Ongoing</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{ongoingCount}</p>
+              <p className="text-sm text-gray-600">{t.training.inProgress}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(ongoingCount, language)}</p>
             </div>
             <BookOpen className="h-12 w-12 text-green-600" />
           </div>
@@ -96,8 +99,8 @@ export function Training() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-purple-600 mt-1">{completedCount}</p>
+              <p className="text-sm text-gray-600">{t.training.completed}</p>
+              <p className="text-2xl font-bold text-purple-600 mt-1">{formatNumber(completedCount, language)}</p>
             </div>
             <Award className="h-12 w-12 text-purple-600" />
           </div>
@@ -106,8 +109,8 @@ export function Training() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Participants</p>
-              <p className="text-2xl font-bold text-orange-600 mt-1">{totalParticipants}</p>
+              <p className="text-sm text-gray-600">{t.common.totalParticipants}</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{formatNumber(totalParticipants, language)}</p>
             </div>
             <Users className="h-12 w-12 text-orange-600" />
           </div>
@@ -119,23 +122,23 @@ export function Training() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Program Name
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.common.programName}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Duration
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.training.duration}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Start Date
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.common.startDate}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  End Date
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.common.endDate}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Participants
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.common.participants}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                  {t.common.status}
                 </th>
               </tr>
             </thead>
@@ -143,7 +146,7 @@ export function Training() {
               {programs.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    No training programs found.
+                    {t.messages.noResults}
                   </td>
                 </tr>
               ) : (
@@ -156,7 +159,7 @@ export function Training() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {program.duration_hours} hours
+                      {formatNumber(program.duration_hours, language)} {t.common.hours}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(program.start_date).toLocaleDateString()}
@@ -165,8 +168,8 @@ export function Training() {
                       {new Date(program.end_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {program.enrollments[0]?.count || 0}
-                      {program.max_participants && ` / ${program.max_participants}`}
+                      {formatNumber(program.enrollments[0]?.count || 0, language)}
+                      {program.max_participants && ` / ${formatNumber(program.max_participants, language)}`}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
