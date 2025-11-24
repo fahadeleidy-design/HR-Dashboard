@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Employee, Department } from '@/types/database';
 import { X } from 'lucide-react';
@@ -13,6 +14,7 @@ interface EmployeeFormProps {
 
 export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps) {
   const { currentCompany } = useCompany();
+  const { t, isRTL } = useLanguage();
   const [companies, setCompanies] = useState<any[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [managers, setManagers] = useState<any[]>([]);
@@ -284,7 +286,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8 max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
           <h2 className="text-2xl font-bold text-gray-900">
-            {employee ? 'Edit Employee' : 'Add Employee'}
+            {employee ? t.employees.editEmployee : t.employees.addEmployee}
           </h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
             <X className="h-6 w-6" />
@@ -294,12 +296,12 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
         <form id="employee-form" onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Company *
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.common.company} *
               </label>
               <SearchableSelect
                 options={[
-                  { value: '', label: 'Select Company' },
+                  { value: '', label: t.employees.selectCompany },
                   ...companies.map(company => ({
                     value: company.id,
                     label: company.name_en,
@@ -311,17 +313,17 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                   setSelectedCompanyId(value);
                   setFormData(prev => ({ ...prev, department_id: '' }));
                 }}
-                placeholder="Select Company"
+                placeholder={t.employees.selectCompany}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Department
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.common.department}
               </label>
               <SearchableSelect
                 options={[
-                  { value: '', label: 'Select Department' },
+                  { value: '', label: t.employees.selectDepartment },
                   ...departments.map(dept => ({
                     value: dept.id,
                     label: dept.name_en,
@@ -330,17 +332,17 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                 ]}
                 value={formData.department_id}
                 onChange={(value) => setFormData(prev => ({ ...prev, department_id: value }))}
-                placeholder="Select Department"
+                placeholder={t.employees.selectDepartment}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Direct Manager
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.employees.directManager}
               </label>
               <SearchableSelect
                 options={[
-                  { value: '', label: 'No Manager (Top Level)' },
+                  { value: '', label: t.employees.noManager },
                   ...managers
                     .filter(m => m.id !== employee?.id)
                     .map(manager => ({
@@ -351,10 +353,10 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
                 ]}
                 value={formData.manager_id}
                 onChange={(value) => setFormData(prev => ({ ...prev, manager_id: value }))}
-                placeholder="Select Manager"
+                placeholder={t.employees.selectManager}
               />
-              <p className="mt-1 text-xs text-gray-500">
-                Select the direct manager this employee reports to
+              <p className={`mt-1 text-xs text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.employees.selectManagerHelp}
               </p>
             </div>
 
