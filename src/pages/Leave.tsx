@@ -263,7 +263,7 @@ export function Leave() {
           className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
         >
           <Plus className="h-4 w-4" />
-          <span>Request Leave</span>
+          <span>{t.leave.requestLeave}</span>
         </button>
       </div>
 
@@ -469,7 +469,7 @@ export function Leave() {
                   ]}
                   value={requestForm.employee_id}
                   onChange={(value) => setRequestForm({...requestForm, employee_id: value})}
-                  placeholder="Select Employee"
+                  placeholder={t.employees.selectEmployee}
                 />
               </div>
 
@@ -488,7 +488,7 @@ export function Leave() {
                   ]}
                   value={requestForm.leave_type_id}
                   onChange={(value) => setRequestForm({...requestForm, leave_type_id: value})}
-                  placeholder="Select Leave Type"
+                  placeholder={t.leave.selectLeaveType}
                 />
               </div>
 

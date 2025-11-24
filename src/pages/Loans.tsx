@@ -442,7 +442,7 @@ export function Loans() {
                   ]}
                   value={formData.employee_id}
                   onChange={(value) => setFormData({ ...formData, employee_id: value })}
-                  placeholder="Select Employee"
+                  placeholder={t.employees.selectEmployee}
                 />
               </div>
 

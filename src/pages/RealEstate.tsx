@@ -420,13 +420,13 @@ export function RealEstate() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <SortableTableHeader label="Asset" sortKey="asset_name" currentSort={assetSortConfig} onSort={requestAssetSort} />
-                  <SortableTableHeader label="Number" sortKey="asset_number" currentSort={assetSortConfig} onSort={requestAssetSort} />
-                  <SortableTableHeader label="Type" sortKey="asset_type" currentSort={assetSortConfig} onSort={requestAssetSort} />
-                  <SortableTableHeader label="Purchase Date" sortKey="purchase_date" currentSort={assetSortConfig} onSort={requestAssetSort} />
-                  <SortableTableHeader label="Current Value" sortKey="current_value" currentSort={assetSortConfig} onSort={requestAssetSort} />
-                  <SortableTableHeader label="Status" sortKey="status" currentSort={assetSortConfig} onSort={requestAssetSort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <SortableTableHeader label={t.realEstate.asset} sortKey="asset_name" currentSort={assetSortConfig} onSort={requestAssetSort} />
+                  <SortableTableHeader label={t.realEstate.number} sortKey="asset_number" currentSort={assetSortConfig} onSort={requestAssetSort} />
+                  <SortableTableHeader label={t.common.type} sortKey="asset_type" currentSort={assetSortConfig} onSort={requestAssetSort} />
+                  <SortableTableHeader label={t.realEstate.purchaseDate} sortKey="purchase_date" currentSort={assetSortConfig} onSort={requestAssetSort} />
+                  <SortableTableHeader label={t.realEstate.currentValue} sortKey="current_value" currentSort={assetSortConfig} onSort={requestAssetSort} />
+                  <SortableTableHeader label={t.common.status} sortKey="status" currentSort={assetSortConfig} onSort={requestAssetSort} />
+                  <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">

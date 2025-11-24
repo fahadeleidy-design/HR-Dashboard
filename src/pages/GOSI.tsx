@@ -266,7 +266,7 @@ export function GOSI() {
                 className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
               >
                 <Download className="h-4 w-4" />
-                <span>Export</span>
+                <span>{t.common.export}</span>
               </button>
             </div>
           </div>

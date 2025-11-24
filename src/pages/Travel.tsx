@@ -893,8 +893,8 @@ export function Travel() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">New Business Travel Request</h2>
-                  <p className="text-gray-600 mt-1">Create a comprehensive travel request with booking and approval workflow</p>
+                  <h2 className="text-2xl font-bold text-gray-900">{t.travel.newRequestTitle}</h2>
+                  <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.travel.newRequestDescription}</p>
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}

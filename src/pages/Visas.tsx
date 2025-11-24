@@ -383,7 +383,7 @@ export function Visas() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder={t.common.search}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -739,8 +739,8 @@ export function Visas() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">New Visa/Iqama Request</h2>
-                  <p className="text-gray-600 mt-1">Create a new visa or iqama request with MOL integration</p>
+                  <h2 className="text-2xl font-bold text-gray-900">{t.visas.newRequestTitle}</h2>
+                  <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.visas.newRequestDescription}</p>
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}

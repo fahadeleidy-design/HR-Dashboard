@@ -451,7 +451,7 @@ export function Advances() {
                   ]}
                   value={formData.employee_id}
                   onChange={(value) => setFormData({ ...formData, employee_id: value })}
-                  placeholder="Select Employee"
+                  placeholder={t.employees.selectEmployee}
                 />
               </div>
 

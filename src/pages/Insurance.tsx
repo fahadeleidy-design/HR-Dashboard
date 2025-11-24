@@ -403,7 +403,7 @@ export function Insurance() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by policy number or provider..."
+                  placeholder={t.insurance.searchPlaceholder}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -780,7 +780,7 @@ export function Insurance() {
                 </h3>
                 <button className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
                   <Plus className="h-4 w-4" />
-                  <span>Add Beneficiary</span>
+                  <span>{t.insurance.addBeneficiary}</span>
                 </button>
               </div>
 
@@ -803,7 +803,7 @@ export function Insurance() {
                         <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                           <User className="h-12 w-12 mx-auto text-gray-400 mb-3" />
                           <p className="text-lg font-medium">No beneficiaries added</p>
-                          <p className="text-sm mt-1">Add beneficiaries to this policy</p>
+                          <p className={`text-sm mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.insurance.addBeneficiariesDesc}</p>
                         </td>
                       </tr>
                     ) : (
@@ -873,8 +873,8 @@ export function Insurance() {
               <div className="p-6 border-b border-gray-200">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Add New Insurance Policy</h2>
-                    <p className="text-gray-600 mt-1">Create a new insurance policy for your company</p>
+                    <h2 className="text-2xl font-bold text-gray-900">{t.insurance.addNewPolicy}</h2>
+                    <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.insurance.addPolicyDescription}</p>
                   </div>
                   <button
                     type="button"

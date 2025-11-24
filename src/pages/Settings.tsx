@@ -526,7 +526,7 @@ export function Settings() {
                 value={gosiForm.establishment_number}
                 onChange={(e) => setGosiForm({ ...gosiForm, establishment_number: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your GOSI establishment number"
+                placeholder={t.settings.gosiEstablishmentPlaceholder}
               />
             </div>
 
@@ -540,7 +540,7 @@ export function Settings() {
                 value={gosiForm.client_id}
                 onChange={(e) => setGosiForm({ ...gosiForm, client_id: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your GOSI Client ID"
+                placeholder={t.settings.gosiClientIdPlaceholder}
               />
             </div>
 
@@ -554,7 +554,7 @@ export function Settings() {
                 value={gosiForm.client_secret}
                 onChange={(e) => setGosiForm({ ...gosiForm, client_secret: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter your GOSI Client Secret"
+                placeholder={t.settings.gosiClientSecretPlaceholder}
               />
             </div>
 
@@ -568,7 +568,7 @@ export function Settings() {
                 value={gosiForm.private_key}
                 onChange={(e) => setGosiForm({ ...gosiForm, private_key: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                placeholder="Paste your GOSI Private Key here (RSA or PEM format)"
+                placeholder={t.settings.gosiPrivateKeyPlaceholder}
               />
               <p className="text-xs text-gray-500 mt-1">
                 Paste the entire private key including BEGIN and END markers. This key is used to generate DPoP tokens.
@@ -685,7 +685,7 @@ export function Settings() {
               className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
             >
               <Plus className="h-4 w-4" />
-              <span>Add Department</span>
+              <span>{t.settings.addDepartment}</span>
             </button>
           </div>
         </div>
@@ -742,7 +742,7 @@ export function Settings() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">Add Department</h2>
+              <h2 className="text-2xl font-bold text-gray-900">{t.settings.addDepartmentTitle}</h2>
             </div>
 
             <form onSubmit={handleAddDepartment} className="p-6 space-y-4">
