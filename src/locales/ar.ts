@@ -86,6 +86,7 @@ export const arTranslations = {
     expired: 'منتهي',
     filters: 'الفلاتر',
     clearFilters: 'مسح الفلاتر',
+    clearAll: 'مسح الكل',
     activeFilters: 'الفلاتر النشطة',
     statuses: 'الحالات',
     showing: 'عرض',
@@ -318,6 +319,11 @@ export const arTranslations = {
     expiring30Days: 'تنتهي خلال ٣٠ يوم',
     expiring60Days: 'تنتهي خلال ٦٠ يوم',
     expiring90Days: 'تنتهي خلال ٩٠ يوم',
+    quickFilters: 'فلاتر سريعة',
+    advancedFilters: 'فلاتر متقدمة',
+    saudiOnly: 'سعوديون فقط',
+    nonSaudiOnly: 'غير سعوديين فقط',
+    highSalary: 'رواتب عالية (١٠آلاف+)',
   },
 
   recruitment: {

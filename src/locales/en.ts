@@ -77,6 +77,7 @@ export const enTranslations = {
     expired: 'Expired',
     filters: 'Filters',
     clearFilters: 'Clear Filters',
+    clearAll: 'Clear All',
     activeFilters: 'Active Filters',
     statuses: 'Statuses',
     showing: 'Showing',
@@ -293,6 +294,11 @@ export const enTranslations = {
     expiring30Days: 'Expiring in 30 Days',
     expiring60Days: 'Expiring in 60 Days',
     expiring90Days: 'Expiring in 90 Days',
+    quickFilters: 'Quick Filters',
+    advancedFilters: 'Advanced Filters',
+    saudiOnly: 'Saudi Only',
+    nonSaudiOnly: 'Non-Saudi Only',
+    highSalary: 'High Salary (10K+)',
   },
 
   recruitment: {

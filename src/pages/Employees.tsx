@@ -4,7 +4,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types/database';
-import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X } from 'lucide-react';
+import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X, ChevronDown, Users, Building2, Calendar, DollarSign, RefreshCw } from 'lucide-react';
 import { EmployeeForm } from '@/components/EmployeeForm';
 import { BulkUpload } from '@/components/BulkUpload';
 import { EmployeeDetail } from '@/components/EmployeeDetail';
@@ -44,6 +44,8 @@ export function Employees() {
   const [filterSalaryMin, setFilterSalaryMin] = useState('');
   const [filterSalaryMax, setFilterSalaryMax] = useState('');
   const [showFilters, setShowFilters] = useState(false);
+  const [filterPreset, setFilterPreset] = useState('');
+  const [isFilterAnimating, setIsFilterAnimating] = useState(false);
 
   useEffect(() => {
     if (currentCompany) {
@@ -275,11 +277,79 @@ export function Employees() {
   };
 
   const handleClearFilters = () => {
-    setFilterNationality('');
-    setFilterDepartment('');
-    setFilterIqamaExpiry('');
-    setFilterSalaryMin('');
-    setFilterSalaryMax('');
+    setIsFilterAnimating(true);
+    setTimeout(() => {
+      setFilterNationality('');
+      setFilterDepartment('');
+      setFilterIqamaExpiry('');
+      setFilterSalaryMin('');
+      setFilterSalaryMax('');
+      setFilterPreset('');
+      setIsFilterAnimating(false);
+    }, 150);
+  };
+
+  const applyFilterPreset = (preset: string) => {
+    setFilterPreset(preset);
+    setIsFilterAnimating(true);
+
+    setTimeout(() => {
+      switch(preset) {
+        case 'expiring-soon':
+          setFilterNationality('');
+          setFilterDepartment('');
+          setFilterIqamaExpiry('30days');
+          setFilterSalaryMin('');
+          setFilterSalaryMax('');
+          break;
+        case 'saudi-only':
+          setFilterNationality('saudi');
+          setFilterDepartment('');
+          setFilterIqamaExpiry('');
+          setFilterSalaryMin('');
+          setFilterSalaryMax('');
+          break;
+        case 'non-saudi':
+          setFilterNationality('non-saudi');
+          setFilterDepartment('');
+          setFilterIqamaExpiry('');
+          setFilterSalaryMin('');
+          setFilterSalaryMax('');
+          break;
+        case 'high-salary':
+          setFilterNationality('');
+          setFilterDepartment('');
+          setFilterIqamaExpiry('');
+          setFilterSalaryMin('10000');
+          setFilterSalaryMax('');
+          break;
+        default:
+          handleClearFilters();
+      }
+      setIsFilterAnimating(false);
+    }, 150);
+  };
+
+  const removeFilter = (filterType: string) => {
+    setIsFilterAnimating(true);
+    setTimeout(() => {
+      switch(filterType) {
+        case 'nationality':
+          setFilterNationality('');
+          break;
+        case 'department':
+          setFilterDepartment('');
+          break;
+        case 'iqama':
+          setFilterIqamaExpiry('');
+          break;
+        case 'salary':
+          setFilterSalaryMin('');
+          setFilterSalaryMax('');
+          break;
+      }
+      setIsFilterAnimating(false);
+    }, 100);
   };
 
   const getUniqueNationalities = () => {
@@ -404,12 +474,12 @@ export function Employees() {
             </div>
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2 border rounded-md transition-colors ${showFilters ? 'bg-primary-50 border-primary-500 text-primary-700' : 'border-gray-300 hover:bg-gray-50'} ${isRTL ? 'flex-row-reverse' : ''}`}
+              className={`flex items-center gap-2 px-4 py-2.5 border-2 rounded-lg font-medium transition-all duration-200 ${showFilters ? 'bg-primary-500 border-primary-500 text-white shadow-lg shadow-primary-200' : 'bg-white border-gray-300 text-gray-700 hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700'} ${isRTL ? 'flex-row-reverse' : ''}`}
             >
               <Filter className="h-4 w-4" />
               <span>{t.common.filters}</span>
               {hasActiveFilters && (
-                <span className="ml-1 px-2 py-0.5 bg-primary-600 text-white text-xs rounded-full">
+                <span className={`ml-1 px-2 py-0.5 text-xs font-semibold rounded-full animate-pulse ${showFilters ? 'bg-white text-primary-600' : 'bg-primary-600 text-white'}`}>
                   {[filterNationality, filterDepartment, filterIqamaExpiry, filterSalaryMin || filterSalaryMax].filter(Boolean).length}
                 </span>
               )}
@@ -417,69 +487,136 @@ export function Employees() {
           </div>
 
           {showFilters && (
-            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className={`bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 space-y-6 border border-gray-200 shadow-sm transition-all duration-300 ${isFilterAnimating ? 'opacity-50' : 'opacity-100'}`}>
+              {/* Quick Filter Presets */}
+              <div className="space-y-2">
+                <p className={`text-xs font-semibold text-gray-500 uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.employees.quickFilters}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => applyFilterPreset('expiring-soon')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${filterPreset === 'expiring-soon' ? 'bg-orange-500 text-white shadow-md scale-105' : 'bg-white text-gray-700 border border-gray-300 hover:border-orange-500 hover:text-orange-600 hover:shadow'}`}
+                  >
+                    <Calendar className="h-4 w-4" />
+                    <span>{t.employees.expiringSoon}</span>
+                  </button>
+                  <button
+                    onClick={() => applyFilterPreset('saudi-only')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${filterPreset === 'saudi-only' ? 'bg-green-500 text-white shadow-md scale-105' : 'bg-white text-gray-700 border border-gray-300 hover:border-green-500 hover:text-green-600 hover:shadow'}`}
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>{t.employees.saudiOnly}</span>
+                  </button>
+                  <button
+                    onClick={() => applyFilterPreset('non-saudi')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${filterPreset === 'non-saudi' ? 'bg-blue-500 text-white shadow-md scale-105' : 'bg-white text-gray-700 border border-gray-300 hover:border-blue-500 hover:text-blue-600 hover:shadow'}`}
+                  >
+                    <Users className="h-4 w-4" />
+                    <span>{t.employees.nonSaudiOnly}</span>
+                  </button>
+                  <button
+                    onClick={() => applyFilterPreset('high-salary')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${filterPreset === 'high-salary' ? 'bg-purple-500 text-white shadow-md scale-105' : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-500 hover:text-purple-600 hover:shadow'}`}
+                  >
+                    <DollarSign className="h-4 w-4" />
+                    <span>{t.employees.highSalary}</span>
+                  </button>
+                  {hasActiveFilters && (
+                    <button
+                      onClick={handleClearFilters}
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-white text-red-600 border border-red-300 hover:bg-red-50 hover:border-red-400 transition-all duration-200"
+                    >
+                      <RefreshCw className="h-4 w-4" />
+                      <span>{t.common.clearAll}</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-200"></div>
+
+              {/* Advanced Filters */}
+              <div className="space-y-2">
+                <p className={`text-xs font-semibold text-gray-500 uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.employees.advancedFilters}
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {/* Nationality Filter */}
-                <div>
-                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <div className="group">
+                  <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                    <Users className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
                     {t.employees.nationality}
                   </label>
-                  <select
-                    value={filterNationality}
-                    onChange={(e) => setFilterNationality(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="">{t.common.all}</option>
-                    <option value="saudi">{t.employees.saudi}</option>
-                    <option value="non-saudi">{t.employees.nonSaudi}</option>
-                    <optgroup label={t.employees.specificCountries}>
-                      {getUniqueNationalities().map(nat => (
-                        <option key={nat} value={nat}>{nat}</option>
-                      ))}
-                    </optgroup>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={filterNationality}
+                      onChange={(e) => setFilterNationality(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
+                    >
+                      <option value="">{t.common.all}</option>
+                      <option value="saudi">{t.employees.saudi}</option>
+                      <option value="non-saudi">{t.employees.nonSaudi}</option>
+                      <optgroup label={t.employees.specificCountries}>
+                        {getUniqueNationalities().map(nat => (
+                          <option key={nat} value={nat}>{nat}</option>
+                        ))}
+                      </optgroup>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
                 </div>
 
                 {/* Department Filter */}
-                <div>
-                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <div className="group">
+                  <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                    <Building2 className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
                     {t.common.department}
                   </label>
-                  <select
-                    value={filterDepartment}
-                    onChange={(e) => setFilterDepartment(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="">{t.common.all}</option>
-                    {departments.map(dept => (
-                      <option key={dept.id} value={dept.id}>
-                        {language === 'ar' && dept.name_ar ? dept.name_ar : dept.name_en}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={filterDepartment}
+                      onChange={(e) => setFilterDepartment(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
+                    >
+                      <option value="">{t.common.all}</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>
+                          {language === 'ar' && dept.name_ar ? dept.name_ar : dept.name_en}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
                 </div>
 
                 {/* Iqama Expiry Filter */}
-                <div>
-                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <div className="group">
+                  <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                    <Calendar className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
                     {t.employees.iqamaExpiry}
                   </label>
-                  <select
-                    value={filterIqamaExpiry}
-                    onChange={(e) => setFilterIqamaExpiry(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  >
-                    <option value="">{t.common.all}</option>
-                    <option value="expired">{t.employees.expired}</option>
-                    <option value="30days">{t.employees.expiring30Days}</option>
-                    <option value="60days">{t.employees.expiring60Days}</option>
-                    <option value="90days">{t.employees.expiring90Days}</option>
-                  </select>
+                  <div className="relative">
+                    <select
+                      value={filterIqamaExpiry}
+                      onChange={(e) => setFilterIqamaExpiry(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
+                    >
+                      <option value="">{t.common.all}</option>
+                      <option value="expired">{t.employees.expired}</option>
+                      <option value="30days">{t.employees.expiring30Days}</option>
+                      <option value="60days">{t.employees.expiring60Days}</option>
+                      <option value="90days">{t.employees.expiring90Days}</option>
+                    </select>
+                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  </div>
                 </div>
 
-                {/* Salary Range Start */}
-                <div>
-                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {/* Salary Range */}
+                <div className="group">
+                  <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                    <DollarSign className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
                     {t.employees.salaryRange}
                   </label>
                   <div className="flex gap-2">
@@ -488,67 +625,109 @@ export function Employees() {
                       placeholder={t.employees.min}
                       value={filterSalaryMin}
                       onChange={(e) => setFilterSalaryMin(e.target.value)}
-                      className="w-1/2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-1/2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 hover:border-gray-300"
                     />
                     <input
                       type="number"
                       placeholder={t.employees.max}
                       value={filterSalaryMax}
                       onChange={(e) => setFilterSalaryMax(e.target.value)}
-                      className="w-1/2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className="w-1/2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 hover:border-gray-300"
                     />
                   </div>
                 </div>
               </div>
+            </div>
+            </div>
+          )}
 
-              {/* Filter Actions */}
-              {hasActiveFilters && (
-                <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
+          {/* Active Filter Chips - Outside filter panel, always visible */}
+          {hasActiveFilters && !showFilters && (
+            <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
+              <div className={`flex flex-wrap gap-2 ${isRTL ? 'justify-end' : 'justify-start'}`}>
+                <span className="inline-flex items-center px-2 py-1 text-xs font-medium text-gray-500">
+                  {t.common.activeFilters}:
+                </span>
+                {filterNationality && (
                   <button
-                    onClick={handleClearFilters}
-                    className={`flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 ${isRTL ? 'flex-row-reverse' : ''}`}
+                    onClick={() => removeFilter('nationality')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-medium rounded-full hover:from-blue-600 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow group"
                   >
-                    <X className="h-4 w-4" />
-                    <span>{t.common.clearFilters}</span>
+                    <Users className="h-3 w-3" />
+                    <span>{filterNationality === 'saudi' ? t.employees.saudi : filterNationality === 'non-saudi' ? t.employees.nonSaudi : filterNationality}</span>
+                    <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
                   </button>
-                </div>
-              )}
-
-              {/* Active Filters Summary */}
-              {hasActiveFilters && (
-                <div className={`flex flex-wrap gap-2 pt-2 border-t border-gray-200 ${isRTL ? 'justify-end' : 'justify-start'}`}>
-                  <span className="text-sm text-gray-600">{t.common.activeFilters}:</span>
-                  {filterNationality && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                      {t.employees.nationality}: {filterNationality === 'saudi' ? t.employees.saudi : filterNationality === 'non-saudi' ? t.employees.nonSaudi : filterNationality}
-                    </span>
-                  )}
-                  {filterDepartment && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
-                      {t.common.department}: {departments.find(d => d.id === filterDepartment)?.name_en}
-                    </span>
-                  )}
-                  {filterIqamaExpiry && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
-                      {t.employees.iqamaExpiry}: {filterIqamaExpiry === 'expired' ? t.employees.expired : filterIqamaExpiry === '30days' ? t.employees.expiring30Days : filterIqamaExpiry === '60days' ? t.employees.expiring60Days : t.employees.expiring90Days}
-                    </span>
-                  )}
-                  {(filterSalaryMin || filterSalaryMax) && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
-                      {t.employees.salary}: {filterSalaryMin || '0'} - {filterSalaryMax || '∞'}
-                    </span>
-                  )}
-                </div>
-              )}
+                )}
+                {filterDepartment && (
+                  <button
+                    onClick={() => removeFilter('department')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-medium rounded-full hover:from-green-600 hover:to-green-700 transition-all duration-200 shadow-sm hover:shadow group"
+                  >
+                    <Building2 className="h-3 w-3" />
+                    <span>{departments.find(d => d.id === filterDepartment)?.name_en}</span>
+                    <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                  </button>
+                )}
+                {filterIqamaExpiry && (
+                  <button
+                    onClick={() => removeFilter('iqama')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-orange-500 to-orange-600 text-white text-xs font-medium rounded-full hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-sm hover:shadow group"
+                  >
+                    <Calendar className="h-3 w-3" />
+                    <span>{filterIqamaExpiry === 'expired' ? t.employees.expired : filterIqamaExpiry === '30days' ? t.employees.expiring30Days : filterIqamaExpiry === '60days' ? t.employees.expiring60Days : t.employees.expiring90Days}</span>
+                    <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                  </button>
+                )}
+                {(filterSalaryMin || filterSalaryMax) && (
+                  <button
+                    onClick={() => removeFilter('salary')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-medium rounded-full hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow group"
+                  >
+                    <DollarSign className="h-3 w-3" />
+                    <span>{filterSalaryMin || '0'} - {filterSalaryMax || '∞'}</span>
+                    <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                  </button>
+                )}
+                <button
+                  onClick={handleClearFilters}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-full hover:bg-gray-200 transition-all duration-200"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  <span>{t.common.clearAll}</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
 
         {/* Results Count */}
-        <div className="px-4 py-2 bg-gray-50 border-t border-gray-200">
-          <p className={`text-sm text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`}>
-            {t.common.showing} <span className="font-semibold text-gray-900">{filteredEmployees.length}</span> {t.common.of} <span className="font-semibold text-gray-900">{employees.length}</span> {t.employees.totalRecords}
-          </p>
+        <div className="px-6 py-3 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200">
+          <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className="flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-primary-100 flex items-center justify-center">
+                <Users className="h-4 w-4 text-primary-600" />
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 leading-none">{t.employees.totalRecords}</p>
+                <p className="text-sm font-bold text-gray-900 leading-tight mt-0.5">
+                  {t.common.showing} <span className="text-primary-600">{filteredEmployees.length}</span>
+                  {filteredEmployees.length !== employees.length && (
+                    <span className="text-gray-400"> / {employees.length}</span>
+                  )}
+                </p>
+              </div>
+            </div>
+            {filteredEmployees.length !== employees.length && (
+              <div className="ml-auto">
+                <div className="h-2 w-32 bg-gray-200 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary-500 to-primary-600 transition-all duration-500 ease-out"
+                    style={{ width: `${(filteredEmployees.length / employees.length) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto">
