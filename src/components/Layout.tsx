@@ -118,8 +118,8 @@ export function Layout({ children }: LayoutProps) {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100">
       <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 backdrop-blur-lg bg-opacity-90">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
+          <div className={`flex justify-between items-center h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
                 className="lg:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
@@ -127,7 +127,7 @@ export function Layout({ children }: LayoutProps) {
                 {sidebarOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </button>
 
-              <div className="flex items-center space-x-3">
+              <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
                 <img
                   src="/image.png"
                   alt="Special Offices Company"
@@ -174,16 +174,16 @@ export function Layout({ children }: LayoutProps) {
               </div>
             </div>
 
-            <div className={`flex items-center ${isRTL ? 'space-x-reverse' : ''} space-x-2 sm:space-x-4`}>
+            <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2 sm:space-x-4' : 'space-x-2 sm:space-x-4'}`}>
               <button
                 onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
-                className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all duration-200"
+                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all duration-200`}
                 title={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
               >
                 <Languages className="h-5 w-5" />
                 <span className="text-sm font-medium">{language === 'en' ? 'العربية' : 'English'}</span>
               </button>
-              <div className="hidden sm:flex items-center space-x-2 px-3 py-2 bg-gray-50 rounded-lg">
+              <div className={`hidden sm:flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-3 py-2 bg-gray-50 rounded-lg`}>
                 <div className="h-8 w-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                   {user?.email?.charAt(0).toUpperCase()}
                 </div>
@@ -191,7 +191,7 @@ export function Layout({ children }: LayoutProps) {
               </div>
               <button
                 onClick={handleSignOut}
-                className="flex items-center space-x-2 px-3 py-2 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200"
+                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-3 py-2 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200`}
               >
                 <LogOut className="h-5 w-5" />
                 <span className="text-sm hidden sm:inline">{t.auth.signOut}</span>
@@ -201,7 +201,7 @@ export function Layout({ children }: LayoutProps) {
         </div>
       </nav>
 
-      <div className="flex">
+      <div className={`flex ${isRTL ? 'flex-row-reverse' : ''}`}>
         <aside
           className={`
             fixed lg:static inset-y-0 ${isRTL ? 'right-0' : 'left-0'} z-30
