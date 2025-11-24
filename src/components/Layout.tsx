@@ -203,19 +203,13 @@ export function Layout({ children }: LayoutProps) {
 
       <div className={`flex ${isRTL ? 'flex-row-reverse' : ''}`}>
         <aside
-          style={{
-            transform: sidebarOpen
-              ? 'translateX(0)'
-              : isRTL
-                ? 'translateX(100%)'
-                : 'translateX(-100%)'
-          }}
           className={`
+            sidebar-nav
             fixed lg:static inset-y-0 ${isRTL ? 'right-0' : 'left-0'} z-30
             w-72 bg-white ${isRTL ? 'border-l' : 'border-r'} border-gray-200
-            lg:transform-none
             transition-transform duration-300 ease-in-out
             min-h-[calc(100vh-4rem)] overflow-y-auto shadow-xl lg:shadow-none
+            ${sidebarOpen ? 'translate-x-0' : isRTL ? 'sidebar-hidden-rtl' : 'sidebar-hidden-ltr'}
           `}
         >
           <nav className="p-4 space-y-6">

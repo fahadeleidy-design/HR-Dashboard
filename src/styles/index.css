@@ -98,14 +98,20 @@
     flex-direction: row-reverse;
   }
 
-  /* RTL Transform Corrections - Only for mobile */
-  @media (max-width: 1023px) {
-    [dir="rtl"] .translate-x-full {
-      transform: translateX(-100%) !important;
-    }
+  /* Sidebar Navigation Classes */
+  .sidebar-hidden-ltr {
+    transform: translateX(-100%);
+  }
 
-    [dir="rtl"] .-translate-x-full {
-      transform: translateX(100%) !important;
+  .sidebar-hidden-rtl {
+    transform: translateX(100%);
+  }
+
+  /* On desktop, sidebar is always visible */
+  @media (min-width: 1024px) {
+    .sidebar-hidden-ltr,
+    .sidebar-hidden-rtl {
+      transform: translateX(0);
     }
   }
 
