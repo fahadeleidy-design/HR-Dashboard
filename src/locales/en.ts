@@ -75,6 +75,10 @@ export const enTranslations = {
     programName: 'Program Name',
     expiringSoon: 'Expiring Soon',
     expired: 'Expired',
+    filters: 'Filters',
+    clearFilters: 'Clear Filters',
+    activeFilters: 'Active Filters',
+    statuses: 'Statuses',
   },
 
   nav: {
@@ -271,6 +275,22 @@ export const enTranslations = {
     totalRecords: 'Total Records',
     uploadExcel: 'Upload Excel File',
     downloadTemplate: 'Download Template',
+    selectEmployee: 'Select Employee',
+    selectCompany: 'Select Company',
+    selectDepartment: 'Select Department',
+    selectManager: 'Select Manager',
+    selectManagerHelp: 'Select the direct manager this employee reports to',
+    noManager: 'No Manager (Top Level)',
+    saudi: 'Saudi',
+    nonSaudi: 'Non-Saudi',
+    specificCountries: 'Specific Countries',
+    salaryRange: 'Salary Range',
+    min: 'Min',
+    max: 'Max',
+    salary: 'Salary',
+    expiring30Days: 'Expiring in 30 Days',
+    expiring60Days: 'Expiring in 60 Days',
+    expiring90Days: 'Expiring in 90 Days',
   },
 
   recruitment: {

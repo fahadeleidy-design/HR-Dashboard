@@ -4,19 +4,31 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types/database';
-import { Plus, Upload, Download, Pencil, Trash2, Search, Eye } from 'lucide-react';
+import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X } from 'lucide-react';
 import { EmployeeForm } from '@/components/EmployeeForm';
 import { BulkUpload } from '@/components/BulkUpload';
 import { EmployeeDetail } from '@/components/EmployeeDetail';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import * as XLSX from 'xlsx';
 
+interface Department {
+  id: string;
+  name_en: string;
+  name_ar: string;
+}
+
+interface EmployeeWithPayroll extends Employee {
+  payroll?: { basic_salary: number }[];
+  department?: { name_en: string; name_ar: string };
+}
+
 export function Employees() {
   const { currentCompany } = useCompany();
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, language } = useLanguage();
   const [searchParams] = useSearchParams();
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
+  const [employees, setEmployees] = useState<EmployeeWithPayroll[]>([]);
+  const [filteredEmployees, setFilteredEmployees] = useState<EmployeeWithPayroll[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -25,16 +37,25 @@ export function Employees() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
+  // New filter states
+  const [filterNationality, setFilterNationality] = useState('');
+  const [filterDepartment, setFilterDepartment] = useState('');
+  const [filterIqamaExpiry, setFilterIqamaExpiry] = useState('');
+  const [filterSalaryMin, setFilterSalaryMin] = useState('');
+  const [filterSalaryMax, setFilterSalaryMax] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+
   useEffect(() => {
     if (currentCompany) {
       fetchEmployees();
+      fetchDepartments();
       subscribeToChanges();
     }
   }, [currentCompany]);
 
   useEffect(() => {
     filterEmployees();
-  }, [searchTerm, employees, searchParams]);
+  }, [searchTerm, employees, searchParams, filterNationality, filterDepartment, filterIqamaExpiry, filterSalaryMin, filterSalaryMax]);
 
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredEmployees);
 
@@ -45,7 +66,11 @@ export function Employees() {
     try {
       const { data, error } = await supabase
         .from('employees')
-        .select('*')
+        .select(`
+          *,
+          department:departments(name_en, name_ar),
+          payroll(basic_salary)
+        `)
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
 
@@ -55,6 +80,23 @@ export function Employees() {
       console.error('Error fetching employees:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchDepartments = async () => {
+    if (!currentCompany) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('departments')
+        .select('id, name_en, name_ar')
+        .eq('company_id', currentCompany.id)
+        .order('name_en');
+
+      if (error) throw error;
+      setDepartments(data || []);
+    } catch (error) {
+      console.error('Error fetching departments:', error);
     }
   };
 
@@ -96,23 +138,74 @@ export function Employees() {
     let filtered = [...employees];
 
     const statusFilter = searchParams.get('status');
-    const nationalityFilter = searchParams.get('nationality');
+    const nationalityFilterParam = searchParams.get('nationality');
     const genderFilter = searchParams.get('gender');
 
+    // Status filter
     if (statusFilter) {
       filtered = filtered.filter(emp => emp.status === statusFilter);
     }
 
-    if (nationalityFilter === 'saudi') {
+    // URL nationality filter
+    if (nationalityFilterParam === 'saudi') {
       filtered = filtered.filter(emp => emp.is_saudi === true);
-    } else if (nationalityFilter === 'non-saudi') {
+    } else if (nationalityFilterParam === 'non-saudi') {
       filtered = filtered.filter(emp => emp.is_saudi === false);
     }
 
+    // Gender filter
     if (genderFilter) {
       filtered = filtered.filter(emp => emp.gender === genderFilter);
     }
 
+    // Nationality filter (new)
+    if (filterNationality) {
+      if (filterNationality === 'saudi') {
+        filtered = filtered.filter(emp => emp.is_saudi === true);
+      } else if (filterNationality === 'non-saudi') {
+        filtered = filtered.filter(emp => emp.is_saudi === false);
+      } else {
+        filtered = filtered.filter(emp => emp.nationality.toLowerCase() === filterNationality.toLowerCase());
+      }
+    }
+
+    // Department filter (new)
+    if (filterDepartment) {
+      filtered = filtered.filter(emp => emp.department_id === filterDepartment);
+    }
+
+    // Iqama expiry filter (new)
+    if (filterIqamaExpiry) {
+      const today = new Date();
+      filtered = filtered.filter(emp => {
+        if (!emp.iqama_expiry) return false;
+        const expiryDate = new Date(emp.iqama_expiry);
+        const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+        if (filterIqamaExpiry === 'expired') {
+          return daysUntilExpiry < 0;
+        } else if (filterIqamaExpiry === '30days') {
+          return daysUntilExpiry >= 0 && daysUntilExpiry <= 30;
+        } else if (filterIqamaExpiry === '60days') {
+          return daysUntilExpiry >= 0 && daysUntilExpiry <= 60;
+        } else if (filterIqamaExpiry === '90days') {
+          return daysUntilExpiry >= 0 && daysUntilExpiry <= 90;
+        }
+        return true;
+      });
+    }
+
+    // Salary range filter (new)
+    if (filterSalaryMin || filterSalaryMax) {
+      filtered = filtered.filter(emp => {
+        const salary = emp.payroll && emp.payroll.length > 0 ? emp.payroll[0].basic_salary : 0;
+        const min = filterSalaryMin ? parseFloat(filterSalaryMin) : 0;
+        const max = filterSalaryMax ? parseFloat(filterSalaryMax) : Infinity;
+        return salary >= min && salary <= max;
+      });
+    }
+
+    // Search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -155,6 +248,24 @@ export function Employees() {
     setShowForm(false);
     setEditingEmployee(null);
   };
+
+  const handleClearFilters = () => {
+    setFilterNationality('');
+    setFilterDepartment('');
+    setFilterIqamaExpiry('');
+    setFilterSalaryMin('');
+    setFilterSalaryMax('');
+  };
+
+  const getUniqueNationalities = () => {
+    const nationalities = new Set<string>();
+    employees.forEach(emp => {
+      if (emp.nationality) nationalities.add(emp.nationality);
+    });
+    return Array.from(nationalities).sort();
+  };
+
+  const hasActiveFilters = filterNationality || filterDepartment || filterIqamaExpiry || filterSalaryMin || filterSalaryMax;
 
   const handleExport = () => {
     const exportData = employees.map((emp) => ({
@@ -254,17 +365,158 @@ export function Employees() {
       </div>
 
       <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200">
-          <div className="relative">
-            <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400`} />
-            <input
-              type="text"
-              placeholder={t.employees.searchEmployees}
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500`}
-            />
+        <div className="p-4 border-b border-gray-200 space-y-4">
+          <div className="flex gap-3">
+            <div className="flex-1 relative">
+              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400`} />
+              <input
+                type="text"
+                placeholder={t.employees.searchEmployees}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500`}
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2 border rounded-md transition-colors ${showFilters ? 'bg-primary-50 border-primary-500 text-primary-700' : 'border-gray-300 hover:bg-gray-50'} ${isRTL ? 'flex-row-reverse' : ''}`}
+            >
+              <Filter className="h-4 w-4" />
+              <span>{t.common.filters}</span>
+              {hasActiveFilters && (
+                <span className="ml-1 px-2 py-0.5 bg-primary-600 text-white text-xs rounded-full">
+                  {[filterNationality, filterDepartment, filterIqamaExpiry, filterSalaryMin || filterSalaryMax].filter(Boolean).length}
+                </span>
+              )}
+            </button>
           </div>
+
+          {showFilters && (
+            <div className="bg-gray-50 rounded-lg p-4 space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {/* Nationality Filter */}
+                <div>
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.employees.nationality}
+                  </label>
+                  <select
+                    value={filterNationality}
+                    onChange={(e) => setFilterNationality(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">{t.common.all}</option>
+                    <option value="saudi">{t.employees.saudi}</option>
+                    <option value="non-saudi">{t.employees.nonSaudi}</option>
+                    <optgroup label={t.employees.specificCountries}>
+                      {getUniqueNationalities().map(nat => (
+                        <option key={nat} value={nat}>{nat}</option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
+
+                {/* Department Filter */}
+                <div>
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.common.department}
+                  </label>
+                  <select
+                    value={filterDepartment}
+                    onChange={(e) => setFilterDepartment(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">{t.common.all}</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>
+                        {language === 'ar' && dept.name_ar ? dept.name_ar : dept.name_en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Iqama Expiry Filter */}
+                <div>
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.employees.iqamaExpiry}
+                  </label>
+                  <select
+                    value={filterIqamaExpiry}
+                    onChange={(e) => setFilterIqamaExpiry(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  >
+                    <option value="">{t.common.all}</option>
+                    <option value="expired">{t.employees.expired}</option>
+                    <option value="30days">{t.employees.expiring30Days}</option>
+                    <option value="60days">{t.employees.expiring60Days}</option>
+                    <option value="90days">{t.employees.expiring90Days}</option>
+                  </select>
+                </div>
+
+                {/* Salary Range Start */}
+                <div>
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.employees.salaryRange}
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      placeholder={t.employees.min}
+                      value={filterSalaryMin}
+                      onChange={(e) => setFilterSalaryMin(e.target.value)}
+                      className="w-1/2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                    <input
+                      type="number"
+                      placeholder={t.employees.max}
+                      value={filterSalaryMax}
+                      onChange={(e) => setFilterSalaryMax(e.target.value)}
+                      className="w-1/2 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter Actions */}
+              {hasActiveFilters && (
+                <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
+                  <button
+                    onClick={handleClearFilters}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 ${isRTL ? 'flex-row-reverse' : ''}`}
+                  >
+                    <X className="h-4 w-4" />
+                    <span>{t.common.clearFilters}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Active Filters Summary */}
+              {hasActiveFilters && (
+                <div className={`flex flex-wrap gap-2 pt-2 border-t border-gray-200 ${isRTL ? 'justify-end' : 'justify-start'}`}>
+                  <span className="text-sm text-gray-600">{t.common.activeFilters}:</span>
+                  {filterNationality && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                      {t.employees.nationality}: {filterNationality === 'saudi' ? t.employees.saudi : filterNationality === 'non-saudi' ? t.employees.nonSaudi : filterNationality}
+                    </span>
+                  )}
+                  {filterDepartment && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                      {t.common.department}: {departments.find(d => d.id === filterDepartment)?.name_en}
+                    </span>
+                  )}
+                  {filterIqamaExpiry && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                      {t.employees.iqamaExpiry}: {filterIqamaExpiry === 'expired' ? t.employees.expired : filterIqamaExpiry === '30days' ? t.employees.expiring30Days : filterIqamaExpiry === '60days' ? t.employees.expiring60Days : t.employees.expiring90Days}
+                    </span>
+                  )}
+                  {(filterSalaryMin || filterSalaryMax) && (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">
+                      {t.employees.salary}: {filterSalaryMin || '0'} - {filterSalaryMax || '∞'}
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="overflow-x-auto">
