@@ -73,6 +73,8 @@ export const enTranslations = {
     participants: 'Participants',
     totalParticipants: 'Total Participants',
     programName: 'Program Name',
+    expiringSoon: 'Expiring Soon',
+    expired: 'Expired',
   },
 
   nav: {

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { FileText, AlertTriangle, CheckCircle } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
+import { formatNumber } from '@/lib/formatters';
 
 interface Document {
   id: string;
@@ -21,6 +23,7 @@ interface Document {
 
 export function Documents() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'expiring_soon' | 'expired'>('all');
@@ -75,10 +78,10 @@ export function Documents() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Document Management</h1>
-          <p className="text-gray-600 mt-1">Track employee documents and expiry dates</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.documents.title}</h1>
+          <p className="text-gray-600 mt-1">{t.documents.subtitle}</p>
         </div>
       </div>
 
@@ -86,8 +89,8 @@ export function Documents() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Documents</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{documents.length}</p>
+              <p className="text-sm text-gray-600">{t.common.total} {t.documents.title}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(documents.length, language)}</p>
             </div>
             <FileText className="h-12 w-12 text-gray-600" />
           </div>
@@ -96,8 +99,8 @@ export function Documents() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{activeCount}</p>
+              <p className="text-sm text-gray-600">{t.common.active}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(activeCount, language)}</p>
             </div>
             <CheckCircle className="h-12 w-12 text-green-600" />
           </div>
@@ -106,8 +109,8 @@ export function Documents() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Expiring Soon</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">{expiringSoonCount}</p>
+              <p className="text-sm text-gray-600">{t.common.expiringSoon}</p>
+              <p className="text-2xl font-bold text-yellow-600 mt-1">{formatNumber(expiringSoonCount, language)}</p>
             </div>
             <AlertTriangle className="h-12 w-12 text-yellow-600" />
           </div>
@@ -116,8 +119,8 @@ export function Documents() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Expired</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{expiredCount}</p>
+              <p className="text-sm text-gray-600">{t.common.expired}</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{formatNumber(expiredCount, language)}</p>
             </div>
             <AlertTriangle className="h-12 w-12 text-red-600" />
           </div>
@@ -137,7 +140,7 @@ export function Documents() {
                     : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                {status.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                {status === 'all' ? t.common.all : status === 'active' ? t.common.active : status === 'expiring_soon' ? t.common.expiringSoon : t.common.expired}
               </button>
             ))}
           </div>
@@ -148,37 +151,37 @@ export function Documents() {
             <thead className="bg-gray-50">
               <tr>
                 <SortableTableHeader
-                  label="Employee"
+                  label={t.common.employee}
                   sortKey="employee.first_name_en"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Document Type"
+                  label={t.documents.documentType}
                   sortKey="document_type"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Document Number"
+                  label={t.documents.documentNumber}
                   sortKey="document_number"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Issue Date"
+                  label={t.documents.issueDate}
                   sortKey="issue_date"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Expiry Date"
+                  label={t.documents.expiryDate}
                   sortKey="expiry_date"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Status"
+                  label={t.common.status}
                   sortKey="status"
                   currentSort={sortConfig}
                   onSort={requestSort}
@@ -189,7 +192,7 @@ export function Documents() {
               {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    No documents found.
+                    {t.messages.noResults}
                   </td>
                 </tr>
               ) : (

@@ -82,6 +82,8 @@ export const arTranslations = {
     participants: 'المشاركون',
     totalParticipants: 'إجمالي المشاركين',
     programName: 'اسم البرنامج',
+    expiringSoon: 'تنتهي قريباً',
+    expired: 'منتهي',
     yesterday: 'أمس',
     thisWeek: 'هذا الأسبوع',
     thisMonth: 'هذا الشهر',
