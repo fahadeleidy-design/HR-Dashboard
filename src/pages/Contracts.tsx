@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 import {
   FileText, Plus, Eye, Edit, AlertTriangle, CheckCircle, Clock,
   XCircle, Search, Filter, Download, RefreshCw, Building2, Calendar,
@@ -42,6 +44,7 @@ interface ContractRenewal {
 
 export function Contracts() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'active' | 'expiring' | 'expired' | 'all'>('active');
 
@@ -182,17 +185,17 @@ export function Contracts() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Contract Management</h1>
-          <p className="text-gray-600 mt-1">Manage vendor and client contracts with Saudi legal compliance</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.contracts.title}</h1>
+          <p className="text-gray-600 mt-1">{t.contracts.subtitle}</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
+          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <Plus className="h-4 w-4" />
-          <span>New Contract</span>
+          <span>{t.contracts.newContract}</span>
         </button>
       </div>
 
@@ -200,8 +203,8 @@ export function Contracts() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Contracts</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{activeContracts}</p>
+              <p className="text-sm text-gray-600">{t.contracts.activeContracts}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(activeContracts, language)}</p>
             </div>
             <CheckCircle className="h-12 w-12 text-green-600 opacity-20" />
           </div>
@@ -210,9 +213,9 @@ export function Contracts() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Expiring Soon</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">{expiringContracts}</p>
-              <p className="text-xs text-gray-500 mt-1">Within 30 days</p>
+              <p className="text-sm text-gray-600">{t.common.expiringSoon}</p>
+              <p className="text-2xl font-bold text-yellow-600 mt-1">{formatNumber(expiringContracts, language)}</p>
+              <p className="text-xs text-gray-500 mt-1">{t.contracts.within30Days}</p>
             </div>
             <AlertTriangle className="h-12 w-12 text-yellow-600 opacity-20" />
           </div>
@@ -221,8 +224,8 @@ export function Contracts() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Expired</p>
-              <p className="text-2xl font-bold text-gray-600 mt-1">{expiredContracts}</p>
+              <p className="text-sm text-gray-600">{t.common.expired}</p>
+              <p className="text-2xl font-bold text-gray-600 mt-1">{formatNumber(expiredContracts, language)}</p>
             </div>
             <XCircle className="h-12 w-12 text-gray-600 opacity-20" />
           </div>
@@ -231,11 +234,11 @@ export function Contracts() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Value</p>
+              <p className="text-sm text-gray-600">{t.contracts.totalValue}</p>
               <p className="text-2xl font-bold text-blue-600 mt-1">
-                {totalValue.toLocaleString()} SAR
+                {formatCurrency(totalValue, language)}
               </p>
-              <p className="text-xs text-gray-500 mt-1">Active contracts</p>
+              <p className="text-xs text-gray-500 mt-1">{t.contracts.activeContracts}</p>
             </div>
             <DollarSign className="h-12 w-12 text-blue-600 opacity-20" />
           </div>

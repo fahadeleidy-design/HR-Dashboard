@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { Building2, Package, DollarSign, Plus, Edit, Trash2, X } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 
@@ -30,6 +32,7 @@ interface Asset {
 
 export function RealEstate() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [properties, setProperties] = useState<Property[]>([]);
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
@@ -274,17 +277,17 @@ export function RealEstate() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Real Estate & Assets</h1>
-          <p className="text-gray-600 mt-1">Manage properties, equipment, and company assets</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.realEstate.title}</h1>
+          <p className="text-gray-600 mt-1">{t.realEstate.subtitle}</p>
         </div>
         <button
           onClick={() => activeTab === 'properties' ? setShowPropertyForm(true) : setShowAssetForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <Plus className="h-4 w-4" />
-          <span>Add {activeTab === 'properties' ? 'Property' : 'Asset'}</span>
+          <span>{activeTab === 'properties' ? t.realEstate.addProperty : t.realEstate.addAsset}</span>
         </button>
       </div>
 
@@ -292,8 +295,8 @@ export function RealEstate() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Properties</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{totalProperties}</p>
+              <p className="text-sm text-gray-600">{t.realEstate.properties}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(totalProperties, language)}</p>
             </div>
             <Building2 className="h-12 w-12 text-blue-600" />
           </div>
@@ -302,8 +305,8 @@ export function RealEstate() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Assets</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{totalAssets}</p>
+              <p className="text-sm text-gray-600">{t.realEstate.assets}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(totalAssets, language)}</p>
             </div>
             <Package className="h-12 w-12 text-green-600" />
           </div>
@@ -312,8 +315,8 @@ export function RealEstate() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Property Value</p>
-              <p className="text-xl font-bold text-gray-900 mt-1">SAR {(totalPropertyValue / 1000000).toFixed(1)}M</p>
+              <p className="text-sm text-gray-600">{t.realEstate.propertyValue}</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(totalPropertyValue, language)}</p>
             </div>
             <DollarSign className="h-12 w-12 text-purple-600" />
           </div>
@@ -322,8 +325,8 @@ export function RealEstate() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Asset Value</p>
-              <p className="text-xl font-bold text-gray-900 mt-1">SAR {(totalAssetValue / 1000).toFixed(0)}K</p>
+              <p className="text-sm text-gray-600">{t.realEstate.assetValue}</p>
+              <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(totalAssetValue, language)}</p>
             </div>
             <DollarSign className="h-12 w-12 text-orange-600" />
           </div>
@@ -341,7 +344,7 @@ export function RealEstate() {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Properties ({totalProperties})
+              {t.realEstate.properties} ({formatNumber(totalProperties, language)})
             </button>
             <button
               onClick={() => setActiveTab('assets')}
@@ -351,7 +354,7 @@ export function RealEstate() {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              Assets ({totalAssets})
+              {t.realEstate.assets} ({formatNumber(totalAssets, language)})
             </button>
           </nav>
         </div>
@@ -361,19 +364,19 @@ export function RealEstate() {
             <table className="w-full">
               <thead className="bg-gray-50">
                 <tr>
-                  <SortableTableHeader label="Property" sortKey="property_name" currentSort={propertySortConfig} onSort={requestPropertySort} />
-                  <SortableTableHeader label="Type" sortKey="property_type" currentSort={propertySortConfig} onSort={requestPropertySort} />
-                  <SortableTableHeader label="Location" sortKey="city" currentSort={propertySortConfig} onSort={requestPropertySort} />
-                  <SortableTableHeader label="Ownership" sortKey="ownership_type" currentSort={propertySortConfig} onSort={requestPropertySort} />
-                  <SortableTableHeader label="Value" sortKey="current_value" currentSort={propertySortConfig} onSort={requestPropertySort} />
-                  <SortableTableHeader label="Status" sortKey="status" currentSort={propertySortConfig} onSort={requestPropertySort} />
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                  <SortableTableHeader label={t.realEstate.property} sortKey="property_name" currentSort={propertySortConfig} onSort={requestPropertySort} />
+                  <SortableTableHeader label={t.common.type} sortKey="property_type" currentSort={propertySortConfig} onSort={requestPropertySort} />
+                  <SortableTableHeader label={t.realEstate.location} sortKey="city" currentSort={propertySortConfig} onSort={requestPropertySort} />
+                  <SortableTableHeader label={t.realEstate.ownership} sortKey="ownership_type" currentSort={propertySortConfig} onSort={requestPropertySort} />
+                  <SortableTableHeader label={t.realEstate.value} sortKey="current_value" currentSort={propertySortConfig} onSort={requestPropertySort} />
+                  <SortableTableHeader label={t.common.status} sortKey="status" currentSort={propertySortConfig} onSort={requestPropertySort} />
+                  <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {sortedProperties.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">No properties found</td>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">{t.messages.noResults}</td>
                   </tr>
                 ) : (
                   sortedProperties.map((property) => (

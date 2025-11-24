@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatNumber } from '@/lib/formatters';
 import {
   Network,
   Search,
@@ -50,6 +52,7 @@ interface Department {
 
 export function OrgChart() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);

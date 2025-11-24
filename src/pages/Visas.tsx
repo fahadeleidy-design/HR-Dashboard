@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 import {
   CreditCard, Plus, Eye, Edit, CheckCircle, XCircle, Clock,
   AlertTriangle, Users, FileText, Calendar, DollarSign, Search,
@@ -63,6 +65,7 @@ interface ProfessionCode {
 
 export function Visas() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<'visas' | 'iqamas' | 'requests' | 'quotas'>('visas');
@@ -296,7 +299,7 @@ export function Visas() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Visa & Work Permit Management</h1>
+        <h1 className="text-3xl font-bold">{t.visas.title}</h1>
         <button
           onClick={() => setShowAddModal(true)}
           className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center gap-2"

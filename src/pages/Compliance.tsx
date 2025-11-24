@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatNumber } from '@/lib/formatters';
 import { Shield, TrendingUp, Download, DollarSign, Info, AlertCircle, CheckCircle, Users, Calculator, BookOpen, FileBarChart, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
@@ -49,6 +51,7 @@ interface GOSISyncLog {
 
 export function Compliance() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [nitaqatCalc, setNitaqatCalc] = useState<NitaqatCalculation | null>(null);
   const [gosiContributions, setGosiContributions] = useState<any[]>([]);
@@ -472,25 +475,25 @@ export function Compliance() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Compliance & Reporting</h1>
-          <p className="text-gray-600 mt-1">Nitaqat, GOSI, and WPS compliance tracking</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.compliance.title}</h1>
+          <p className="text-gray-600 mt-1">{t.compliance.subtitle}</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <button
             onClick={() => setShowCalculator(!showCalculator)}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Calculator className="h-4 w-4" />
-            <span>Calculator</span>
+            <span>{t.compliance.calculator}</span>
           </button>
           <button
             onClick={() => setShowNitaqatInfo(!showNitaqatInfo)}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+            className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Info className="h-4 w-4" />
-            <span>Info</span>
+            <span>{t.common.info}</span>
           </button>
         </div>
       </div>
@@ -498,7 +501,7 @@ export function Compliance() {
       {showCalculator && (
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-bold text-gray-900">Nitaqat Calculator</h3>
+            <h3 className="text-lg font-bold text-gray-900">{t.compliance.nitaqatCalculator}</h3>
             <button onClick={() => setShowCalculator(false)} className="text-gray-400 hover:text-gray-600">
               ×
             </button>
@@ -506,7 +509,7 @@ export function Compliance() {
           <p className="text-sm text-gray-600 mb-4">Calculate what zone your company would be in with different employee counts</p>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Total Employees</label>
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.compliance.totalEmployees}</label>
               <input
                 type="number"
                 min="0"
@@ -516,7 +519,7 @@ export function Compliance() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Effective Saudi Count</label>
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.compliance.effectiveSaudiCount}</label>
               <input
                 type="number"
                 min="0"
@@ -578,7 +581,7 @@ export function Compliance() {
       )}
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Nitaqat Status</h2>
+        <h2 className={`text-xl font-bold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.compliance.nitaqatStatus}</h2>
         {nitaqatCalc ? (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

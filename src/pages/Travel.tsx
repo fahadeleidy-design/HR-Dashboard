@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 import {
   Plane, Plus, Eye, Edit, AlertTriangle, CheckCircle, Clock,
   XCircle, Search, Filter, Download, RefreshCw, MapPin, Calendar,
@@ -61,6 +63,7 @@ interface Employee {
 
 export function Travel() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'pending' | 'approved' | 'completed' | 'all'>('pending');
 
@@ -342,7 +345,7 @@ export function Travel() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Business Travel Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t.travel.title}</h1>
           <p className="text-gray-600 mt-1">Manage travel requests with multi-level approvals and Saudi compliance</p>
         </div>
         <button

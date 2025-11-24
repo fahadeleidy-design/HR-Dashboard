@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { Receipt, Plus, AlertTriangle, Calculator } from 'lucide-react';
 
 interface Employee {
@@ -47,6 +49,7 @@ const CURRENCIES = ['SAR', 'USD', 'EUR', 'GBP', 'AED', 'KWD', 'BHD', 'OMR', 'QAR
 
 export function Expenses() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [expenses, setExpenses] = useState<any[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -289,7 +292,7 @@ export function Expenses() {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Expense Management</h1>
+        <h1 className="text-3xl font-bold">{t.expenses.title}</h1>
         <button
           onClick={() => setShowAddModal(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
