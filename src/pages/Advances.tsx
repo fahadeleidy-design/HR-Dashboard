@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, DollarSign, Clock, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 
 interface Advance {
   id: string;
@@ -31,6 +33,7 @@ interface Employee {
 
 export function Advances() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [advances, setAdvances] = useState<Advance[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -235,17 +238,17 @@ export function Advances() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Salary Advances</h1>
-          <p className="text-gray-600 mt-1">Manage employee salary advance requests</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.advances.title}</h1>
+          <p className="text-gray-600 mt-1">{t.advances.subtitle}</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <Plus className="h-4 w-4" />
-          <span>New Advance</span>
+          <span>{t.advances.newAdvance}</span>
         </button>
       </div>
 
@@ -253,9 +256,9 @@ export function Advances() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Advances</p>
+              <p className="text-sm text-gray-600">{t.advances.totalAdvances}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                SAR {totalAdvances.toLocaleString()}
+                {formatCurrency(totalAdvances, language)}
               </p>
             </div>
             <DollarSign className="h-12 w-12 text-blue-600" />
@@ -265,9 +268,9 @@ export function Advances() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Remaining</p>
+              <p className="text-sm text-gray-600">{t.advances.totalRemaining}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                SAR {totalRemaining.toLocaleString()}
+                {formatCurrency(totalRemaining, language)}
               </p>
             </div>
             <DollarSign className="h-12 w-12 text-orange-600" />
@@ -277,8 +280,8 @@ export function Advances() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending Requests</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{pendingAdvances}</p>
+              <p className="text-sm text-gray-600">{t.advances.pendingRequests}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(pendingAdvances, language)}</p>
             </div>
             <Clock className="h-12 w-12 text-yellow-600" />
           </div>
@@ -291,46 +294,46 @@ export function Advances() {
             <thead className="bg-gray-50">
               <tr>
                 <SortableTableHeader
-                  label="Employee"
+                  label={t.common.employee}
                   sortKey="employee.first_name_en"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Amount"
+                  label={t.advances.amount}
                   sortKey="amount"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Remaining"
+                  label={t.advances.remaining}
                   sortKey="remaining_amount"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Monthly Deduction"
+                  label={t.advances.monthlyDeduction}
                   sortKey="deduction_amount"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Progress
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>
+                  {t.advances.progress}
                 </th>
                 <SortableTableHeader
-                  label="Request Date"
+                  label={t.advances.requestDate}
                   sortKey="request_date"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Status"
+                  label={t.common.status}
                   sortKey="status"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Actions
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>
+                  {t.common.actions}
                 </th>
               </tr>
             </thead>
@@ -338,7 +341,7 @@ export function Advances() {
               {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
-                    No advances found. Click "New Advance" to create one.
+                    {t.messages.noResults}
                   </td>
                 </tr>
               ) : (

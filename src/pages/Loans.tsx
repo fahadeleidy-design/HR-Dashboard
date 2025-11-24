@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { Plus, DollarSign, TrendingDown, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
@@ -32,6 +34,7 @@ interface Employee {
 
 export function Loans() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -226,17 +229,17 @@ export function Loans() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Employee Loans</h1>
-          <p className="text-gray-600 mt-1">Manage employee loans and track repayments</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.loans.title}</h1>
+          <p className="text-gray-600 mt-1">{t.loans.subtitle}</p>
         </div>
         <button
           onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <Plus className="h-4 w-4" />
-          <span>New Loan</span>
+          <span>{t.loans.newLoan}</span>
         </button>
       </div>
 
@@ -244,9 +247,9 @@ export function Loans() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Loans Issued</p>
+              <p className="text-sm text-gray-600">{t.loans.totalLoans}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                SAR {totalLoans.toLocaleString()}
+                {formatCurrency(totalLoans, language)}
               </p>
             </div>
             <DollarSign className="h-12 w-12 text-blue-600" />
@@ -256,9 +259,9 @@ export function Loans() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Remaining</p>
+              <p className="text-sm text-gray-600">{t.loans.totalRemaining}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">
-                SAR {totalRemaining.toLocaleString()}
+                {formatCurrency(totalRemaining, language)}
               </p>
             </div>
             <TrendingDown className="h-12 w-12 text-orange-600" />
@@ -268,8 +271,8 @@ export function Loans() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Loans</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{activeLoans}</p>
+              <p className="text-sm text-gray-600">{t.loans.activeLoans}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(activeLoans, language)}</p>
             </div>
             <CheckCircle className="h-12 w-12 text-green-600" />
           </div>
@@ -282,46 +285,46 @@ export function Loans() {
             <thead className="bg-gray-50">
               <tr>
                 <SortableTableHeader
-                  label="Employee"
+                  label={t.common.employee}
                   sortKey="employee.first_name_en"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Loan Type"
+                  label={t.loans.loanType}
                   sortKey="loan_type"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Loan Amount"
+                  label={t.loans.loanAmount}
                   sortKey="loan_amount"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Remaining"
+                  label={t.loans.remaining}
                   sortKey="remaining_amount"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
                 <SortableTableHeader
-                  label="Monthly Installment"
+                  label={t.loans.monthlyInstallment}
                   sortKey="monthly_installment"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Progress
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>
+                  {t.loans.progress}
                 </th>
                 <SortableTableHeader
-                  label="Status"
+                  label={t.common.status}
                   sortKey="status"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Actions
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>
+                  {t.common.actions}
                 </th>
               </tr>
             </thead>

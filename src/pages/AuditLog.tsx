@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Shield, Search, Filter, Calendar, User, FileText, Eye, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatNumber } from '@/lib/formatters';
 
 interface AuditLogEntry {
   id: string;
@@ -23,6 +25,7 @@ interface AuditLogEntry {
 
 export function AuditLog() {
   const { currentCompany } = useCompany();
+  const { t, language, isRTL } = useLanguage();
   const [logs, setLogs] = useState<AuditLogEntry[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -183,8 +186,8 @@ export function AuditLog() {
         <div className="flex items-center gap-3 mb-2">
           <Shield className="h-8 w-8 text-red-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Audit Log</h1>
-            <p className="text-sm text-gray-600">Complete system activity trail - Super Admin access only</p>
+            <h1 className="text-2xl font-bold text-gray-900">{t.auditLog.title}</h1>
+            <p className="text-sm text-gray-600">{t.auditLog.subtitle}</p>
           </div>
         </div>
       </div>
@@ -192,12 +195,12 @@ export function AuditLog() {
       <div className="bg-white rounded-lg shadow-md border border-gray-200 mb-6 p-4">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-5 w-5 text-gray-500" />
-          <h3 className="font-semibold text-gray-900">Filters</h3>
+          <h3 className="font-semibold text-gray-900">{t.common.filter}</h3>
           <button
             onClick={clearFilters}
             className="ml-auto text-sm text-primary-600 hover:text-primary-700"
           >
-            Clear All
+            {t.common.clear}
           </button>
         </div>
 
@@ -205,39 +208,39 @@ export function AuditLog() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Search className="h-4 w-4 inline mr-1" />
-              Search
+              {t.common.search}
             </label>
             <input
               type="text"
               value={filters.searchTerm}
               onChange={(e) => setFilters({ ...filters, searchTerm: e.target.value })}
-              placeholder="Search logs..."
+              placeholder={t.auditLog.searchPlaceholder}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Action Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.auditLog.actionType}</label>
             <select
               value={filters.action}
               onChange={(e) => setFilters({ ...filters, action: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="">All Actions</option>
-              <option value="INSERT">Insert</option>
-              <option value="UPDATE">Update</option>
-              <option value="DELETE">Delete</option>
+              <option value="">{t.auditLog.allActions}</option>
+              <option value="INSERT">{t.auditLog.insert}</option>
+              <option value="UPDATE">{t.auditLog.update}</option>
+              <option value="DELETE">{t.auditLog.delete}</option>
             </select>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Table</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t.auditLog.table}</label>
             <select
               value={filters.table}
               onChange={(e) => setFilters({ ...filters, table: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
             >
-              <option value="">All Tables</option>
+              <option value="">{t.auditLog.allTables}</option>
               {availableTables.map(table => (
                 <option key={table} value={table}>{getTableDisplayName(table)}</option>
               ))}
@@ -247,7 +250,7 @@ export function AuditLog() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Calendar className="h-4 w-4 inline mr-1" />
-              From Date
+              {t.auditLog.fromDate}
             </label>
             <input
               type="date"
@@ -260,7 +263,7 @@ export function AuditLog() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Calendar className="h-4 w-4 inline mr-1" />
-              To Date
+              {t.auditLog.toDate}
             </label>
             <input
               type="date"
@@ -276,7 +279,7 @@ export function AuditLog() {
         <div className="p-4 border-b border-gray-200">
           <div className="flex justify-between items-center">
             <h3 className="font-semibold text-gray-900">
-              Audit Trail ({filteredLogs.length} {filteredLogs.length === 1 ? 'entry' : 'entries'})
+              {t.auditLog.auditTrail} ({formatNumber(filteredLogs.length, language)} {t.auditLog.entries})
             </h3>
           </div>
         </div>
@@ -285,13 +288,13 @@ export function AuditLog() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Timestamp</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Table</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">User</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
-                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">Details</th>
+                <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.auditLog.timestamp}</th>
+                <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.auditLog.action}</th>
+                <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.auditLog.table}</th>
+                <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.description}</th>
+                <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.auditLog.user}</th>
+                <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.employee}</th>
+                <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase">{t.common.details}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
