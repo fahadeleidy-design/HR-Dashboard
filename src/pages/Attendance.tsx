@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { Calendar, Clock, Download } from 'lucide-react';
+import { Calendar, Clock, Download, Users } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
+import { EmptyState } from '@/components/EmptyState';
+import { PageSkeleton } from '@/components/LoadingSkeleton';
 import * as XLSX from 'xlsx';
 
 interface AttendanceRecord {
@@ -24,7 +26,7 @@ interface AttendanceRecord {
 
 export function Attendance() {
   const { currentCompany } = useCompany();
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, language } = useLanguage();
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -91,30 +93,30 @@ export function Attendance() {
   const { sortedData, sortConfig, requestSort } = useSortableData(attendanceRecords);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className={`flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
         <div>
-          <h1 className={`text-3xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{t.attendance.title}</h1>
+          <h1 className={`text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent ${isRTL ? 'text-right' : 'text-left'}`}>{t.attendance.title}</h1>
           <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.attendance.subtitle}</p>
         </div>
-        <div className="flex items-center space-x-3">
-          <input
-            type="month"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
+        <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className="relative">
+            <Calendar className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none`} />
+            <input
+              type="month"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className={`${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all duration-200 hover:border-gray-300 bg-white`}
+            />
+          </div>
           <button
             onClick={handleExport}
-            className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+            disabled={attendanceRecords.length === 0}
+            className={`flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg font-medium transition-all duration-200 hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-105 hover:shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Download className="h-4 w-4" />
             <span>{t.common.export}</span>
@@ -122,52 +124,67 @@ export function Attendance() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 p-6 hover-lift">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">{t.attendance.present}</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(presentCount, language)}</p>
+              <p className="text-sm font-medium text-gray-600">{t.attendance.present}</p>
+              <p className="text-3xl font-bold text-green-600 mt-2">{presentCount}</p>
             </div>
-            <Calendar className="h-12 w-12 text-green-600" />
+            <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center">
+              <Calendar className="h-7 w-7 text-green-600" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 p-6 hover-lift">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">{t.attendance.absent}</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{formatNumber(absentCount, language)}</p>
+              <p className="text-sm font-medium text-gray-600">{t.attendance.absent}</p>
+              <p className="text-3xl font-bold text-red-600 mt-2">{absentCount}</p>
             </div>
-            <Calendar className="h-12 w-12 text-red-600" />
+            <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-red-100 to-red-200 flex items-center justify-center">
+              <Calendar className="h-7 w-7 text-red-600" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 p-6 hover-lift">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">{t.attendance.late}</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">{lateCount}</p>
+              <p className="text-sm font-medium text-gray-600">{t.attendance.late}</p>
+              <p className="text-3xl font-bold text-yellow-600 mt-2">{lateCount}</p>
             </div>
-            <Clock className="h-12 w-12 text-yellow-600" />
+            <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-yellow-100 to-yellow-200 flex items-center justify-center">
+              <Clock className="h-7 w-7 text-yellow-600" />
+            </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 p-6 hover-lift">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">{t.attendance.totalOvertime}</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">{totalOvertime.toFixed(1)}h</p>
+              <p className="text-sm font-medium text-gray-600">{t.attendance.totalOvertime}</p>
+              <p className="text-3xl font-bold text-blue-600 mt-2">{totalOvertime.toFixed(1)}h</p>
             </div>
-            <Clock className="h-12 w-12 text-blue-600" />
+            <div className="h-14 w-14 rounded-xl bg-gradient-to-br from-blue-100 to-blue-200 flex items-center justify-center">
+              <Clock className="h-7 w-7 text-blue-600" />
+            </div>
           </div>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
+      {attendanceRecords.length === 0 ? (
+        <EmptyState
+          icon={Clock}
+          title={t.attendance.noRecords || "No Attendance Records"}
+          description={t.attendance.noRecordsDesc || "Attendance records for the selected month will appear here"}
+        />
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
                 <SortableTableHeader
                   label="Employee"
@@ -214,15 +231,8 @@ export function Attendance() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedData.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    {t.messages.noResults}
-                  </td>
-                </tr>
-              ) : (
-                sortedData.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
+              {sortedData.map((record) => (
+                  <tr key={record.id} className="hover:bg-gray-50 transition-colors duration-150">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
                         {record.employee.first_name_en} {record.employee.last_name_en}
@@ -245,25 +255,25 @@ export function Attendance() {
                       {record.overtime_hours ? `${record.overtime_hours.toFixed(1)}h` : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                      <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all duration-200 ${
                         record.status === 'present'
-                          ? 'bg-green-100 text-green-800'
+                          ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 hover:shadow-md'
                           : record.status === 'absent'
-                          ? 'bg-red-100 text-red-800'
+                          ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 hover:shadow-md'
                           : record.status === 'late'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
+                          ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 hover:shadow-md'
+                          : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 hover:shadow-md'
                       }`}>
-                        {record.status}
+                        {record.status.charAt(0).toUpperCase() + record.status.slice(1)}
                       </span>
                     </td>
                   </tr>
-                ))
-              )}
+                ))}
             </tbody>
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 }
