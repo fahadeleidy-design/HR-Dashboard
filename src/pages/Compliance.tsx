@@ -506,7 +506,7 @@ export function Compliance() {
               ×
             </button>
           </div>
-          <p className="text-sm text-gray-600 mb-4">Calculate what zone your company would be in with different employee counts</p>
+          <p className={`text-sm text-gray-600 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.compliance.calculatorDesc}</p>
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div>
               <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.compliance.totalEmployees}</label>
@@ -532,17 +532,17 @@ export function Compliance() {
           </div>
           {calculatorEmployees > 0 && (
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-sm font-semibold text-gray-900 mb-2">Result:</p>
+              <p className={`text-sm font-semibold text-gray-900 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>{t.compliance.result}:</p>
               {(() => {
                 const result = calculateScenario();
                 if (!result) return null;
                 return (
                   <div className="space-y-2">
                     <p className="text-lg font-bold text-gray-900">
-                      Saudization: {result.percentage.toFixed(2)}%
+                      {t.compliance.saudization}: {formatNumber(result.percentage, language)}%
                     </p>
                     <p className={`text-lg font-bold ${getColorClass(result.color)}`}>
-                      Zone: {result.zone}
+                      {t.compliance.zone}: {result.zone}
                     </p>
                   </div>
                 );

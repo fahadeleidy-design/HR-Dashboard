@@ -102,8 +102,8 @@ export function Attendance() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Attendance Tracking</h1>
-          <p className="text-gray-600 mt-1">Monitor employee attendance and working hours</p>
+          <h1 className={`text-3xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{t.attendance.title}</h1>
+          <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.attendance.subtitle}</p>
         </div>
         <div className="flex items-center space-x-3">
           <input
@@ -117,7 +117,7 @@ export function Attendance() {
             className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
           >
             <Download className="h-4 w-4" />
-            <span>Export</span>
+            <span>{t.common.export}</span>
           </button>
         </div>
       </div>
@@ -126,8 +126,8 @@ export function Attendance() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Present</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{presentCount}</p>
+              <p className="text-sm text-gray-600">{t.attendance.present}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(presentCount, language)}</p>
             </div>
             <Calendar className="h-12 w-12 text-green-600" />
           </div>
@@ -136,8 +136,8 @@ export function Attendance() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Absent</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{absentCount}</p>
+              <p className="text-sm text-gray-600">{t.attendance.absent}</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{formatNumber(absentCount, language)}</p>
             </div>
             <Calendar className="h-12 w-12 text-red-600" />
           </div>
@@ -146,7 +146,7 @@ export function Attendance() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Late</p>
+              <p className="text-sm text-gray-600">{t.attendance.late}</p>
               <p className="text-2xl font-bold text-yellow-600 mt-1">{lateCount}</p>
             </div>
             <Clock className="h-12 w-12 text-yellow-600" />
@@ -156,7 +156,7 @@ export function Attendance() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Overtime</p>
+              <p className="text-sm text-gray-600">{t.attendance.totalOvertime}</p>
               <p className="text-2xl font-bold text-blue-600 mt-1">{totalOvertime.toFixed(1)}h</p>
             </div>
             <Clock className="h-12 w-12 text-blue-600" />
@@ -217,7 +217,7 @@ export function Attendance() {
               {sortedData.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
-                    No attendance records found for this month.
+                    {t.messages.noResults}
                   </td>
                 </tr>
               ) : (

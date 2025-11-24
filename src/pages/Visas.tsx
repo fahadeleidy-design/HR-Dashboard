@@ -305,7 +305,7 @@ export function Visas() {
           className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
-          New Request
+          {t.visas.newRequest}
         </button>
       </div>
 
@@ -314,9 +314,9 @@ export function Visas() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Work Visas</p>
-              <p className="text-2xl font-bold text-green-600">{activeVisas}</p>
-              <p className="text-xs text-gray-500 mt-1">Used: {usedVisas} | Expired: {expiredVisas}</p>
+              <p className="text-sm text-gray-600">{t.visas.activeWorkVisas}</p>
+              <p className="text-2xl font-bold text-green-600">{formatNumber(activeVisas, language)}</p>
+              <p className="text-xs text-gray-500 mt-1">{t.visas.used}: {formatNumber(usedVisas, language)} | {t.visas.expired}: {formatNumber(expiredVisas, language)}</p>
             </div>
             <CreditCard className="h-12 w-12 text-green-600" />
           </div>
@@ -325,9 +325,9 @@ export function Visas() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Active Iqamas</p>
-              <p className="text-2xl font-bold text-blue-600">{activeIqamas}</p>
-              <p className="text-xs text-red-600 mt-1">Expiring Soon: {expiringIqamas}</p>
+              <p className="text-sm text-gray-600">{t.visas.activeIqamas}</p>
+              <p className="text-2xl font-bold text-blue-600">{formatNumber(activeIqamas, language)}</p>
+              <p className="text-xs text-red-600 mt-1">{t.common.expiringSoon}: {formatNumber(expiringIqamas, language)}</p>
             </div>
             <FileText className="h-12 w-12 text-blue-600" />
           </div>
@@ -336,9 +336,9 @@ export function Visas() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending Requests</p>
-              <p className="text-2xl font-bold text-yellow-600">{pendingRequests}</p>
-              <p className="text-xs text-gray-500 mt-1">In Progress: {inProgressRequests}</p>
+              <p className="text-sm text-gray-600">{t.visas.pendingRequests}</p>
+              <p className="text-2xl font-bold text-yellow-600">{formatNumber(pendingRequests, language)}</p>
+              <p className="text-xs text-gray-500 mt-1">{t.visas.inProgress}: {formatNumber(inProgressRequests, language)}</p>
             </div>
             <Clock className="h-12 w-12 text-yellow-600" />
           </div>
@@ -347,9 +347,9 @@ export function Visas() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Visa Quota {new Date().getFullYear()}</p>
-              <p className="text-2xl font-bold text-purple-600">{availableQuota}/{totalQuota}</p>
-              <p className="text-xs text-gray-500 mt-1">Available</p>
+              <p className="text-sm text-gray-600">{t.visas.visaQuota} {new Date().getFullYear()}</p>
+              <p className="text-2xl font-bold text-purple-600">{formatNumber(availableQuota, language)}/{formatNumber(totalQuota, language)}</p>
+              <p className="text-xs text-gray-500 mt-1">{t.visas.available}</p>
             </div>
             <Users className="h-12 w-12 text-purple-600" />
           </div>

@@ -298,7 +298,7 @@ export function Expenses() {
           className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
         >
           <Plus className="h-4 w-4" />
-          <span>New Expense</span>
+          <span>{t.expenses.newExpense}</span>
         </button>
       </div>
 
@@ -306,8 +306,8 @@ export function Expenses() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Claims</p>
-              <p className="text-2xl font-bold">{expenses.length}</p>
+              <p className="text-sm text-gray-600">{t.expenses.totalClaims}</p>
+              <p className="text-2xl font-bold">{formatNumber(expenses.length, language)}</p>
             </div>
             <Receipt className="h-12 w-12 text-blue-600" />
           </div>
@@ -315,8 +315,8 @@ export function Expenses() {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold mb-4">Expense Claims</h2>
-        <p className="text-gray-600">Expense list will be displayed here</p>
+        <h2 className={`text-lg font-semibold mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.expenses.expenseClaims}</h2>
+        <p className={`text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`}>{t.expenses.listPlaceholder}</p>
       </div>
 
       {showAddModal && (
@@ -325,8 +325,8 @@ export function Expenses() {
             <div className="p-6 border-b border-gray-200">
               <div className="flex justify-between items-start">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">New Expense Claim</h2>
-                  <p className="text-gray-600 mt-1">Comprehensive expense claim with VAT, currency, and policy compliance</p>
+                  <h2 className="text-2xl font-bold text-gray-900">{t.expenses.newExpenseClaim}</h2>
+                  <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.expenses.claimDescription}</p>
                 </div>
                 <button
                   onClick={() => setShowAddModal(false)}

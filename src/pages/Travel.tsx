@@ -346,14 +346,14 @@ export function Travel() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">{t.travel.title}</h1>
-          <p className="text-gray-600 mt-1">Manage travel requests with multi-level approvals and Saudi compliance</p>
+          <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.travel.subtitle}</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
           className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
         >
           <Plus className="h-4 w-4" />
-          <span>New Travel Request</span>
+          <span>{t.travel.newRequest}</span>
         </button>
       </div>
 
@@ -361,8 +361,8 @@ export function Travel() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Pending Approval</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">{pendingRequests}</p>
+              <p className="text-sm text-gray-600">{t.travel.pendingApproval}</p>
+              <p className="text-2xl font-bold text-yellow-600 mt-1">{formatNumber(pendingRequests, language)}</p>
             </div>
             <Clock className="h-12 w-12 text-yellow-600 opacity-20" />
           </div>
@@ -371,8 +371,8 @@ export function Travel() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Approved Trips</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{approvedRequests}</p>
+              <p className="text-sm text-gray-600">{t.travel.approvedTrips}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(approvedRequests, language)}</p>
             </div>
             <CheckCircle className="h-12 w-12 text-green-600 opacity-20" />
           </div>
@@ -381,8 +381,8 @@ export function Travel() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Completed</p>
-              <p className="text-2xl font-bold text-gray-600 mt-1">{completedRequests}</p>
+              <p className="text-sm text-gray-600">{t.common.completed}</p>
+              <p className="text-2xl font-bold text-gray-600 mt-1">{formatNumber(completedRequests, language)}</p>
             </div>
             <CheckSquare className="h-12 w-12 text-gray-600 opacity-20" />
           </div>
@@ -391,9 +391,9 @@ export function Travel() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Budget</p>
+              <p className="text-sm text-gray-600">{t.travel.totalBudget}</p>
               <p className="text-2xl font-bold text-blue-600 mt-1">
-                {totalEstimatedCost.toLocaleString()} SAR
+                {formatCurrency(totalEstimatedCost, language)}
               </p>
             </div>
             <DollarSign className="h-12 w-12 text-blue-600 opacity-20" />
@@ -472,7 +472,7 @@ export function Travel() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search by request number, destination, or employee..."
+                  placeholder={t.travel.searchPlaceholder}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -483,12 +483,12 @@ export function Travel() {
                 onChange={(e) => setFilterStatus(e.target.value)}
                 className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="all">All Statuses</option>
-                <option value="draft">Draft</option>
-                <option value="submitted">Submitted</option>
-                <option value="approved">Approved</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="all">{t.common.all} {t.common.statuses}</option>
+                <option value="draft">{t.travel.draft}</option>
+                <option value="submitted">{t.travel.submitted}</option>
+                <option value="approved">{t.common.approved}</option>
+                <option value="completed">{t.common.completed}</option>
+                <option value="cancelled">{t.travel.cancelled}</option>
               </select>
             </div>
           </div>
