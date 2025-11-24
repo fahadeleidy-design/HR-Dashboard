@@ -17,11 +17,14 @@ interface OrgChartNodeProps {
   subordinates: any[];
   level: number;
   onEmployeeClick: (employee: any) => void;
+  compactMode?: boolean;
+  highlightedId?: string | null;
 }
 
-export function OrgChartNode({ employee, subordinates, level, onEmployeeClick }: OrgChartNodeProps) {
+export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, compactMode = false, highlightedId = null }: OrgChartNodeProps) {
   const [isExpanded, setIsExpanded] = useState(level < 2);
   const [isHovered, setIsHovered] = useState(false);
+  const isHighlighted = highlightedId === employee.id;
 
   const directSubordinates = subordinates.filter(s => s.manager_id === employee.id);
   const hasSubordinates = directSubordinates.length > 0;
@@ -41,7 +44,7 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick }:
     <div className="flex flex-col items-center animate-in fade-in slide-in-from-top-4 duration-500">
       <div className="relative group">
         <div
-          className={`relative bg-white rounded-xl shadow-lg border-2 ${colors.border} p-5 cursor-pointer hover:shadow-2xl ${colors.glow} transition-all duration-300 transform hover:scale-110 w-80 overflow-hidden`}
+          className={`relative bg-white rounded-xl shadow-lg border-2 ${isHighlighted ? 'border-primary-500 ring-4 ring-primary-200 animate-pulse' : colors.border} ${compactMode ? 'p-3 w-64' : 'p-5 w-80'} cursor-pointer hover:shadow-2xl ${colors.glow} transition-all duration-300 transform hover:scale-110 overflow-hidden`}
           onClick={() => onEmployeeClick(employee)}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
@@ -66,10 +69,10 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick }:
               </div>
             </div>
             <div className="relative flex-1 min-w-0">
-              <h3 className="font-bold text-gray-900 truncate text-lg group-hover:text-primary-700 transition-colors">
+              <h3 className={`font-bold text-gray-900 truncate ${compactMode ? 'text-base' : 'text-lg'} group-hover:text-primary-700 transition-colors`}>
                 {employee.first_name_en} {employee.last_name_en}
               </h3>
-              <p className="text-sm text-gray-600 truncate mt-1 font-medium">{employee.job_title_en}</p>
+              <p className={`${compactMode ? 'text-xs' : 'text-sm'} text-gray-600 truncate mt-1 font-medium`}>{employee.job_title_en}</p>
               <div className="flex items-center gap-2 mt-2">
                 <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-semibold">
                   {employee.employee_number}
@@ -84,7 +87,8 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick }:
             </div>
           </div>
 
-          <div className="relative mt-4 pt-4 border-t-2 border-gray-200 space-y-2">
+          {!compactMode && (
+            <div className="relative mt-4 pt-4 border-t-2 border-gray-200 space-y-2">
             {employee.department_name && (
               <div className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-900 transition-colors">
                 <div className="h-6 w-6 rounded-md bg-gray-100 flex items-center justify-center group-hover:bg-primary-100 transition-colors">
@@ -111,7 +115,8 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick }:
                 </span>
               </div>
             )}
-          </div>
+            </div>
+          )}
 
           {hasSubordinates && (
             <button
@@ -152,6 +157,8 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick }:
                   subordinates={subordinates}
                   level={level + 1}
                   onEmployeeClick={onEmployeeClick}
+                  compactMode={compactMode}
+                  highlightedId={highlightedId}
                 />
               </div>
             ))}

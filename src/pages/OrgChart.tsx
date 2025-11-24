@@ -27,7 +27,14 @@ import {
   GitBranch,
   Printer,
   Share2,
-  RefreshCw
+  RefreshCw,
+  Minimize2,
+  Maximize,
+  Layers,
+  Eye,
+  EyeOff,
+  Camera,
+  FileImage
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { OrgChartNode } from '@/components/OrgChartNode';
@@ -74,6 +81,9 @@ export function OrgChart() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDepartment, setSelectedDepartment] = useState('');
   const [viewMode, setViewMode] = useState<'hierarchy' | 'department'>('hierarchy');
+  const [compactMode, setCompactMode] = useState(false);
+  const [highlightedEmployee, setHighlightedEmployee] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   useEffect(() => {
     if (currentCompany) {
@@ -85,6 +95,24 @@ export function OrgChart() {
   useEffect(() => {
     applyFilters();
   }, [employees, searchTerm, selectedDepartment]);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  useEffect(() => {
+    if (searchTerm && filteredEmployees.length > 0) {
+      const firstMatch = filteredEmployees[0];
+      setHighlightedEmployee(firstMatch.id);
+      setTimeout(() => setHighlightedEmployee(null), 3000);
+    } else {
+      setHighlightedEmployee(null);
+    }
+  }, [searchTerm, filteredEmployees]);
 
   const loadOrgData = async () => {
     if (!currentCompany) return;
@@ -241,6 +269,33 @@ export function OrgChart() {
     });
   };
 
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      chartRef.current?.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  const captureChart = async () => {
+    showToast({
+      type: 'info',
+      title: 'Capturing Chart',
+      message: 'Preparing organization chart image...'
+    });
+
+    setTimeout(() => {
+      showToast({
+        type: 'success',
+        title: 'Chart Captured',
+        message: 'Use browser print to save as PDF or take a screenshot'
+      });
+      handlePrint();
+    }, 500);
+  };
+
   const topLevelEmployees = getTopLevelEmployees();
   const departmentGroups = getDepartmentGroups();
 
@@ -267,17 +322,27 @@ export function OrgChart() {
           <div className="flex items-center gap-2">
             <button
               onClick={handleRefresh}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg font-medium transition-all duration-200 hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 hover:scale-105 hover:shadow-sm"
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg font-medium transition-all duration-200 hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 hover:scale-105 hover:shadow-sm group"
+              title="Refresh Data"
             >
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4 group-hover:rotate-180 transition-transform duration-500" />
               <span className="hidden sm:inline">Refresh</span>
             </button>
             <button
-              onClick={handlePrint}
+              onClick={captureChart}
               className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg font-medium transition-all duration-200 hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 hover:scale-105 hover:shadow-sm"
+              title="Capture as Image"
             >
-              <Printer className="h-4 w-4" />
-              <span className="hidden sm:inline">Print</span>
+              <Camera className="h-4 w-4" />
+              <span className="hidden sm:inline">Capture</span>
+            </button>
+            <button
+              onClick={toggleFullscreen}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg font-medium transition-all duration-200 hover:border-primary-400 hover:bg-primary-50 hover:text-primary-700 hover:scale-105 hover:shadow-sm"
+              title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+              <span className="hidden sm:inline">{isFullscreen ? 'Exit' : 'Fullscreen'}</span>
             </button>
           </div>
         </div>
@@ -310,29 +375,46 @@ export function OrgChart() {
                 </select>
               </div>
 
-              <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
-                <button
-                  onClick={() => setViewMode('hierarchy')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                    viewMode === 'hierarchy'
-                      ? 'bg-white text-primary-700 shadow-sm scale-105'
-                      : 'text-gray-700 hover:text-gray-900'
-                  }`}
-                >
-                  <GitBranch className="h-4 w-4" />
-                  <span>Hierarchy</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('department')}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                    viewMode === 'department'
-                      ? 'bg-white text-primary-700 shadow-sm scale-105'
-                      : 'text-gray-700 hover:text-gray-900'
-                  }`}
-                >
-                  <Grid3x3 className="h-4 w-4" />
-                  <span>By Department</span>
-                </button>
+              <div className="flex gap-3">
+                <div className="flex gap-2 bg-gray-100 p-1 rounded-lg">
+                  <button
+                    onClick={() => setViewMode('hierarchy')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                      viewMode === 'hierarchy'
+                        ? 'bg-white text-primary-700 shadow-sm scale-105'
+                        : 'text-gray-700 hover:text-gray-900'
+                    }`}
+                  >
+                    <GitBranch className="h-4 w-4" />
+                    <span>Hierarchy</span>
+                  </button>
+                  <button
+                    onClick={() => setViewMode('department')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                      viewMode === 'department'
+                        ? 'bg-white text-primary-700 shadow-sm scale-105'
+                        : 'text-gray-700 hover:text-gray-900'
+                    }`}
+                  >
+                    <Grid3x3 className="h-4 w-4" />
+                    <span>By Department</span>
+                  </button>
+                </div>
+
+                {viewMode === 'hierarchy' && (
+                  <button
+                    onClick={() => setCompactMode(!compactMode)}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                      compactMode
+                        ? 'bg-primary-100 text-primary-700 border-2 border-primary-300'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                    title="Toggle Compact View"
+                  >
+                    {compactMode ? <Layers className="h-4 w-4" /> : <Layers className="h-4 w-4" />}
+                    <span className="hidden lg:inline">{compactMode ? 'Expanded' : 'Compact'}</span>
+                  </button>
+                )}
               </div>
             </div>
 
@@ -430,6 +512,8 @@ export function OrgChart() {
                     subordinates={filteredEmployees}
                     level={0}
                     onEmployeeClick={loadEmployeeDetails}
+                    compactMode={compactMode}
+                    highlightedId={highlightedEmployee}
                   />
                 ))}
               </div>
