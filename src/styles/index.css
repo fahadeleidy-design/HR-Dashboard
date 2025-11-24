@@ -98,13 +98,15 @@
     flex-direction: row-reverse;
   }
 
-  /* RTL Transform Corrections */
-  [dir="rtl"] .translate-x-full {
-    transform: translateX(-100%) !important;
-  }
+  /* RTL Transform Corrections - Only for mobile */
+  @media (max-width: 1023px) {
+    [dir="rtl"] .translate-x-full {
+      transform: translateX(-100%) !important;
+    }
 
-  [dir="rtl"] .-translate-x-full {
-    transform: translateX(100%) !important;
+    [dir="rtl"] .-translate-x-full {
+      transform: translateX(100%) !important;
+    }
   }
 
   /* Arabic Number Support */
