@@ -115,8 +115,8 @@ export function Layout({ children }: LayoutProps) {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-50 to-gray-100">
-      <nav className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40 backdrop-blur-lg bg-opacity-90">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+      <nav className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 sticky top-0 z-40">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`flex justify-between items-center h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-4' : 'space-x-4'}`}>
@@ -128,21 +128,25 @@ export function Layout({ children }: LayoutProps) {
               </button>
 
               <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-3' : 'space-x-3'}`}>
-                <img
-                  src="/image.png"
-                  alt="Special Offices Company"
-                  className="h-10 sm:h-12 w-auto object-contain"
-                />
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary-600 to-primary-400 rounded-lg blur opacity-25 group-hover:opacity-40 transition-opacity"></div>
+                  <img
+                    src="/image.png"
+                    alt="Special Offices Company"
+                    className="relative h-10 sm:h-12 w-auto object-contain"
+                  />
+                </div>
                 <div className={isRTL ? 'text-right' : 'text-left'}>
-                  <h1 className="text-lg sm:text-xl font-bold text-gray-900">{t.common.appTitle}</h1>
+                  <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">{t.common.appTitle}</h1>
                   {currentCompany && (
                     <div className="relative">
                       <button
                         onClick={() => setShowCompanyMenu(!showCompanyMenu)}
-                        className={`text-xs sm:text-sm text-gray-600 hover:text-gray-900 flex items-center gap-1 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+                        className={`text-xs sm:text-sm text-gray-600 hover:text-primary-600 flex items-center gap-1 transition-all duration-200 hover:scale-105 ${isRTL ? 'flex-row-reverse' : ''}`}
                       >
-                        <span className="max-w-[200px] truncate">{language === 'ar' && currentCompany.name_ar ? currentCompany.name_ar : currentCompany.name_en}</span>
-                        <ChevronDown className="h-3 w-3 flex-shrink-0" />
+                        <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="max-w-[200px] truncate font-medium">{language === 'ar' && currentCompany.name_ar ? currentCompany.name_ar : currentCompany.name_en}</span>
+                        <ChevronDown className={`h-3 w-3 flex-shrink-0 transition-transform ${showCompanyMenu ? 'rotate-180' : ''}`} />
                       </button>
                       {showCompanyMenu && companies.length > 1 && (
                         <div className={`absolute top-full ${isRTL ? 'right-0' : 'left-0'} mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden`}>
@@ -177,24 +181,27 @@ export function Layout({ children }: LayoutProps) {
             <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2 sm:space-x-4' : 'space-x-2 sm:space-x-4'}`}>
               <button
                 onClick={() => setLanguage(language === 'en' ? 'ar' : 'en')}
-                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-3 py-2 text-gray-700 hover:bg-primary-50 hover:text-primary-600 rounded-lg transition-all duration-200`}
+                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-3 py-2 text-gray-700 hover:bg-gradient-to-r hover:from-primary-50 hover:to-blue-50 hover:text-primary-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-sm`}
                 title={language === 'en' ? 'Switch to Arabic' : 'التبديل إلى الإنجليزية'}
               >
                 <Languages className="h-5 w-5" />
                 <span className="text-sm font-medium">{language === 'en' ? 'العربية' : 'English'}</span>
               </button>
-              <div className={`hidden sm:flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-3 py-2 bg-gray-50 rounded-lg`}>
-                <div className="h-8 w-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                  {user?.email?.charAt(0).toUpperCase()}
+              <div className={`hidden sm:flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-3 py-2 bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg border border-gray-200 hover:border-primary-300 transition-all duration-200`}>
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full blur opacity-20"></div>
+                  <div className="relative h-8 w-8 bg-gradient-to-br from-primary-600 to-primary-700 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-lg">
+                    {user?.email?.charAt(0).toUpperCase()}
+                  </div>
                 </div>
-                <span className="text-sm text-gray-700 max-w-[150px] truncate">{user?.email}</span>
+                <span className="text-sm text-gray-700 max-w-[150px] truncate font-medium">{user?.email}</span>
               </div>
               <button
                 onClick={handleSignOut}
-                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-3 py-2 text-gray-700 hover:bg-red-50 hover:text-red-600 rounded-lg transition-all duration-200`}
+                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-3 py-2 text-gray-700 hover:bg-gradient-to-r hover:from-red-50 hover:to-red-100 hover:text-red-600 rounded-lg transition-all duration-200 hover:scale-105 hover:shadow-sm`}
               >
                 <LogOut className="h-5 w-5" />
-                <span className="text-sm hidden sm:inline">{t.auth.signOut}</span>
+                <span className="text-sm hidden sm:inline font-medium">{t.auth.signOut}</span>
               </button>
             </div>
           </div>
@@ -206,16 +213,19 @@ export function Layout({ children }: LayoutProps) {
           className={`
             sidebar-nav
             fixed lg:static inset-y-0 ${isRTL ? 'right-0' : 'left-0'} z-30
-            w-72 bg-white ${isRTL ? 'border-l' : 'border-r'} border-gray-200
+            w-72 bg-gradient-to-b from-white to-gray-50 ${isRTL ? 'border-l' : 'border-r'} border-gray-200
             transition-transform duration-300 ease-in-out
-            min-h-[calc(100vh-4rem)] overflow-y-auto shadow-xl lg:shadow-none
+            min-h-[calc(100vh-4rem)] overflow-y-auto shadow-2xl lg:shadow-none
             ${sidebarOpen ? 'translate-x-0' : isRTL ? 'sidebar-hidden-rtl' : 'sidebar-hidden-ltr'}
           `}
         >
-          <nav className="p-4 space-y-6">
+          <nav className="p-4 space-y-6 relative">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary-50/20 via-transparent to-blue-50/20 pointer-events-none"></div>
+            <div className="relative">
             {navSections.map((section) => (
               <div key={section.title}>
-                <h3 className={`px-3 mb-2 text-xs font-semibold text-gray-500 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'}`}>
+                <h3 className={`px-3 mb-3 text-xs font-bold text-gray-600 uppercase tracking-wider ${isRTL ? 'text-right' : 'text-left'} flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className="h-0.5 w-6 bg-gradient-to-r from-primary-500 to-transparent rounded-full"></div>
                   {section.title}
                 </h3>
                 <div className="space-y-1">
@@ -228,34 +238,41 @@ export function Layout({ children }: LayoutProps) {
                         to={item.path}
                         onClick={() => setSidebarOpen(false)}
                         className={`
-                          group flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 px-3 py-2.5 rounded-xl transition-all duration-200
+                          group flex items-center ${isRTL ? 'flex-row-reverse' : ''} gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 relative overflow-hidden
                           ${
                             active
-                              ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-md shadow-primary-200'
-                              : 'text-gray-700 hover:bg-gray-50 hover:shadow-sm'
+                              ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-lg shadow-primary-200 scale-105'
+                              : 'text-gray-700 hover:bg-white hover:shadow-md hover:scale-102 hover:-translate-y-0.5'
                           }
                         `}
                       >
-                        <Icon className={`h-5 w-5 transition-transform group-hover:scale-110 ${active ? 'text-white' : 'text-gray-400'}`} />
-                        <span className={`font-medium text-sm ${active ? 'text-white' : ''} flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>{item.label}</span>
+                        {!active && (
+                          <div className="absolute inset-0 bg-gradient-to-r from-primary-50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+                        )}
+                        <Icon className={`relative h-5 w-5 transition-transform group-hover:scale-110 group-hover:rotate-3 ${active ? 'text-white' : 'text-gray-400 group-hover:text-primary-600'}`} />
+                        <span className={`relative font-medium text-sm ${active ? 'text-white' : 'group-hover:text-primary-700'} flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>{item.label}</span>
+                        {active && (
+                          <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 h-8 w-1 bg-white rounded-full shadow-lg`}></div>
+                        )}
                       </Link>
                     );
                   })}
                 </div>
               </div>
             ))}
+            </div>
           </nav>
         </aside>
 
         {sidebarOpen && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden backdrop-blur-sm"
+            className="fixed inset-0 bg-gradient-to-br from-black/50 to-black/30 z-20 lg:hidden backdrop-blur-sm animate-in fade-in duration-200"
             onClick={() => setSidebarOpen(false)}
           />
         )}
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1920px] mx-auto w-full">
-          <div className="animate-fadeIn">
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {children}
           </div>
         </main>
