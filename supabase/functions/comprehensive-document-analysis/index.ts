@@ -188,8 +188,34 @@ Deno.serve(async (req: Request) => {
 async function extractTextFromFile(base64: string, fileType: string): Promise<string> {
   try {
     const decoded = atob(base64);
+
     const textMatches = decoded.match(/[\x20-\x7E\u0600-\u06FF\s]{3,}/g) || [];
-    const extractedText = textMatches.join(' ');
+    let extractedText = textMatches.join(' ');
+
+    extractedText = extractedText
+      .replace(/\s+/g, ' ')
+      .replace(/[^\x20-\x7E\u0600-\u06FF\s]/g, '')
+      .trim();
+
+    const patterns = [
+      /Employee\s+Number[:\s]+([A-Z0-9]+)/gi,
+      /Name[:\s]+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/gi,
+      /Position[:\s]+([A-Za-z\s]+?)(?:\n|$)/gi,
+      /Salary[:\s]+([0-9,]+(?:\.\d{2})?)/gi,
+      /Start\s+Date[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi,
+      /End\s+Date[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi,
+      /Contract\s+Date[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi,
+    ];
+
+    for (const pattern of patterns) {
+      const matches = decoded.matchAll(pattern);
+      for (const match of matches) {
+        if (match[0] && !extractedText.includes(match[0])) {
+          extractedText += ' ' + match[0];
+        }
+      }
+    }
+
     return extractedText;
   } catch (error) {
     console.error('Text extraction error:', error);
@@ -214,8 +240,15 @@ function extractComprehensiveData(text: string, docType?: string): ExtractionRes
 
   data.holderName = extractPattern(text, [
     /(?:name|holder|employee|passenger)[:\s]*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
-    /(?:الاسم|اسم)[:\s]*([\u0600-\u06FF\s]+)/i
+    /(?:name|holder|employee)[:\s]*([A-Z\s]+(?:[A-Z][a-z]+)?)/i,
+    /(?:الاسم|اسم)[:\s]*([\u0600-\u06FF\s]+)/i,
+    /Employee[:\s]+([A-Z][A-Z\s]+[A-Z])/i
   ]);
+
+  const employeeNumberMatch = text.match(/Employee\s+Number[:\s]+([A-Z0-9]+)/i);
+  if (employeeNumberMatch) {
+    data.documentNumber = employeeNumberMatch[1];
+  }
 
   data.issuer = extractPattern(text, [
     /(?:issued by|issuing authority|issuer)[:\s]*([A-Za-z\s]+?)(?:\n|\.|,)/i,
@@ -316,19 +349,19 @@ function extractAllDates(text: string): {
 } {
   const result: any = {};
 
-  const issueMatch = text.match(/(?:issue|issued)\s*(?:date)?[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const issueMatch = text.match(/(?:issue|issued)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (issueMatch) result.issue = normalizeDate(issueMatch[1]);
 
-  const startMatch = text.match(/(?:start|commencement|effective|from)\s*(?:date)?[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const startMatch = text.match(/(?:start|commencement|effective|from)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (startMatch) result.start = normalizeDate(startMatch[1]);
 
-  const endMatch = text.match(/(?:end|termination|to)\s*(?:date)?[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const endMatch = text.match(/(?:end|termination|to)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (endMatch) result.end = normalizeDate(endMatch[1]);
 
-  const expiryMatch = text.match(/(?:expir(?:y|es|ation)|valid until)\s*(?:date)?[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const expiryMatch = text.match(/(?:expir(?:y|es|ation)|valid until)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (expiryMatch) result.expiry = normalizeDate(expiryMatch[1]);
 
-  const birthMatch = text.match(/(?:date of birth|DOB|born)[:\s]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{4}|\d{4}[\/-]\d{1,2}[\/-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const birthMatch = text.match(/(?:date of birth|DOB|born)[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (birthMatch) result.birth = normalizeDate(birthMatch[1]);
 
   return result;
@@ -382,7 +415,7 @@ function extractSalary(text: string): number | undefined {
 
 function normalizeDate(dateStr: string): string | undefined {
   try {
-    const ddmmyyyy = dateStr.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    const ddmmyyyy = dateStr.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
     if (ddmmyyyy) {
       const day = ddmmyyyy[1].padStart(2, '0');
       const month = ddmmyyyy[2].padStart(2, '0');
@@ -390,7 +423,7 @@ function normalizeDate(dateStr: string): string | undefined {
       return `${year}-${month}-${day}`;
     }
 
-    const yyyymmdd = dateStr.match(/^(\d{4})[\/-](\d{1,2})[\/-](\d{1,2})$/);
+    const yyyymmdd = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
     if (yyyymmdd) {
       const year = yyyymmdd[1];
       const month = yyyymmdd[2].padStart(2, '0');
@@ -424,29 +457,68 @@ function performAIAnalysis(data: ExtractionResult, text: string, docType?: strin
 
   const dataPoints = Object.keys(data).filter(key => data[key] !== undefined && data[key] !== null).length;
 
-  if (data.expiryDate) {
-    const expiryDate = new Date(data.expiryDate);
-    const today = new Date();
-    const daysUntilExpiry = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  const isContract = docType?.toLowerCase().includes('contract') || text.toLowerCase().includes('employment contract') || text.toLowerCase().includes('work contract');
+  const isVisa = docType?.toLowerCase().includes('visa');
+  const isIqama = docType?.toLowerCase().includes('iqama') || docType?.toLowerCase().includes('residence');
+  const isPassport = docType?.toLowerCase().includes('passport');
 
-    if (daysUntilExpiry < 0) {
-      warnings.push('Document has expired');
-      recommendations.push('Immediate renewal required');
-    } else if (daysUntilExpiry < 30) {
-      warnings.push(`Document expiring in ${daysUntilExpiry} days`);
-      recommendations.push('Schedule renewal as soon as possible');
-    } else if (daysUntilExpiry < 90) {
-      recommendations.push(`Document expires in ${daysUntilExpiry} days - plan for renewal`);
-    }
-
-    keyInsights.push(`Document validity: ${daysUntilExpiry} days remaining`);
-  } else {
-    missingFields.push('Expiry Date');
+  if (data.holderName) {
+    keyInsights.push(`Employee: ${data.holderName}`);
   }
 
-  if (!data.documentNumber) missingFields.push('Document Number');
-  if (!data.holderName) missingFields.push('Holder Name');
-  if (!data.issueDate) missingFields.push('Issue Date');
+  if (data.position) {
+    keyInsights.push(`Position: ${data.position}`);
+  }
+
+  if (isContract) {
+    keyInsights.push('Employment contract - defines rights and obligations');
+
+    if (data.startDate) {
+      keyInsights.push(`Contract Start: ${data.startDate}`);
+    } else {
+      missingFields.push('Start Date');
+    }
+
+    if (data.endDate) {
+      keyInsights.push(`Contract End: ${data.endDate}`);
+    } else {
+      missingFields.push('End Date');
+    }
+
+    if (data.salary) {
+      keyInsights.push(`Salary: ${data.currency || 'SAR'} ${data.salary.toLocaleString()}`);
+    } else {
+      missingFields.push('Salary');
+    }
+
+    if (!data.holderName) missingFields.push('Employee Name');
+    if (!data.position) missingFields.push('Position');
+  } else {
+    if (data.expiryDate) {
+      const expiryDate = new Date(data.expiryDate);
+      const today = new Date();
+      const daysUntilExpiry = Math.floor((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (daysUntilExpiry < 0) {
+        warnings.push('Document has expired');
+        recommendations.push('Immediate renewal required');
+      } else if (daysUntilExpiry < 30) {
+        warnings.push(`Document expiring in ${daysUntilExpiry} days`);
+        recommendations.push('Schedule renewal as soon as possible');
+      } else if (daysUntilExpiry < 90) {
+        recommendations.push(`Document expires in ${daysUntilExpiry} days - plan for renewal`);
+      }
+
+      keyInsights.push(`Document validity: ${daysUntilExpiry} days remaining`);
+    } else {
+      warnings.push('No expiry date found - cannot track document validity');
+      missingFields.push('Expiry Date');
+    }
+
+    if (!data.documentNumber) missingFields.push('Document Number');
+    if (!data.holderName) missingFields.push('Holder Name');
+    if (!data.issueDate) missingFields.push('Issue Date');
+  }
 
   if (data.amount && data.amount > 0) {
     keyInsights.push(`Document contains monetary value: ${data.currency || 'SAR'} ${data.amount.toLocaleString()}`);
@@ -461,9 +533,34 @@ function performAIAnalysis(data: ExtractionResult, text: string, docType?: strin
     recommendations.push('Consider rescanning with higher resolution');
   }
 
-  const completeness = Math.round((dataPoints / 15) * 100);
-  const confidence = Math.min(100, dataPoints * 7 + (text.length > 200 ? 20 : 0));
+  let expectedFields = 15;
+  if (isContract) {
+    expectedFields = 8;
+  } else if (isVisa || isIqama || isPassport) {
+    expectedFields = 10;
+  }
+
+  const completeness = Math.min(100, Math.round((dataPoints / expectedFields) * 100));
+
+  let confidence = 0;
+  if (isContract && data.holderName && (data.startDate || data.endDate || data.salary)) {
+    confidence = Math.min(100, dataPoints * 12 + (text.length > 500 ? 30 : text.length > 200 ? 20 : 10));
+  } else if (dataPoints >= 3) {
+    confidence = Math.min(100, dataPoints * 10 + (text.length > 200 ? 20 : 10));
+  } else {
+    confidence = Math.min(100, dataPoints * 8 + (text.length > 200 ? 15 : 5));
+  }
+
   const qualityScore = Math.round((completeness + confidence) / 2);
+
+  if (keyInsights.length === 0) {
+    keyInsights.push('Document processed - review extracted data');
+  }
+
+  if (dataPoints === 0) {
+    warnings.push('No structured data could be extracted from this document');
+    recommendations.push('Verify document quality and format');
+  }
 
   return {
     documentType: docType || 'unknown',
