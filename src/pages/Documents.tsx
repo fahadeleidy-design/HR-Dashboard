@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { FileText, AlertTriangle, CheckCircle } from 'lucide-react';
+import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2 } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatNumber } from '@/lib/formatters';
 
@@ -27,12 +27,36 @@ export function Documents() {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'expiring_soon' | 'expired'>('all');
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [formData, setFormData] = useState({
+    employee_id: '',
+    document_type: 'iqama',
+    document_name: '',
+    issue_date: '',
+    expiry_date: '',
+    file: null as File | null
+  });
 
   useEffect(() => {
     if (currentCompany) {
       fetchDocuments();
+      fetchEmployees();
     }
   }, [currentCompany]);
+
+  const fetchEmployees = async () => {
+    if (!currentCompany) return;
+
+    const { data } = await supabase
+      .from('employees')
+      .select('id, first_name_en, last_name_en, employee_number')
+      .eq('company_id', currentCompany.id)
+      .order('first_name_en');
+
+    if (data) setEmployees(data);
+  };
 
   const fetchDocuments = async () => {
     if (!currentCompany) return;
@@ -68,6 +92,62 @@ export function Documents() {
 
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredDocuments);
 
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCompany || !formData.employee_id) return;
+
+    setUploading(true);
+    try {
+      let documentUrl = null;
+
+      if (formData.file) {
+        const fileName = `${currentCompany.id}/${formData.employee_id}/${Date.now()}-${formData.file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(fileName, formData.file);
+
+        if (uploadError) throw uploadError;
+
+        const { data: urlData } = supabase.storage
+          .from('documents')
+          .getPublicUrl(fileName);
+
+        documentUrl = urlData.publicUrl;
+      }
+
+      const { error: insertError } = await supabase
+        .from('documents')
+        .insert({
+          company_id: currentCompany.id,
+          employee_id: formData.employee_id,
+          document_type: formData.document_type,
+          document_name: formData.document_name,
+          document_url: documentUrl,
+          issue_date: formData.issue_date || null,
+          expiry_date: formData.expiry_date || null,
+          status: 'active'
+        });
+
+      if (insertError) throw insertError;
+
+      setShowUploadModal(false);
+      setFormData({
+        employee_id: '',
+        document_type: 'iqama',
+        document_name: '',
+        issue_date: '',
+        expiry_date: '',
+        file: null
+      });
+      fetchDocuments();
+    } catch (error: any) {
+      console.error('Error uploading document:', error);
+      alert(error.message || 'Failed to upload document');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -83,6 +163,13 @@ export function Documents() {
           <h1 className="text-3xl font-bold text-gray-900">{t.documents.title}</h1>
           <p className="text-gray-600 mt-1">{t.documents.subtitle}</p>
         </div>
+        <button
+          onClick={() => setShowUploadModal(true)}
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-200"
+        >
+          <Plus className="h-5 w-5" />
+          <span>{t.documents.addDocument}</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -234,6 +321,180 @@ export function Documents() {
           </table>
         </div>
       </div>
+
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-gray-900">{t.documents.addDocument}</h2>
+                <button
+                  onClick={() => setShowUploadModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleUpload} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t.common.employee} *
+                </label>
+                <select
+                  required
+                  value={formData.employee_id}
+                  onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500"
+                >
+                  <option value="">Select employee...</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.first_name_en} {emp.last_name_en} ({emp.employee_number})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t.documents.documentType} *
+                </label>
+                <select
+                  required
+                  value={formData.document_type}
+                  onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500"
+                >
+                  <option value="iqama">Iqama</option>
+                  <option value="passport">Passport</option>
+                  <option value="contract">Contract</option>
+                  <option value="certificate">Certificate</option>
+                  <option value="visa">Visa</option>
+                  <option value="medical">Medical</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Document Name *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.document_name}
+                  onChange={(e) => setFormData({ ...formData, document_name: e.target.value })}
+                  className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500"
+                  placeholder="Enter document name"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.documents.issueDate}
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.issue_date}
+                    onChange={(e) => setFormData({ ...formData, issue_date: e.target.value })}
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {t.documents.expiryDate}
+                  </label>
+                  <input
+                    type="date"
+                    value={formData.expiry_date}
+                    onChange={(e) => setFormData({ ...formData, expiry_date: e.target.value })}
+                    className="w-full px-4 py-2.5 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload File (Optional)
+                </label>
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 hover:bg-primary-50 transition-all cursor-pointer"
+                  onClick={() => document.getElementById('file-upload')?.click()}
+                >
+                  {formData.file ? (
+                    <div className="flex items-center justify-center gap-2">
+                      <FileText className="h-6 w-6 text-primary-600" />
+                      <span className="text-sm text-gray-700">{formData.file.name}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFormData({ ...formData, file: null });
+                        }}
+                        className="p-1 hover:bg-gray-200 rounded"
+                      >
+                        <X className="h-4 w-4 text-gray-600" />
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600">Click to upload document</p>
+                      <p className="text-xs text-gray-500 mt-1">PDF, DOC, DOCX, JPG, PNG (max 10MB)</p>
+                    </>
+                  )}
+                </div>
+                <input
+                  id="file-upload"
+                  type="file"
+                  accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file && file.size <= 10 * 1024 * 1024) {
+                      setFormData({ ...formData, file });
+                    } else {
+                      alert('File size must be less than 10MB');
+                    }
+                  }}
+                  className="hidden"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-4">
+                <button
+                  type="submit"
+                  disabled={uploading}
+                  className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span>Uploading...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-5 w-5" />
+                      <span>Upload Document</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowUploadModal(false)}
+                  disabled={uploading}
+                  className="px-6 py-3 border-2 border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
