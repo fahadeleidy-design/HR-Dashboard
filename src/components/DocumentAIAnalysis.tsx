@@ -167,14 +167,25 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
     setIsAnalyzing(true);
 
     try {
-      const response = await fetch(fileUrl);
-      if (!response.ok) throw new Error('Failed to fetch document file');
-
-      const blob = await response.blob();
-      const file = new File([blob], 'document.pdf', { type: blob.type || 'application/pdf' });
-
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Not authenticated');
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const storagePath = fileUrl.split('/documents/')[1];
+      if (!storagePath) {
+        throw new Error('Invalid document URL');
+      }
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('documents')
+        .download(storagePath);
+
+      if (downloadError) {
+        throw new Error(`Failed to download file: ${downloadError.message}`);
+      }
+
+      const file = new File([fileData], 'document.pdf', { type: fileData.type || 'application/pdf' });
 
       const formData = new FormData();
       formData.append('file', file);
