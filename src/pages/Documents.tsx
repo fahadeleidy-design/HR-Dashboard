@@ -97,18 +97,32 @@ export function Documents() {
         return;
       }
 
+      console.log('=== MISSING CONTRACTS DETECTION ===');
+      console.log('Company ID:', currentCompany.id);
       console.log('Total employees:', allEmployees?.length || 0);
-      console.log('Employees with contracts:', contractDocs?.length || 0);
+      console.log('Contract documents found:', contractDocs?.length || 0);
+      console.log('Contract docs data:', contractDocs);
 
       if (allEmployees && contractDocs) {
         const employeeIdsWithContracts = new Set(contractDocs.map(doc => doc.employee_id));
+        console.log('Unique employees with contracts:', employeeIdsWithContracts.size);
+        console.log('Employee IDs with contracts:', Array.from(employeeIdsWithContracts));
+
         const employeesWithout = allEmployees.filter(emp => !employeeIdsWithContracts.has(emp.id));
 
         console.log('Employees WITHOUT contracts:', employeesWithout.length);
-        console.log('Missing contract employees:', employeesWithout.map(e => `${e.employee_number}: ${e.first_name_en} ${e.last_name_en}`));
+        if (employeesWithout.length > 0) {
+          console.log('Missing contract employees (first 10):', employeesWithout.slice(0, 10).map(e => ({
+            id: e.id,
+            number: e.employee_number,
+            name: `${e.first_name_en} ${e.last_name_en}`
+          })));
+        }
+        console.log('=================================');
 
         setEmployeesWithoutContracts(employeesWithout);
       } else {
+        console.log('Missing data - allEmployees:', !!allEmployees, 'contractDocs:', !!contractDocs);
         setEmployeesWithoutContracts([]);
       }
     } catch (error) {
@@ -226,6 +240,9 @@ export function Documents() {
         <div className={isRTL ? 'text-right' : 'text-left'}>
           <h1 className="text-3xl font-bold text-gray-900">{t.documents.title}</h1>
           <p className="text-gray-600 mt-1">{t.documents.subtitle}</p>
+          <p className="text-xs text-blue-600 mt-2 font-mono bg-blue-50 px-3 py-1 rounded inline-block">
+            📊 {employees.length} employees | {documents.filter(d => d.document_type === 'contract').length} contracts | {employeesWithoutContracts.length} missing
+          </p>
         </div>
         <div className="flex gap-3">
           <button
