@@ -41,6 +41,7 @@ export function Documents() {
   const [showAIAnalysisModal, setShowAIAnalysisModal] = useState(false);
   const [showMissingContractsModal, setShowMissingContractsModal] = useState(false);
   const [showEmployeeDocumentsModal, setShowEmployeeDocumentsModal] = useState(false);
+  const [showDocumentViewerModal, setShowDocumentViewerModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [uploading, setUploading] = useState(false);
@@ -207,6 +208,11 @@ export function Documents() {
   const handleViewEmployeeDocuments = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
     setShowEmployeeDocumentsModal(true);
+  };
+
+  const handleViewDocument = (document: Document) => {
+    setSelectedDocument(document);
+    setShowDocumentViewerModal(true);
   };
 
   const handlePrintEmployeeDocuments = (employeeId: string) => {
@@ -691,16 +697,27 @@ export function Documents() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <button
-                        onClick={() => {
-                          setSelectedDocument(document);
-                          setShowAIAnalysisModal(true);
-                        }}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-xs font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200"
-                      >
-                        <Brain className="h-3 w-3" />
-                        <span>AI Analysis</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        {document.document_url && (
+                          <button
+                            onClick={() => handleViewDocument(document)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-xs font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
+                          >
+                            <Eye className="h-3 w-3" />
+                            <span>View</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => {
+                            setSelectedDocument(document);
+                            setShowAIAnalysisModal(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-xs font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200"
+                        >
+                          <Brain className="h-3 w-3" />
+                          <span>AI</span>
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1293,15 +1310,13 @@ export function Documents() {
                                 </td>
                                 <td className="px-4 py-3 whitespace-nowrap">
                                   {doc.document_url && (
-                                    <a
-                                      href={doc.document_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
+                                    <button
+                                      onClick={() => handleViewDocument(doc)}
                                       className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
                                     >
                                       <Eye className="h-3 w-3" />
                                       <span>View</span>
-                                    </a>
+                                    </button>
                                   )}
                                 </td>
                               </tr>
@@ -1313,6 +1328,97 @@ export function Documents() {
                   </>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDocumentViewerModal && selectedDocument && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl w-full h-full max-w-7xl max-h-[95vh] flex flex-col">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-white bg-opacity-20 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Document Viewer</h2>
+                  <p className="text-blue-100 mt-1">
+                    {selectedDocument.document_name || selectedDocument.document_type.toUpperCase()} - {selectedDocument.employee?.first_name_en} {selectedDocument.employee?.last_name_en}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <a
+                  href={selectedDocument.document_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors text-white"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Download</span>
+                </a>
+                <button
+                  onClick={() => {
+                    setShowDocumentViewerModal(false);
+                    setSelectedDocument(null);
+                  }}
+                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="flex-1 overflow-hidden p-4 bg-gray-50">
+              {selectedDocument.document_url ? (
+                <iframe
+                  src={selectedDocument.document_url}
+                  className="w-full h-full rounded-lg border-2 border-gray-200 bg-white"
+                  title={selectedDocument.document_name || 'Document'}
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">No Document Available</h3>
+                    <p className="text-gray-600">This document does not have a file attached.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="sticky bottom-0 bg-gray-100 px-6 py-3 border-t border-gray-200 rounded-b-xl">
+              <div className="grid grid-cols-5 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500 font-medium">Employee</p>
+                  <p className="text-gray-900">{selectedDocument.employee?.first_name_en} {selectedDocument.employee?.last_name_en}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 font-medium">Type</p>
+                  <p className="text-gray-900">{selectedDocument.document_type.toUpperCase()}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 font-medium">Issue Date</p>
+                  <p className="text-gray-900">{selectedDocument.issue_date ? new Date(selectedDocument.issue_date).toLocaleDateString() : '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 font-medium">Expiry Date</p>
+                  <p className="text-gray-900">{selectedDocument.expiry_date ? new Date(selectedDocument.expiry_date).toLocaleDateString() : '-'}</p>
+                </div>
+                <div>
+                  <p className="text-gray-500 font-medium">Status</p>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    selectedDocument.status === 'active'
+                      ? 'bg-green-100 text-green-800'
+                      : selectedDocument.status === 'expiring_soon'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {selectedDocument.status.replace('_', ' ').toUpperCase()}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
