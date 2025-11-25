@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Upload, FileText, Loader2, CheckCircle, XCircle, AlertCircle, Sparkles, X } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle, XCircle, AlertCircle, Sparkles, X, Calendar, Zap } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -15,9 +15,14 @@ interface UploadItem {
   employeeName: string | null;
   documentType: string;
   documentName: string;
-  status: 'pending' | 'uploading' | 'completed' | 'failed';
+  status: 'pending' | 'analyzing' | 'uploading' | 'completed' | 'failed';
   error?: string;
   confidence: number;
+  startDate?: string | null;
+  endDate?: string | null;
+  expiryDate?: string | null;
+  dateConfidence?: number;
+  analyzing?: boolean;
 }
 
 const DOCUMENT_TYPES = ['iqama', 'passport', 'contract', 'certificate', 'visa', 'medical', 'other'];
@@ -28,6 +33,7 @@ export function BulkDocumentUpload({ companyId, onComplete, onCancel }: BulkDocu
   const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
   const [processing, setProcessing] = useState(false);
   const [bulkDocType, setBulkDocType] = useState<string>('');
+  const [analyzingAll, setAnalyzingAll] = useState(false);
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -192,6 +198,82 @@ export function BulkDocumentUpload({ companyId, onComplete, onCancel }: BulkDocu
     })));
   };
 
+  const analyzeDocument = async (index: number, item: UploadItem): Promise<void> => {
+    try {
+      setUploadItems(prev => {
+        const updated = [...prev];
+        updated[index] = { ...updated[index], analyzing: true, status: 'analyzing' };
+        return updated;
+      });
+
+      const formData = new FormData();
+      formData.append('file', item.file);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No session');
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-document-dates`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: formData
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        setUploadItems(prev => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            analyzing: false,
+            status: 'pending',
+            startDate: result.data.startDate,
+            endDate: result.data.endDate,
+            expiryDate: result.data.expiryDate,
+            dateConfidence: result.data.confidence
+          };
+          return updated;
+        });
+      } else {
+        throw new Error(result.error || 'Analysis failed');
+      }
+    } catch (err: any) {
+      setUploadItems(prev => {
+        const updated = [...prev];
+        updated[index] = {
+          ...updated[index],
+          analyzing: false,
+          status: 'pending',
+          error: err.message
+        };
+        return updated;
+      });
+    }
+  };
+
+  const analyzeAllDocuments = async () => {
+    setAnalyzingAll(true);
+
+    for (let i = 0; i < uploadItems.length; i++) {
+      const item = uploadItems[i];
+      if (item.status === 'pending' && !item.startDate) {
+        await analyzeDocument(i, item);
+      }
+    }
+
+    setAnalyzingAll(false);
+    showToast({
+      type: 'success',
+      title: 'Analysis Complete',
+      message: 'All documents have been analyzed'
+    });
+  };
+
   const processAllUploads = async () => {
     const validItems = uploadItems.filter(item => item.employeeId);
 
@@ -288,6 +370,8 @@ export function BulkDocumentUpload({ companyId, onComplete, onCancel }: BulkDocu
         return <CheckCircle className="h-5 w-5 text-green-600" />;
       case 'failed':
         return <XCircle className="h-5 w-5 text-red-600" />;
+      case 'analyzing':
+        return <Loader2 className="h-5 w-5 text-purple-600 animate-spin" />;
       case 'uploading':
         return <Loader2 className="h-5 w-5 text-blue-600 animate-spin" />;
       default:
@@ -390,6 +474,37 @@ export function BulkDocumentUpload({ companyId, onComplete, onCancel }: BulkDocu
                 </div>
               </div>
             </div>
+
+            <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Zap className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    AI Date Extraction
+                  </label>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Automatically extract start and expiry dates from all documents
+                  </p>
+                  <button
+                    onClick={analyzeAllDocuments}
+                    disabled={analyzingAll || processing}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {analyzingAll ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Analyzing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Zap className="h-4 w-4" />
+                        <span>Analyze All Dates</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3 max-h-96 overflow-y-auto">
@@ -423,42 +538,98 @@ export function BulkDocumentUpload({ companyId, onComplete, onCancel }: BulkDocu
                   )}
 
                   {item.status === 'pending' && (
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Employee {item.employeeName && <span className="text-green-600">✓ Auto-detected</span>}
-                        </label>
-                        <select
-                          value={item.employeeId || ''}
-                          onChange={(e) => updateEmployeeId(index, e.target.value)}
-                          className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500"
-                          disabled={processing}
-                        >
-                          <option value="">Select Employee</option>
-                          {employees.map((emp) => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.first_name_en} {emp.last_name_en}
-                            </option>
-                          ))}
-                        </select>
+                    <div className="space-y-2">
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Employee {item.employeeName && <span className="text-green-600">✓ Auto-detected</span>}
+                          </label>
+                          <select
+                            value={item.employeeId || ''}
+                            onChange={(e) => updateEmployeeId(index, e.target.value)}
+                            className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500"
+                            disabled={processing}
+                          >
+                            <option value="">Select Employee</option>
+                            {employees.map((emp) => (
+                              <option key={emp.id} value={emp.id}>
+                                {emp.first_name_en} {emp.last_name_en}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                            Document Type <span className="text-purple-600">✓ Auto-detected</span>
+                          </label>
+                          <select
+                            value={item.documentType}
+                            onChange={(e) => updateDocumentType(index, e.target.value)}
+                            className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500"
+                            disabled={processing}
+                          >
+                            {DOCUMENT_TYPES.map((type) => (
+                              <option key={type} value={type}>
+                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
-                          Document Type <span className="text-purple-600">✓ Auto-detected</span>
-                        </label>
-                        <select
-                          value={item.documentType}
-                          onChange={(e) => updateDocumentType(index, e.target.value)}
-                          className="w-full px-3 py-2 text-sm border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-100 focus:border-purple-500"
-                          disabled={processing}
+                      {(item.startDate || item.endDate || item.expiryDate) && (
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Calendar className="h-4 w-4 text-blue-600" />
+                            <span className="text-xs font-semibold text-blue-900">AI Extracted Dates</span>
+                            {item.dateConfidence !== undefined && (
+                              <span className={`text-xs font-medium ml-auto ${getConfidenceColor(item.dateConfidence)}`}>
+                                {item.dateConfidence}% confidence
+                              </span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-xs">
+                            {item.startDate && (
+                              <div>
+                                <span className="text-gray-600 block">Start:</span>
+                                <span className="text-gray-900 font-medium">{new Date(item.startDate).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {item.endDate && (
+                              <div>
+                                <span className="text-gray-600 block">End:</span>
+                                <span className="text-gray-900 font-medium">{new Date(item.endDate).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                            {item.expiryDate && (
+                              <div>
+                                <span className="text-gray-600 block">Expiry:</span>
+                                <span className="text-gray-900 font-medium">{new Date(item.expiryDate).toLocaleDateString()}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {!item.startDate && !item.endDate && !item.expiryDate && !item.analyzing && (
+                        <button
+                          onClick={() => analyzeDocument(index, item)}
+                          disabled={analyzingAll}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-white border-2 border-blue-200 text-blue-700 rounded-lg text-xs font-medium hover:bg-blue-50 transition-colors disabled:opacity-50"
                         >
-                          {DOCUMENT_TYPES.map((type) => (
-                            <option key={type} value={type}>
-                              {type.charAt(0).toUpperCase() + type.slice(1)}
-                            </option>
-                          ))}
-                        </select>
+                          <Zap className="h-3 w-3" />
+                          <span>Analyze This Document</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+
+                  {item.status === 'analyzing' && (
+                    <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 text-purple-600 animate-spin" />
+                        <span className="text-xs font-medium text-purple-900">Analyzing document for dates...</span>
                       </div>
                     </div>
                   )}
