@@ -16,7 +16,7 @@ interface PayslipData {
     first_name_en: string;
     last_name_en: string;
     iqama_number: string;
-    position: string;
+    job_title_en: string;
     department?: { name_en: string };
   };
   company: {
@@ -80,7 +80,7 @@ export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }:
 
       const { data: employee, error: employeeError } = await supabase
         .from('employees')
-        .select('employee_number, first_name_en, last_name_en, iqama_number, position, department:departments!employees_department_id_fkey(name_en)')
+        .select('employee_number, first_name_en, last_name_en, iqama_number, job_title_en, department:departments!employees_department_id_fkey(name_en)')
         .eq('id', employeeId)
         .single();
 
@@ -260,7 +260,7 @@ export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }:
                     <Building2 className="h-4 w-4 text-gray-400 mt-0.5" />
                     <div>
                       <p className="text-xs text-gray-500">Position</p>
-                      <p className="text-sm font-medium text-gray-900">{employee.position}</p>
+                      <p className="text-sm font-medium text-gray-900">{employee.job_title_en}</p>
                     </div>
                   </div>
                   {employee.department && (
