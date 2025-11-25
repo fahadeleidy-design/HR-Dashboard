@@ -167,24 +167,11 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
     setIsAnalyzing(true);
 
     try {
-      const { data: doc } = await supabase
-        .from('documents')
-        .select('document_url')
-        .eq('id', documentId)
-        .single();
+      const response = await fetch(fileUrl);
+      if (!response.ok) throw new Error('Failed to fetch document file');
 
-      if (!doc?.document_url) throw new Error('Document URL not found');
-
-      const storagePath = doc.document_url.split('/documents/')[1];
-      if (!storagePath) throw new Error('Invalid document URL');
-
-      const { data: fileData, error: downloadError } = await supabase.storage
-        .from('documents')
-        .download(storagePath);
-
-      if (downloadError) throw downloadError;
-
-      const file = new File([fileData], 'document.pdf', { type: fileData.type });
+      const blob = await response.blob();
+      const file = new File([blob], 'document.pdf', { type: blob.type || 'application/pdf' });
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
