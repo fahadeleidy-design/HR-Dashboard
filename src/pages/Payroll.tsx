@@ -21,6 +21,7 @@ import {
   Trash2
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { PayslipViewer } from '@/components/PayslipViewer';
 
 interface PayrollBatch {
   id: string;
@@ -112,6 +113,8 @@ export function Payroll() {
   const [advances, setAdvances] = useState<Advance[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [showPayslip, setShowPayslip] = useState(false);
+  const [selectedPayrollItem, setSelectedPayrollItem] = useState<{ itemId: string; employeeId: string } | null>(null);
 
   useEffect(() => {
     if (currentCompany) {
@@ -821,6 +824,7 @@ export function Payroll() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Ded</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Net Salary</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Days</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -868,6 +872,19 @@ export function Payroll() {
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                           {item.days_worked}
+                        </td>
+                        <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <button
+                            onClick={() => {
+                              setSelectedPayrollItem({ itemId: item.id, employeeId: item.employee_id });
+                              setShowPayslip(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                            title="View Payslip"
+                          >
+                            <FileText className="h-4 w-4" />
+                            Payslip
+                          </button>
                         </td>
                       </tr>
                     ))
@@ -1004,6 +1021,18 @@ export function Payroll() {
             </div>
           </div>
         </div>
+      )}
+
+      {showPayslip && selectedPayrollItem && currentCompany && (
+        <PayslipViewer
+          payrollItemId={selectedPayrollItem.itemId}
+          employeeId={selectedPayrollItem.employeeId}
+          companyId={currentCompany.id}
+          onClose={() => {
+            setShowPayslip(false);
+            setSelectedPayrollItem(null);
+          }}
+        />
       )}
     </div>
   );
