@@ -115,7 +115,7 @@ export function Layout({ children }: LayoutProps) {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100">
       <nav className="bg-white/80 backdrop-blur-xl shadow-sm border-b border-gray-200/50 sticky top-0 z-40">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`flex justify-between items-center h-16 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -208,14 +208,14 @@ export function Layout({ children }: LayoutProps) {
         </div>
       </nav>
 
-      <div className={`flex ${isRTL ? 'flex-row-reverse' : ''}`}>
+      <div className={`flex ${isRTL ? 'flex-row-reverse' : ''} flex-1 overflow-hidden`}>
         <aside
           className={`
             sidebar-nav
-            fixed lg:static inset-y-0 ${isRTL ? 'right-0' : 'left-0'} z-30
+            fixed lg:static top-16 bottom-0 ${isRTL ? 'right-0' : 'left-0'} z-30
             w-72 bg-gradient-to-b from-white to-gray-50 ${isRTL ? 'border-l' : 'border-r'} border-gray-200
             transition-transform duration-300 ease-in-out
-            min-h-[calc(100vh-4rem)] overflow-y-auto shadow-2xl lg:shadow-none
+            overflow-y-auto shadow-2xl lg:shadow-none
             ${sidebarOpen ? 'translate-x-0' : isRTL ? 'sidebar-hidden-rtl' : 'sidebar-hidden-ltr'}
           `}
         >
@@ -271,7 +271,7 @@ export function Layout({ children }: LayoutProps) {
           />
         )}
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-[1920px] mx-auto w-full">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 max-w-[1920px] mx-auto w-full">
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             {children}
           </div>
