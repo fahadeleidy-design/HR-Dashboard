@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2 } from 'lucide-react';
+import { BulkDocumentUpload } from '@/components/BulkDocumentUpload';
+import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatNumber } from '@/lib/formatters';
 
@@ -28,6 +29,7 @@ export function Documents() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'expiring_soon' | 'expired'>('all');
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -163,13 +165,22 @@ export function Documents() {
           <h1 className="text-3xl font-bold text-gray-900">{t.documents.title}</h1>
           <p className="text-gray-600 mt-1">{t.documents.subtitle}</p>
         </div>
-        <button
-          onClick={() => setShowUploadModal(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-200"
-        >
-          <Plus className="h-5 w-5" />
-          <span>{t.documents.addDocument}</span>
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowUploadModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-200 hover:shadow-xl hover:scale-105"
+          >
+            <Plus className="h-5 w-5" />
+            <span>{t.documents.addDocument}</span>
+          </button>
+          <button
+            onClick={() => setShowBulkUploadModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg font-medium hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg shadow-purple-200 hover:shadow-xl hover:scale-105"
+          >
+            <Layers className="h-5 w-5" />
+            <span>AI Bulk Upload</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -492,6 +503,28 @@ export function Documents() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {showBulkUploadModal && (
+        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+              <h2 className="text-2xl font-bold text-gray-900">AI Bulk Document Upload</h2>
+              <p className="text-gray-600 mt-1">Upload multiple documents with automatic employee and type detection</p>
+            </div>
+
+            <div className="p-6">
+              <BulkDocumentUpload
+                companyId={currentCompany!.id}
+                onComplete={() => {
+                  setShowBulkUploadModal(false);
+                  fetchDocuments();
+                }}
+                onCancel={() => setShowBulkUploadModal(false)}
+              />
+            </div>
           </div>
         </div>
       )}
