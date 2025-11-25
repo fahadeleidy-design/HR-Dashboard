@@ -22,7 +22,7 @@ interface PayslipData {
   company: {
     name_en: string;
     name_ar?: string;
-    cr_number?: string;
+    commercial_registration?: string;
   };
   payroll: {
     basic_salary: number;
@@ -88,7 +88,7 @@ export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }:
 
       const { data: company, error: companyError } = await supabase
         .from('companies')
-        .select('name_en, name_ar, cr_number')
+        .select('name_en, name_ar, commercial_registration')
         .eq('id', companyId)
         .single();
 
@@ -220,8 +220,8 @@ export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }:
                   {company.name_ar && (
                     <p className="text-xl text-gray-600 mt-1">{company.name_ar}</p>
                   )}
-                  {company.cr_number && (
-                    <p className="text-sm text-gray-500 mt-2">CR: {company.cr_number}</p>
+                  {company.commercial_registration && (
+                    <p className="text-sm text-gray-500 mt-2">CR: {company.commercial_registration}</p>
                   )}
                 </div>
                 <div className="text-right">
