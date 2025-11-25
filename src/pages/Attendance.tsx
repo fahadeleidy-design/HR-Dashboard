@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Calendar, Clock, Download, Users } from 'lucide-react';
+import { ScrollableTable } from '@/components/ScrollableTable';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { EmptyState } from '@/components/EmptyState';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
@@ -182,7 +183,7 @@ export function Attendance() {
         />
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all duration-300">
-          <div className="overflow-x-auto">
+          <ScrollableTable maxHeight="calc(100vh - 350px)">
             <table className="w-full">
               <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
               <tr>
@@ -271,7 +272,7 @@ export function Attendance() {
                 ))}
             </tbody>
           </table>
-        </div>
+        </ScrollableTable>
       </div>
       )}
     </div>

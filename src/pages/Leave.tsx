@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Calendar, Check, X, Clock } from 'lucide-react';
+import { ScrollableTable } from '@/components/ScrollableTable';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
 
@@ -328,7 +329,7 @@ export function Leave() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <ScrollableTable maxHeight="calc(100vh - 350px)">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -443,7 +444,7 @@ export function Leave() {
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollableTable>
       </div>
 
       {showForm && (

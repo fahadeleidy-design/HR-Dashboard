@@ -8,6 +8,7 @@ import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X, Chevron
 import { EmployeeForm } from '@/components/EmployeeForm';
 import { BulkUpload } from '@/components/BulkUpload';
 import { EmployeeDetail } from '@/components/EmployeeDetail';
+import { ScrollableTable } from '@/components/ScrollableTable';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import * as XLSX from 'xlsx';
 
@@ -730,7 +731,7 @@ export function Employees() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <ScrollableTable maxHeight="calc(100vh - 350px)">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -876,7 +877,7 @@ export function Employees() {
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollableTable>
 
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
           <div className="text-sm text-gray-700">
