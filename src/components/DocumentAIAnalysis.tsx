@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Brain, Loader2, AlertTriangle, CheckCircle, Info, Sparkles, Calendar, FileText, User, CreditCard, Zap, TrendingUp, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
@@ -36,6 +36,39 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+
+  useEffect(() => {
+    loadExistingAnalysis();
+  }, [documentId]);
+
+  const loadExistingAnalysis = async () => {
+    try {
+      const { data: doc, error: docError } = await supabase
+        .from('documents')
+        .select('extraction_status, extraction_confidence, ai_analysis, extracted_data')
+        .eq('id', documentId)
+        .single();
+
+      if (docError || !doc) return;
+
+      if (doc.extraction_status === 'completed' && doc.ai_analysis) {
+        setAnalysisData({
+          extractedData: doc.extracted_data || {},
+          aiAnalysis: doc.ai_analysis,
+          metadata: {
+            fileSize: 0,
+            fileType: 'application/pdf',
+            pageCount: 1,
+            language: 'English',
+            processingTime: 0,
+          },
+        });
+        setExpanded(true);
+      }
+    } catch (err) {
+      console.error('Failed to load existing analysis:', err);
+    }
+  };
 
   const handleAnalyze = async () => {
     setAnalyzing(true);
@@ -179,8 +212,16 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
             <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-600 to-blue-600 flex items-center justify-center">
               <Brain className="h-5 w-5 text-white" />
             </div>
-            <div>
-              <h3 className="text-sm font-bold text-gray-900">AI Document Analysis</h3>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-gray-900">AI Document Analysis</h3>
+                {analysisData && !analyzing && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                    <CheckCircle className="h-3 w-3" />
+                    Analyzed
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-gray-600">Comprehensive data extraction & insights</p>
             </div>
           </div>
@@ -193,6 +234,11 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Analyzing...</span>
+              </>
+            ) : analysisData ? (
+              <>
+                <Sparkles className="h-4 w-4" />
+                <span>Re-Analyze</span>
               </>
             ) : (
               <>
