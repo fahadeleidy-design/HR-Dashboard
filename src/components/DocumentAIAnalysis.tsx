@@ -36,6 +36,7 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
 
   useEffect(() => {
     loadExistingAnalysis();
@@ -163,54 +164,52 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
   const handleAnalyze = async () => {
     setError(null);
     setShowSuccess(false);
+    setIsAnalyzing(true);
 
     try {
-      const { data: doc, error: docError } = await supabase
-        .from('documents')
-        .select(`
-          document_number,
-          holder_name,
-          holder_id,
-          issuer,
-          issue_date,
-          expiry_date,
-          amount,
-          document_type,
-          employee:employees(
-            first_name_en,
-            last_name_en,
-            employee_number
-          )
-        `)
-        .eq('id', documentId)
-        .maybeSingle();
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'document.pdf', { type: blob.type });
 
-      if (docError) throw docError;
-      if (!doc) throw new Error('Document not found');
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Not authenticated');
 
-      const analysisResult = generateAnalysis(doc);
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('documentId', documentId);
+      formData.append('documentType', documentType);
 
-      setAnalysisData(analysisResult);
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const analysisResponse = await fetch(
+        `${supabaseUrl}/functions/v1/comprehensive-document-analysis`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: formData,
+        }
+      );
+
+      const result = await analysisResponse.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Analysis failed');
+      }
+
+      setAnalysisData(result.data);
       setExpanded(true);
       setShowSuccess(true);
 
       setTimeout(() => setShowSuccess(false), 2000);
 
-      supabase
-        .from('documents')
-        .update({
-          extraction_status: 'completed',
-          extraction_confidence: analysisResult.aiAnalysis.confidence,
-          ai_analysis: analysisResult.aiAnalysis,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', documentId)
-        .then(() => {
-          if (onAnalysisComplete) onAnalysisComplete();
-        });
+      if (onAnalysisComplete) onAnalysisComplete();
 
     } catch (err: any) {
+      console.error('Analysis error:', err);
       setError(err.message || 'Analysis failed');
+    } finally {
+      setIsAnalyzing(false);
     }
   };
 
@@ -251,9 +250,15 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
           <div className="relative">
             <button
               onClick={handleAnalyze}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
+              disabled={isAnalyzing}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {analysisData ? (
+              {isAnalyzing ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Analyzing...</span>
+                </>
+              ) : analysisData ? (
                 <>
                   <Sparkles className="h-4 w-4" />
                   <span>Re-Analyze</span>
