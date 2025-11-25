@@ -168,28 +168,29 @@ export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }:
   const { employee, company, payroll, batch } = payslipData;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200 print:hidden">
-          <h2 className="text-2xl font-bold text-gray-900">Employee Payslip</h2>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleDownload}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <Download className="h-4 w-4" />
-              Download / Print
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto">
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl my-8">
+          <div className="sticky top-0 z-10 bg-white flex items-center justify-between p-6 border-b border-gray-200 rounded-t-xl print:hidden">
+            <h2 className="text-2xl font-bold text-gray-900">Employee Payslip</h2>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleDownload}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm"
+              >
+                <Download className="h-4 w-4" />
+                Download / Print
+              </button>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div ref={printRef} className="p-8 space-y-8">
+          <div ref={printRef} className="p-8 space-y-8">
           <style>
             {`
               @media print {
@@ -441,6 +442,7 @@ export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }:
           </div>
         </div>
       </div>
+    </div>
     </div>
   );
 }
