@@ -49,7 +49,7 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
     try {
       const { data: empData, error: empError } = await supabase
         .from('employees')
-        .select('*, department:departments(name_en)')
+        .select('*, department:departments!employees_department_id_fkey(name_en)')
         .eq('id', employeeId)
         .single();
 
