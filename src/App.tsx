@@ -33,6 +33,7 @@ import { EndOfService } from './pages/EndOfService';
 import { AuditLog } from './pages/AuditLog';
 import { OrgChart } from './pages/OrgChart';
 import { EmployeeHandbook } from './pages/EmployeeHandbook';
+import { EmployeeContracts } from './pages/EmployeeContracts';
 
 function App() {
   return (
@@ -168,6 +169,7 @@ function App() {
             <Route path="/gov-docs" element={<ProtectedRoute><Layout><GovernmentalDocs /></Layout></ProtectedRoute>} />
             <Route path="/real-estate" element={<ProtectedRoute><Layout><RealEstate /></Layout></ProtectedRoute>} />
             <Route path="/contracts" element={<ProtectedRoute><Layout><Contracts /></Layout></ProtectedRoute>} />
+            <Route path="/employee-contracts" element={<ProtectedRoute><Layout><EmployeeContracts /></Layout></ProtectedRoute>} />
             <Route path="/insurance" element={<ProtectedRoute><Layout><Insurance /></Layout></ProtectedRoute>} />
             <Route path="/travel" element={<ProtectedRoute><Layout><Travel /></Layout></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
