@@ -205,6 +205,15 @@ async function extractTextFromFile(base64: string, fileType: string): Promise<st
       /Start\s+Date[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi,
       /End\s+Date[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi,
       /Contract\s+Date[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi,
+      /(?:رقم|رقم الموظف)[:\s]+([A-Z0-9\-\/]+)/gi,
+      /(?:الاسم|اسم الموظف|اسم العامل)[:\s]+([\u0600-\u06FF\s]+)/gi,
+      /(?:المسمى الوظيفي|الوظيفة|المنصب)[:\s]+([\u0600-\u06FF\s]+)/gi,
+      /(?:الراتب|الأجر|المرتب)[:\s]+([0-9,]+(?:\.\d{2})?)/gi,
+      /(?:تاريخ البدء|تاريخ البداية|من تاريخ)[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi,
+      /(?:تاريخ الانتهاء|تاريخ النهاية|إلى تاريخ)[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi,
+      /(?:تاريخ العقد|تاريخ التوقيع)[:\s]+(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/gi,
+      /(?:الجنسية)[:\s]+([\u0600-\u06FF]+)/gi,
+      /(?:رقم الهوية|رقم الإقامة|رقم الجواز)[:\s]+([0-9]+)/gi,
     ];
 
     for (const pattern of patterns) {
@@ -245,9 +254,18 @@ function extractComprehensiveData(text: string, docType?: string): ExtractionRes
     /Employee[:\s]+([A-Z][A-Z\s]+[A-Z])/i
   ]);
 
-  const employeeNumberMatch = text.match(/Employee\s+Number[:\s]+([A-Z0-9]+)/i);
+  let employeeNumberMatch = text.match(/Employee\s+Number[:\s]+([A-Z0-9]+)/i);
+  if (!employeeNumberMatch) {
+    employeeNumberMatch = text.match(/(?:رقم الموظف|رقم العامل)[:\s]+([A-Z0-9]+)/i);
+  }
   if (employeeNumberMatch) {
     data.documentNumber = employeeNumberMatch[1];
+  }
+
+  if (data.holderName && data.documentNumber) {
+    if (data.documentNumber.match(/^EMP\d+$/)) {
+      data.documentNumber = `${data.documentNumber}`;
+    }
   }
 
   data.issuer = extractPattern(text, [
@@ -349,19 +367,19 @@ function extractAllDates(text: string): {
 } {
   const result: any = {};
 
-  const issueMatch = text.match(/(?:issue|issued)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const issueMatch = text.match(/(?:issue|issued|تاريخ الإصدار|تاريخ التوقيع|تاريخ العقد)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (issueMatch) result.issue = normalizeDate(issueMatch[1]);
 
-  const startMatch = text.match(/(?:start|commencement|effective|from)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const startMatch = text.match(/(?:start|commencement|effective|from|تاريخ البدء|تاريخ البداية|من تاريخ|يبدأ في)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (startMatch) result.start = normalizeDate(startMatch[1]);
 
-  const endMatch = text.match(/(?:end|termination|to)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const endMatch = text.match(/(?:end|termination|to|until|تاريخ الانتهاء|تاريخ النهاية|إلى تاريخ|ينتهي في|حتى تاريخ)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (endMatch) result.end = normalizeDate(endMatch[1]);
 
-  const expiryMatch = text.match(/(?:expir(?:y|es|ation)|valid until)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const expiryMatch = text.match(/(?:expir(?:y|es|ation)|valid until|تاريخ الصلاحية|صالح حتى|ينتهي|تاريخ الانتهاء)\s*(?:date)?[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (expiryMatch) result.expiry = normalizeDate(expiryMatch[1]);
 
-  const birthMatch = text.match(/(?:date of birth|DOB|born)[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
+  const birthMatch = text.match(/(?:date of birth|DOB|born|تاريخ الميلاد|تاريخ المولد|مواليد)\s*[:\s]*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4}|\d{4}[\/\-]\d{1,2}[\/\-]\d{1,2}|\d{1,2}\s+\w+\s+\d{4})/i);
   if (birthMatch) result.birth = normalizeDate(birthMatch[1]);
 
   return result;
@@ -406,9 +424,17 @@ function extractCurrency(text: string): string | undefined {
 }
 
 function extractSalary(text: string): number | undefined {
-  const match = text.match(/(?:salary|wage|compensation)[:\s]*(?:SAR|SR)?\s*([\d,]+(?:\.\d{2})?)/i);
-  if (match && match[1]) {
-    return parseFloat(match[1].replace(/,/g, ''));
+  const patterns = [
+    /(?:salary|wage|compensation|الراتب|الأجر|المرتب)[:\s]*(?:SAR|SR|ريال)?\s*([\d,]+(?:\.\d{2})?)/i,
+    /(?:SAR|SR|ريال)\s*([\d,]+(?:\.\d{2})?)\s*(?:شهري|شهريا|monthly)?/i,
+    /([\d,]+(?:\.\d{2})?)\s*(?:SAR|SR|ريال)\s*(?:شهري|شهريا|monthly)?/i
+  ];
+
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match && match[1]) {
+      return parseFloat(match[1].replace(/,/g, ''));
+    }
   }
   return undefined;
 }
@@ -420,7 +446,9 @@ function normalizeDate(dateStr: string): string | undefined {
       const day = ddmmyyyy[1].padStart(2, '0');
       const month = ddmmyyyy[2].padStart(2, '0');
       const year = ddmmyyyy[3];
-      return `${year}-${month}-${day}`;
+      if (parseInt(year) >= 1900 && parseInt(year) <= 2100) {
+        return `${year}-${month}-${day}`;
+      }
     }
 
     const yyyymmdd = dateStr.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
@@ -428,7 +456,9 @@ function normalizeDate(dateStr: string): string | undefined {
       const year = yyyymmdd[1];
       const month = yyyymmdd[2].padStart(2, '0');
       const day = yyyymmdd[3].padStart(2, '0');
-      return `${year}-${month}-${day}`;
+      if (parseInt(year) >= 1900 && parseInt(year) <= 2100) {
+        return `${year}-${month}-${day}`;
+      }
     }
 
     const textDate = dateStr.match(/^(\d{1,2})\s+(\w+)\s+(\d{4})$/);
@@ -457,17 +487,32 @@ function performAIAnalysis(data: ExtractionResult, text: string, docType?: strin
 
   const dataPoints = Object.keys(data).filter(key => data[key] !== undefined && data[key] !== null).length;
 
-  const isContract = docType?.toLowerCase().includes('contract') || text.toLowerCase().includes('employment contract') || text.toLowerCase().includes('work contract');
-  const isVisa = docType?.toLowerCase().includes('visa');
-  const isIqama = docType?.toLowerCase().includes('iqama') || docType?.toLowerCase().includes('residence');
-  const isPassport = docType?.toLowerCase().includes('passport');
+  const isContract = docType?.toLowerCase().includes('contract') ||
+                     text.toLowerCase().includes('employment contract') ||
+                     text.toLowerCase().includes('work contract') ||
+                     text.includes('عقد عمل') ||
+                     text.includes('عقد توظيف');
+  const isVisa = docType?.toLowerCase().includes('visa') || text.includes('تأشيرة');
+  const isIqama = docType?.toLowerCase().includes('iqama') ||
+                  docType?.toLowerCase().includes('residence') ||
+                  text.includes('إقامة') ||
+                  text.includes('هوية مقيم');
+  const isPassport = docType?.toLowerCase().includes('passport') || text.includes('جواز سفر');
 
   if (data.holderName) {
     keyInsights.push(`Employee: ${data.holderName}`);
   }
 
+  if (data.documentNumber) {
+    keyInsights.push(`Employee Number: ${data.documentNumber}`);
+  }
+
   if (data.position) {
     keyInsights.push(`Position: ${data.position}`);
+  }
+
+  if (data.nationality) {
+    keyInsights.push(`Nationality: ${data.nationality}`);
   }
 
   if (isContract) {
