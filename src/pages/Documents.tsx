@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { BulkDocumentUpload } from '@/components/BulkDocumentUpload';
 import { DocumentAIAnalysis } from '@/components/DocumentAIAnalysis';
+import { ScrollableTable } from '@/components/ScrollableTable';
 import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers, Brain, Eye, FileQuestion, Users } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatNumber } from '@/lib/formatters';
@@ -351,7 +352,7 @@ export function Documents() {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <ScrollableTable maxHeight="calc(100vh - 400px)">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -474,7 +475,7 @@ export function Documents() {
               )}
             </tbody>
           </table>
-        </div>
+        </ScrollableTable>
       </div>
 
       {showUploadModal && (
@@ -812,7 +813,7 @@ export function Documents() {
                     </span>
                   </div>
 
-                  <div className="overflow-x-auto">
+                  <ScrollableTable maxHeight="500px">
                     <table className="w-full">
                       <thead className="bg-gray-50">
                         <tr>
@@ -884,7 +885,7 @@ export function Documents() {
                         ))}
                       </tbody>
                     </table>
-                  </div>
+                  </ScrollableTable>
 
                   <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <div className="flex items-start gap-3">
