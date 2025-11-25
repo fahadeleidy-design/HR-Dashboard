@@ -89,7 +89,7 @@ export function Documents() {
 
       const { data: contractDocs, error: docError } = await supabase
         .from('documents')
-        .select('employee_id')
+        .select('employee_id, document_name, holder_name')
         .eq('company_id', currentCompany.id)
         .eq('document_type', 'contract');
 
@@ -98,25 +98,50 @@ export function Documents() {
         return;
       }
 
-      console.log('=== MISSING CONTRACTS DETECTION ===');
+      console.log('=== MISSING CONTRACTS DETECTION (NAME-BASED) ===');
       console.log('Company ID:', currentCompany.id);
       console.log('Total employees:', allEmployees?.length || 0);
       console.log('Contract documents found:', contractDocs?.length || 0);
-      console.log('Contract docs data:', contractDocs);
 
       if (allEmployees && contractDocs) {
-        const employeeIdsWithContracts = new Set(contractDocs.map(doc => doc.employee_id));
-        console.log('Unique employees with contracts:', employeeIdsWithContracts.size);
-        console.log('Employee IDs with contracts:', Array.from(employeeIdsWithContracts));
+        const normalizeString = (str: string) => {
+          return str
+            .toUpperCase()
+            .replace(/\s+/g, ' ')
+            .trim()
+            .replace(/[^\w\s]/g, '');
+        };
 
-        const employeesWithout = allEmployees.filter(emp => !employeeIdsWithContracts.has(emp.id));
+        const contractNames = new Set(
+          contractDocs
+            .map(doc => normalizeString(doc.document_name || doc.holder_name || ''))
+            .filter(name => name.length > 0)
+        );
+
+        const employeeIdsWithContracts = new Set(
+          contractDocs.map(doc => doc.employee_id).filter(id => id)
+        );
+
+        console.log('Contract names found:', Array.from(contractNames).slice(0, 10));
+        console.log('Unique employees with contracts (by ID):', employeeIdsWithContracts.size);
+
+        const employeesWithout = allEmployees.filter(emp => {
+          const employeeNameEN = normalizeString(`${emp.first_name_en} ${emp.last_name_en}`);
+          const employeeNameAR = normalizeString(`${emp.first_name_ar || ''} ${emp.last_name_ar || ''}`);
+
+          const hasContractByName = contractNames.has(employeeNameEN) || contractNames.has(employeeNameAR);
+          const hasContractById = employeeIdsWithContracts.has(emp.id);
+
+          return !hasContractByName && !hasContractById;
+        });
 
         console.log('Employees WITHOUT contracts:', employeesWithout.length);
         if (employeesWithout.length > 0) {
           console.log('Missing contract employees (first 10):', employeesWithout.slice(0, 10).map(e => ({
             id: e.id,
             number: e.employee_number,
-            name: `${e.first_name_en} ${e.last_name_en}`
+            nameEN: `${e.first_name_en} ${e.last_name_en}`,
+            nameAR: `${e.first_name_ar || ''} ${e.last_name_ar || ''}`
           })));
         }
         console.log('=================================');
