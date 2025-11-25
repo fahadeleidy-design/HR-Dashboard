@@ -4,7 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { BulkDocumentUpload } from '@/components/BulkDocumentUpload';
 import { DocumentAIAnalysis } from '@/components/DocumentAIAnalysis';
-import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers, Brain, Eye } from 'lucide-react';
+import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers, Brain, Eye, FileQuestion, Users } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatNumber } from '@/lib/formatters';
 
@@ -37,9 +37,11 @@ export function Documents() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showAIAnalysisModal, setShowAIAnalysisModal] = useState(false);
+  const [showMissingContractsModal, setShowMissingContractsModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [uploading, setUploading] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [employeesWithoutContracts, setEmployeesWithoutContracts] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     employee_id: '',
     document_type: 'iqama',
@@ -53,6 +55,7 @@ export function Documents() {
     if (currentCompany) {
       fetchDocuments();
       fetchEmployees();
+      fetchEmployeesWithoutContracts();
     }
   }, [currentCompany]);
 
@@ -66,6 +69,28 @@ export function Documents() {
       .order('first_name_en');
 
     if (data) setEmployees(data);
+  };
+
+  const fetchEmployeesWithoutContracts = async () => {
+    if (!currentCompany) return;
+
+    const { data: allEmployees } = await supabase
+      .from('employees')
+      .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, employee_number, position, department, hire_date, employment_status')
+      .eq('company_id', currentCompany.id)
+      .order('first_name_en');
+
+    const { data: contractDocs } = await supabase
+      .from('documents')
+      .select('employee_id')
+      .eq('company_id', currentCompany.id)
+      .eq('document_type', 'contract');
+
+    if (allEmployees && contractDocs) {
+      const employeeIdsWithContracts = new Set(contractDocs.map(doc => doc.employee_id));
+      const employeesWithout = allEmployees.filter(emp => !employeeIdsWithContracts.has(emp.id));
+      setEmployeesWithoutContracts(employeesWithout);
+    }
   };
 
   const fetchDocuments = async () => {
@@ -101,6 +126,11 @@ export function Documents() {
   const expiredCount = documents.filter(d => d.status === 'expired').length;
 
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredDocuments);
+
+  const refreshData = () => {
+    fetchDocuments();
+    fetchEmployeesWithoutContracts();
+  };
 
   const handleUpload = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -191,7 +221,7 @@ export function Documents() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -229,6 +259,20 @@ export function Documents() {
               <p className="text-2xl font-bold text-red-600 mt-1">{formatNumber(expiredCount, language)}</p>
             </div>
             <AlertTriangle className="h-12 w-12 text-red-600" />
+          </div>
+        </div>
+
+        <div
+          className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-all duration-200 border-2 border-orange-200 hover:border-orange-400"
+          onClick={() => setShowMissingContractsModal(true)}
+        >
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-orange-700">Missing Contracts</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{formatNumber(employeesWithoutContracts.length, language)}</p>
+              <p className="text-xs text-orange-600 mt-1">employees</p>
+            </div>
+            <FileQuestion className="h-12 w-12 text-orange-600" />
           </div>
         </div>
       </div>
@@ -565,7 +609,7 @@ export function Documents() {
                 companyId={currentCompany!.id}
                 onComplete={() => {
                   setShowBulkUploadModal(false);
-                  fetchDocuments();
+                  refreshData();
                 }}
                 onCancel={() => setShowBulkUploadModal(false)}
               />
@@ -603,9 +647,150 @@ export function Documents() {
                 documentType={selectedDocument.document_type}
                 fileUrl={selectedDocument.document_url}
                 onAnalysisComplete={() => {
-                  fetchDocuments();
+                  refreshData();
                 }}
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMissingContractsModal && (
+        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+                    <FileQuestion className="h-6 w-6 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Employees Missing Contracts</h2>
+                    <p className="text-gray-600 mt-1">
+                      {employeesWithoutContracts.length} {employeesWithoutContracts.length === 1 ? 'employee' : 'employees'} without contracts
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowMissingContractsModal(false)}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {employeesWithoutContracts.length === 0 ? (
+                <div className="text-center py-12">
+                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-2">All Set!</h3>
+                  <p className="text-gray-600">All employees have contracts on file</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-lg mb-4">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className="h-5 w-5 text-orange-600" />
+                      <div>
+                        <p className="text-sm font-semibold text-orange-900">Action Required</p>
+                        <p className="text-xs text-orange-700">The following employees need contract documents uploaded</p>
+                      </div>
+                    </div>
+                    <span className="px-3 py-1 bg-orange-100 text-orange-800 rounded-full text-sm font-bold">
+                      {employeesWithoutContracts.length}
+                    </span>
+                  </div>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Employee #
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Name (English)
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Name (Arabic)
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Position
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Department
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Hire Date
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {employeesWithoutContracts.map((employee) => (
+                          <tr key={employee.id} className="hover:bg-orange-50 transition-colors">
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-sm font-medium text-gray-900">{employee.employee_number}</span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4 text-gray-400" />
+                                <span className="text-sm font-medium text-gray-900">
+                                  {employee.first_name_en} {employee.last_name_en}
+                                </span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-sm text-gray-700" dir="rtl">
+                                {employee.first_name_ar} {employee.last_name_ar}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-sm text-gray-700">{employee.position || '-'}</span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-sm text-gray-700">{employee.department || '-'}</span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className="text-sm text-gray-700">
+                                {employee.hire_date ? new Date(employee.hire_date).toLocaleDateString() : '-'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                employee.employment_status === 'active'
+                                  ? 'bg-green-100 text-green-800'
+                                  : employee.employment_status === 'probation'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}>
+                                {employee.employment_status || 'active'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex items-start gap-3">
+                      <FileText className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-blue-900 mb-2">Quick Actions</p>
+                        <ul className="text-sm text-blue-700 space-y-1">
+                          <li>• Use "Add Document" button to upload individual contracts</li>
+                          <li>• Use "AI Bulk Upload" for multiple contracts at once</li>
+                          <li>• Ensure all employment contracts are properly documented for compliance</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
