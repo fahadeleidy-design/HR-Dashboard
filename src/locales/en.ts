@@ -899,6 +899,20 @@ export const enTranslations = {
     expired: 'Expired',
   },
 
+  documents: {
+    title: 'Documents',
+    subtitle: 'Manage employee documents and certifications',
+    addDocument: 'Add Document',
+    documentType: 'Document Type',
+    documentNumber: 'Document Number',
+    issueDate: 'Issue Date',
+    expiryDate: 'Expiry Date',
+    status: 'Status',
+    active: 'Active',
+    expiringSoon: 'Expiring Soon',
+    expired: 'Expired',
+  },
+
   governmentalDocs: {
     title: 'Governmental Documents',
     subtitle: 'Manage licenses and government documents',

@@ -867,6 +867,20 @@ export const arTranslations = {
     rejected: 'مرفوضة',
   },
 
+  documents: {
+    title: 'المستندات',
+    subtitle: 'إدارة مستندات وشهادات الموظفين',
+    addDocument: 'إضافة مستند',
+    documentType: 'نوع المستند',
+    documentNumber: 'رقم المستند',
+    issueDate: 'تاريخ الإصدار',
+    expiryDate: 'تاريخ الانتهاء',
+    status: 'الحالة',
+    active: 'نشط',
+    expiringSoon: 'ينتهي قريباً',
+    expired: 'منتهي',
+  },
+
   visas: {
     title: 'التأشيرات ورخص العمل',
     subtitle: 'إدارة تأشيرات ورخص عمل الموظفين',
