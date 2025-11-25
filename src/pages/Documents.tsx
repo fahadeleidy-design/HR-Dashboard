@@ -74,22 +74,46 @@ export function Documents() {
   const fetchEmployeesWithoutContracts = async () => {
     if (!currentCompany) return;
 
-    const { data: allEmployees } = await supabase
-      .from('employees')
-      .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, employee_number, position, department, hire_date, employment_status')
-      .eq('company_id', currentCompany.id)
-      .order('first_name_en');
+    try {
+      const { data: allEmployees, error: empError } = await supabase
+        .from('employees')
+        .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, employee_number, position, department, hire_date, employment_status')
+        .eq('company_id', currentCompany.id)
+        .order('first_name_en');
 
-    const { data: contractDocs } = await supabase
-      .from('documents')
-      .select('employee_id')
-      .eq('company_id', currentCompany.id)
-      .eq('document_type', 'contract');
+      if (empError) {
+        console.error('Error fetching employees:', empError);
+        return;
+      }
 
-    if (allEmployees && contractDocs) {
-      const employeeIdsWithContracts = new Set(contractDocs.map(doc => doc.employee_id));
-      const employeesWithout = allEmployees.filter(emp => !employeeIdsWithContracts.has(emp.id));
-      setEmployeesWithoutContracts(employeesWithout);
+      const { data: contractDocs, error: docError } = await supabase
+        .from('documents')
+        .select('employee_id')
+        .eq('company_id', currentCompany.id)
+        .eq('document_type', 'contract');
+
+      if (docError) {
+        console.error('Error fetching contract documents:', docError);
+        return;
+      }
+
+      console.log('Total employees:', allEmployees?.length || 0);
+      console.log('Employees with contracts:', contractDocs?.length || 0);
+
+      if (allEmployees && contractDocs) {
+        const employeeIdsWithContracts = new Set(contractDocs.map(doc => doc.employee_id));
+        const employeesWithout = allEmployees.filter(emp => !employeeIdsWithContracts.has(emp.id));
+
+        console.log('Employees WITHOUT contracts:', employeesWithout.length);
+        console.log('Missing contract employees:', employeesWithout.map(e => `${e.employee_number}: ${e.first_name_en} ${e.last_name_en}`));
+
+        setEmployeesWithoutContracts(employeesWithout);
+      } else {
+        setEmployeesWithoutContracts([]);
+      }
+    } catch (error) {
+      console.error('Error in fetchEmployeesWithoutContracts:', error);
+      setEmployeesWithoutContracts([]);
     }
   };
 
@@ -263,16 +287,30 @@ export function Documents() {
         </div>
 
         <div
-          className="bg-gradient-to-br from-orange-50 to-red-50 rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-all duration-200 border-2 border-orange-200 hover:border-orange-400"
+          className={`rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-all duration-200 border-2 ${
+            employeesWithoutContracts.length > 0
+              ? 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 hover:border-orange-400'
+              : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 hover:border-green-400'
+          }`}
           onClick={() => setShowMissingContractsModal(true)}
         >
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-orange-700">Missing Contracts</p>
-              <p className="text-2xl font-bold text-orange-600 mt-1">{formatNumber(employeesWithoutContracts.length, language)}</p>
-              <p className="text-xs text-orange-600 mt-1">employees</p>
+              <p className={`text-sm font-medium ${employeesWithoutContracts.length > 0 ? 'text-orange-700' : 'text-green-700'}`}>
+                Missing Contracts
+              </p>
+              <p className={`text-2xl font-bold mt-1 ${employeesWithoutContracts.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                {formatNumber(employeesWithoutContracts.length, language)}
+              </p>
+              <p className={`text-xs mt-1 ${employeesWithoutContracts.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                {employeesWithoutContracts.length === 0 ? 'all have contracts' : 'employees'}
+              </p>
             </div>
-            <FileQuestion className="h-12 w-12 text-orange-600" />
+            {employeesWithoutContracts.length > 0 ? (
+              <FileQuestion className="h-12 w-12 text-orange-600" />
+            ) : (
+              <CheckCircle className="h-12 w-12 text-green-600" />
+            )}
           </div>
         </div>
       </div>
@@ -682,13 +720,68 @@ export function Documents() {
 
             <div className="p-6">
               {employeesWithoutContracts.length === 0 ? (
-                <div className="text-center py-12">
-                  <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                  <h3 className="text-xl font-bold text-gray-900 mb-2">All Set!</h3>
-                  <p className="text-gray-600">All employees have contracts on file</p>
+                <div className="space-y-6">
+                  <div className="text-center py-12">
+                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">All Set!</h3>
+                    <p className="text-gray-600">All employees have contracts on file</p>
+                  </div>
+
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm font-semibold text-blue-900 mb-3">Contract Coverage Summary</p>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-2xl font-bold text-blue-600">{employees.length}</p>
+                        <p className="text-xs text-blue-700">Total Employees</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-green-600">{employees.length}</p>
+                        <p className="text-xs text-green-700">With Contracts</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-orange-600">0</p>
+                        <p className="text-xs text-orange-700">Missing Contracts</p>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '100%' }}></div>
+                      </div>
+                      <p className="text-center text-xs text-gray-600 mt-2">100% Contract Coverage</p>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-3">
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-4">
+                    <p className="text-sm font-semibold text-blue-900 mb-3">Contract Coverage Summary</p>
+                    <div className="grid grid-cols-3 gap-4 text-center">
+                      <div>
+                        <p className="text-2xl font-bold text-blue-600">{employees.length}</p>
+                        <p className="text-xs text-blue-700">Total Employees</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-green-600">{employees.length - employeesWithoutContracts.length}</p>
+                        <p className="text-xs text-green-700">With Contracts</p>
+                      </div>
+                      <div>
+                        <p className="text-2xl font-bold text-orange-600">{employeesWithoutContracts.length}</p>
+                        <p className="text-xs text-orange-700">Missing Contracts</p>
+                      </div>
+                    </div>
+                    <div className="mt-4">
+                      <div className="w-full bg-gray-200 rounded-full h-2">
+                        <div
+                          className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${((employees.length - employeesWithoutContracts.length) / employees.length * 100).toFixed(1)}%` }}
+                        ></div>
+                      </div>
+                      <p className="text-center text-xs text-gray-600 mt-2">
+                        {((employees.length - employeesWithoutContracts.length) / employees.length * 100).toFixed(1)}% Contract Coverage
+                      </p>
+                    </div>
+                  </div>
+
                   <div className="flex items-center justify-between p-4 bg-orange-50 border border-orange-200 rounded-lg mb-4">
                     <div className="flex items-center gap-3">
                       <AlertTriangle className="h-5 w-5 text-orange-600" />
