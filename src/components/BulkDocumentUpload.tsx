@@ -27,6 +27,7 @@ export function BulkDocumentUpload({ companyId, onComplete, onCancel }: BulkDocu
   const [employees, setEmployees] = useState<any[]>([]);
   const [uploadItems, setUploadItems] = useState<UploadItem[]>([]);
   const [processing, setProcessing] = useState(false);
+  const [bulkDocType, setBulkDocType] = useState<string>('');
   const { showToast } = useToast();
 
   useEffect(() => {
@@ -183,6 +184,14 @@ export function BulkDocumentUpload({ companyId, onComplete, onCancel }: BulkDocu
     });
   };
 
+  const applyBulkDocumentType = (documentType: string) => {
+    setBulkDocType(documentType);
+    setUploadItems(prev => prev.map(item => ({
+      ...item,
+      documentType
+    })));
+  };
+
   const processAllUploads = async () => {
     const validItems = uploadItems.filter(item => item.employeeId);
 
@@ -330,22 +339,57 @@ export function BulkDocumentUpload({ companyId, onComplete, onCancel }: BulkDocu
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
-            <div className="flex items-center gap-2">
-              <FileText className="h-5 w-5 text-purple-600" />
-              <span className="font-medium text-purple-900">{files.length} files selected</span>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-4 bg-purple-50 border border-purple-200 rounded-lg">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-purple-600" />
+                <span className="font-medium text-purple-900">{files.length} files selected</span>
+              </div>
+              {!processing && (
+                <button
+                  onClick={() => {
+                    setFiles([]);
+                    setUploadItems([]);
+                    setBulkDocType('');
+                  }}
+                  className="p-1 hover:bg-purple-100 rounded transition-colors"
+                >
+                  <X className="h-5 w-5 text-purple-600" />
+                </button>
+              )}
             </div>
-            {!processing && (
-              <button
-                onClick={() => {
-                  setFiles([]);
-                  setUploadItems([]);
-                }}
-                className="p-1 hover:bg-purple-100 rounded transition-colors"
-              >
-                <X className="h-5 w-5 text-purple-600" />
-              </button>
-            )}
+
+            <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Sparkles className="h-5 w-5 text-purple-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    Set Document Type for All
+                  </label>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Select a document type to apply to all {files.length} files at once
+                  </p>
+                  <select
+                    value={bulkDocType}
+                    onChange={(e) => applyBulkDocumentType(e.target.value)}
+                    className="w-full sm:w-64 px-4 py-2.5 text-sm font-medium border-2 border-purple-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 bg-white shadow-sm hover:border-purple-400 transition-colors"
+                    disabled={processing}
+                  >
+                    <option value="">Select type for all...</option>
+                    {DOCUMENT_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {type.charAt(0).toUpperCase() + type.slice(1)}
+                      </option>
+                    ))}
+                  </select>
+                  {bulkDocType && (
+                    <p className="mt-2 text-xs text-purple-700 font-medium">
+                      ✓ All documents set to: {bulkDocType.charAt(0).toUpperCase() + bulkDocType.slice(1)}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-3 max-h-96 overflow-y-auto">
