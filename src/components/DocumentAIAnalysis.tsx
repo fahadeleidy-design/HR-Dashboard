@@ -169,15 +169,18 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
     try {
       const { data: doc } = await supabase
         .from('documents')
-        .select('file_path')
+        .select('document_url')
         .eq('id', documentId)
         .single();
 
-      if (!doc?.file_path) throw new Error('Document file path not found');
+      if (!doc?.document_url) throw new Error('Document URL not found');
+
+      const storagePath = doc.document_url.split('/documents/')[1];
+      if (!storagePath) throw new Error('Invalid document URL');
 
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('documents')
-        .download(doc.file_path);
+        .download(storagePath);
 
       if (downloadError) throw downloadError;
 
