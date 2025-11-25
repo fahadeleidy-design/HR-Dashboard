@@ -3,10 +3,11 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { BulkContractUpload } from '@/components/BulkContractUpload';
 import {
   FileText, Plus, Eye, Edit, AlertTriangle, CheckCircle, Clock,
   XCircle, Search, Filter, Download, RefreshCw, Building2, Calendar,
-  DollarSign, FileCheck, AlertCircle
+  DollarSign, FileCheck, AlertCircle, Layers
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 
@@ -54,6 +55,7 @@ export function Contracts() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [selectedContract, setSelectedContract] = useState<Contract | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
@@ -190,13 +192,22 @@ export function Contracts() {
           <h1 className="text-3xl font-bold text-gray-900">{t.contracts.title}</h1>
           <p className="text-gray-600 mt-1">{t.contracts.subtitle}</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 ${isRTL ? 'flex-row-reverse' : ''}`}
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t.contracts.newContract}</span>
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className={`flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-200 hover:shadow-xl hover:scale-105 ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
+            <Plus className="h-5 w-5" />
+            <span>{t.contracts.newContract}</span>
+          </button>
+          <button
+            onClick={() => setShowBulkUploadModal(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-200 hover:shadow-xl hover:scale-105"
+          >
+            <Layers className="h-5 w-5" />
+            <span>AI Bulk Upload</span>
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -542,6 +553,28 @@ export function Contracts() {
                   Edit Contract
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showBulkUploadModal && (
+        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+              <h2 className="text-2xl font-bold text-gray-900">AI Bulk Contract Upload</h2>
+              <p className="text-gray-600 mt-1">Upload multiple employee contracts with automatic name detection</p>
+            </div>
+
+            <div className="p-6">
+              <BulkContractUpload
+                companyId={currentCompany!.id}
+                onComplete={() => {
+                  setShowBulkUploadModal(false);
+                  fetchData();
+                }}
+                onCancel={() => setShowBulkUploadModal(false)}
+              />
             </div>
           </div>
         </div>
