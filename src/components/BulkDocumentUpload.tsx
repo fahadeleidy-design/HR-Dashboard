@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, FileText, Loader2, CheckCircle, XCircle, AlertCircle, Sparkles, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
@@ -29,9 +29,9 @@ export function BulkDocumentUpload({ companyId, onComplete, onCancel }: BulkDocu
   const [processing, setProcessing] = useState(false);
   const { showToast } = useToast();
 
-  useState(() => {
+  useEffect(() => {
     fetchEmployees();
-  });
+  }, [companyId]);
 
   const fetchEmployees = async () => {
     const { data } = await supabase
