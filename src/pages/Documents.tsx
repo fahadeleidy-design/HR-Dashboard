@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabase';
 import { BulkDocumentUpload } from '@/components/BulkDocumentUpload';
 import { DocumentAIAnalysis } from '@/components/DocumentAIAnalysis';
 import { ScrollableTable } from '@/components/ScrollableTable';
-import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers, Brain, Eye, FileQuestion, Users } from 'lucide-react';
+import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers, Brain, Eye, FileQuestion, Users, Printer, Download, FileSpreadsheet, Filter } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatNumber } from '@/lib/formatters';
 
@@ -39,7 +40,9 @@ export function Documents() {
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showAIAnalysisModal, setShowAIAnalysisModal] = useState(false);
   const [showMissingContractsModal, setShowMissingContractsModal] = useState(false);
+  const [showEmployeeDocumentsModal, setShowEmployeeDocumentsModal] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>('');
   const [uploading, setUploading] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [employeesWithoutContracts, setEmployeesWithoutContracts] = useState<any[]>([]);
@@ -181,8 +184,9 @@ export function Documents() {
   };
 
   const filteredDocuments = documents.filter(doc => {
-    if (filter === 'all') return true;
-    return doc.status === filter;
+    const matchesStatus = filter === 'all' || doc.status === filter;
+    const matchesEmployee = !selectedEmployeeId || doc.employee_id === selectedEmployeeId;
+    return matchesStatus && matchesEmployee;
   });
 
   const activeCount = documents.filter(d => d.status === 'active').length;
@@ -194,6 +198,159 @@ export function Documents() {
   const refreshData = () => {
     fetchDocuments();
     fetchEmployeesWithoutContracts();
+  };
+
+  const getEmployeeDocuments = (employeeId: string) => {
+    return documents.filter(doc => doc.employee_id === employeeId);
+  };
+
+  const handleViewEmployeeDocuments = (employeeId: string) => {
+    setSelectedEmployeeId(employeeId);
+    setShowEmployeeDocumentsModal(true);
+  };
+
+  const handlePrintEmployeeDocuments = (employeeId: string) => {
+    const employeeDocs = getEmployeeDocuments(employeeId);
+    const employee = employees.find(e => e.id === employeeId);
+
+    if (!employee) return;
+
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Employee Documents - ${employee.first_name_en} ${employee.last_name_en}</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; }
+            h1 { color: #1e40af; border-bottom: 3px solid #1e40af; padding-bottom: 10px; }
+            h2 { color: #374151; margin-top: 30px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+            th { background-color: #1e40af; color: white; }
+            tr:nth-child(even) { background-color: #f3f4f6; }
+            .status-active { color: #059669; font-weight: bold; }
+            .status-expiring { color: #d97706; font-weight: bold; }
+            .status-expired { color: #dc2626; font-weight: bold; }
+            .header { display: flex; justify-content: space-between; margin-bottom: 20px; }
+            .company-info { text-align: right; color: #6b7280; }
+            @media print {
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div>
+              <h1>Employee Documents Report</h1>
+              <p><strong>Employee:</strong> ${employee.first_name_en} ${employee.last_name_en} (${employee.employee_number})</p>
+              <p><strong>Total Documents:</strong> ${employeeDocs.length}</p>
+            </div>
+            <div class="company-info">
+              <p><strong>${currentCompany?.name_en || 'Company'}</strong></p>
+              <p>${new Date().toLocaleDateString()}</p>
+            </div>
+          </div>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Document Type</th>
+                <th>Document Name</th>
+                <th>Issue Date</th>
+                <th>Expiry Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${employeeDocs.map(doc => `
+                <tr>
+                  <td>${doc.document_type.toUpperCase()}</td>
+                  <td>${doc.document_name || '-'}</td>
+                  <td>${doc.issue_date ? new Date(doc.issue_date).toLocaleDateString() : '-'}</td>
+                  <td>${doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : '-'}</td>
+                  <td class="status-${doc.status}">${doc.status.replace('_', ' ').toUpperCase()}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <script>
+            window.onload = function() { window.print(); }
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handleExportEmployeeDocuments = (employeeId: string, format: 'excel' | 'pdf' = 'excel') => {
+    const employeeDocs = getEmployeeDocuments(employeeId);
+    const employee = employees.find(e => e.id === employeeId);
+
+    if (!employee) return;
+
+    if (format === 'excel') {
+      const exportData = employeeDocs.map(doc => ({
+        'Employee Number': employee.employee_number,
+        'Employee Name': `${employee.first_name_en} ${employee.last_name_en}`,
+        'Document Type': doc.document_type.toUpperCase(),
+        'Document Name': doc.document_name || '-',
+        'Issue Date': doc.issue_date ? new Date(doc.issue_date).toLocaleDateString() : '-',
+        'Expiry Date': doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : '-',
+        'Status': doc.status.replace('_', ' ').toUpperCase()
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Employee Documents');
+
+      const colWidths = [
+        { wch: 15 },
+        { wch: 25 },
+        { wch: 15 },
+        { wch: 30 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 15 }
+      ];
+      ws['!cols'] = colWidths;
+
+      XLSX.writeFile(wb, `${employee.first_name_en}_${employee.last_name_en}_Documents_${new Date().toISOString().split('T')[0]}.xlsx`);
+    }
+  };
+
+  const handleExportAllDocuments = () => {
+    const exportData = documents.map(doc => ({
+      'Employee Number': doc.employee?.employee_number || '-',
+      'Employee Name': doc.employee ? `${doc.employee.first_name_en} ${doc.employee.last_name_en}` : '-',
+      'Document Type': doc.document_type.toUpperCase(),
+      'Document Name': doc.document_name || '-',
+      'Issue Date': doc.issue_date ? new Date(doc.issue_date).toLocaleDateString() : '-',
+      'Expiry Date': doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : '-',
+      'Status': doc.status.replace('_', ' ').toUpperCase()
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'All Documents');
+
+    const colWidths = [
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 15 },
+      { wch: 30 },
+      { wch: 12 },
+      { wch: 12 },
+      { wch: 15 }
+    ];
+    ws['!cols'] = colWidths;
+
+    XLSX.writeFile(wb, `All_Documents_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
 
   const handleUpload = async (e: React.FormEvent) => {
@@ -271,6 +428,13 @@ export function Documents() {
           </p>
         </div>
         <div className="flex gap-3">
+          <button
+            onClick={handleExportAllDocuments}
+            className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-green-200 hover:shadow-xl hover:scale-105"
+          >
+            <FileSpreadsheet className="h-5 w-5" />
+            <span>Export All</span>
+          </button>
           <button
             onClick={() => setShowUploadModal(true)}
             className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-200 hover:shadow-xl hover:scale-105"
@@ -359,7 +523,50 @@ export function Documents() {
       </div>
 
       <div className="bg-white rounded-lg shadow">
-        <div className="p-4 border-b border-gray-200">
+        <div className="p-4 border-b border-gray-200 space-y-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 flex-1">
+              <Filter className="h-5 w-5 text-gray-500" />
+              <select
+                value={selectedEmployeeId}
+                onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                className="flex-1 max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              >
+                <option value="">All Employees</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
+                  </option>
+                ))}
+              </select>
+              {selectedEmployeeId && (
+                <>
+                  <button
+                    onClick={() => handleViewEmployeeDocuments(selectedEmployeeId)}
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span>View</span>
+                  </button>
+                  <button
+                    onClick={() => handlePrintEmployeeDocuments(selectedEmployeeId)}
+                    className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Print</span>
+                  </button>
+                  <button
+                    onClick={() => handleExportEmployeeDocuments(selectedEmployeeId)}
+                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Export</span>
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
           <div className="flex space-x-2">
             {['all', 'active', 'expiring_soon', 'expired'].map((status) => (
               <button
@@ -932,6 +1139,180 @@ export function Documents() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEmployeeDocumentsModal && selectedEmployeeId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-4 flex items-center justify-between rounded-t-xl z-10">
+              <div className="flex items-center gap-3">
+                <div className="h-12 w-12 rounded-xl bg-white bg-opacity-20 flex items-center justify-center">
+                  <FileText className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">Employee Documents</h2>
+                  <p className="text-blue-100 mt-1">
+                    {(() => {
+                      const emp = employees.find(e => e.id === selectedEmployeeId);
+                      return emp ? `${emp.first_name_en} ${emp.last_name_en} (${emp.employee_number})` : '';
+                    })()}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handlePrintEmployeeDocuments(selectedEmployeeId)}
+                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                  title="Print"
+                >
+                  <Printer className="h-5 w-5 text-white" />
+                </button>
+                <button
+                  onClick={() => handleExportEmployeeDocuments(selectedEmployeeId)}
+                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                  title="Export to Excel"
+                >
+                  <Download className="h-5 w-5 text-white" />
+                </button>
+                <button
+                  onClick={() => {
+                    setShowEmployeeDocumentsModal(false);
+                    setSelectedEmployeeId('');
+                  }}
+                  className="p-2 hover:bg-white hover:bg-opacity-20 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-white" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {(() => {
+                const employeeDocs = getEmployeeDocuments(selectedEmployeeId);
+                const emp = employees.find(e => e.id === selectedEmployeeId);
+
+                if (!emp) return null;
+
+                return (
+                  <>
+                    <div className="grid grid-cols-3 gap-4 mb-6">
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <FileText className="h-8 w-8 text-blue-600" />
+                          <div>
+                            <p className="text-sm text-blue-600 font-medium">Total Documents</p>
+                            <p className="text-2xl font-bold text-blue-900">{employeeDocs.length}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="h-8 w-8 text-green-600" />
+                          <div>
+                            <p className="text-sm text-green-600 font-medium">Active</p>
+                            <p className="text-2xl font-bold text-green-900">
+                              {employeeDocs.filter(d => d.status === 'active').length}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <AlertTriangle className="h-8 w-8 text-red-600" />
+                          <div>
+                            <p className="text-sm text-red-600 font-medium">Expired</p>
+                            <p className="text-2xl font-bold text-red-900">
+                              {employeeDocs.filter(d => d.status === 'expired').length}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {employeeDocs.length === 0 ? (
+                      <div className="text-center py-12">
+                        <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">No Documents Found</h3>
+                        <p className="text-gray-600">This employee has no documents uploaded yet.</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Document Type
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Document Name
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Issue Date
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Expiry Date
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Status
+                              </th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Actions
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {employeeDocs.map((doc) => (
+                              <tr key={doc.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    {doc.document_type.toUpperCase()}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span className="text-sm text-gray-900">{doc.document_name || '-'}</span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                                  {doc.issue_date ? new Date(doc.issue_date).toLocaleDateString() : '-'}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                                  {doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : '-'}
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                    doc.status === 'active'
+                                      ? 'bg-green-100 text-green-800'
+                                      : doc.status === 'expiring_soon'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-red-100 text-red-800'
+                                  }`}>
+                                    {doc.status.replace('_', ' ').toUpperCase()}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 whitespace-nowrap">
+                                  {doc.document_url && (
+                                    <a
+                                      href={doc.document_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
+                                    >
+                                      <Eye className="h-3 w-3" />
+                                      <span>View</span>
+                                    </a>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
