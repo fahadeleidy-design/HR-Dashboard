@@ -78,7 +78,7 @@ export function Documents() {
     try {
       const { data: allEmployees, error: empError } = await supabase
         .from('employees')
-        .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, employee_number, position, department, hire_date, employment_status')
+        .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, employee_number, job_title_en, hire_date, employment_status')
         .eq('company_id', currentCompany.id)
         .order('first_name_en');
 
@@ -753,19 +753,24 @@ export function Documents() {
                         <p className="text-xs text-blue-700">Total Employees</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-green-600">{employees.length}</p>
+                        <p className="text-2xl font-bold text-green-600">{employees.length - employeesWithoutContracts.length}</p>
                         <p className="text-xs text-green-700">With Contracts</p>
                       </div>
                       <div>
-                        <p className="text-2xl font-bold text-orange-600">0</p>
+                        <p className="text-2xl font-bold text-orange-600">{employeesWithoutContracts.length}</p>
                         <p className="text-xs text-orange-700">Missing Contracts</p>
                       </div>
                     </div>
                     <div className="mt-4">
                       <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div className="bg-green-500 h-2 rounded-full" style={{ width: '100%' }}></div>
+                        <div
+                          className="bg-green-500 h-2 rounded-full transition-all duration-500"
+                          style={{ width: `${employees.length > 0 ? ((employees.length - employeesWithoutContracts.length) / employees.length * 100).toFixed(1) : 0}%` }}
+                        ></div>
                       </div>
-                      <p className="text-center text-xs text-gray-600 mt-2">100% Contract Coverage</p>
+                      <p className="text-center text-xs text-gray-600 mt-2">
+                        {employees.length > 0 ? ((employees.length - employeesWithoutContracts.length) / employees.length * 100).toFixed(1) : 0}% Contract Coverage
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -860,10 +865,10 @@ export function Documents() {
                               </span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="text-sm text-gray-700">{employee.position || '-'}</span>
+                              <span className="text-sm text-gray-700">{employee.job_title_en || '-'}</span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
-                              <span className="text-sm text-gray-700">{employee.department || '-'}</span>
+                              <span className="text-sm text-gray-700">-</span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
                               <span className="text-sm text-gray-700">
