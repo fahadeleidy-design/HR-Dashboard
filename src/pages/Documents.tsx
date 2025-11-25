@@ -3,7 +3,8 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { BulkDocumentUpload } from '@/components/BulkDocumentUpload';
-import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers } from 'lucide-react';
+import { DocumentAIAnalysis } from '@/components/DocumentAIAnalysis';
+import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers, Brain, Eye } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatNumber } from '@/lib/formatters';
 
@@ -12,9 +13,14 @@ interface Document {
   employee_id: string;
   document_type: string;
   document_number: string;
+  document_url: string;
   issue_date: string;
   expiry_date: string | null;
   status: 'active' | 'expired' | 'expiring_soon';
+  extraction_status?: string;
+  extraction_confidence?: number;
+  extracted_data?: Record<string, any>;
+  ai_analysis?: Record<string, any>;
   employee: {
     employee_number: string;
     first_name_en: string;
@@ -30,6 +36,8 @@ export function Documents() {
   const [filter, setFilter] = useState<'all' | 'active' | 'expiring_soon' | 'expired'>('all');
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
+  const [showAIAnalysisModal, setShowAIAnalysisModal] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
   const [uploading, setUploading] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
   const [formData, setFormData] = useState({
@@ -284,12 +292,18 @@ export function Documents() {
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  AI Analysis
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                     {t.messages.noResults}
                   </td>
                 </tr>
@@ -324,6 +338,37 @@ export function Documents() {
                       }`}>
                         {document.status.split('_').join(' ')}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {document.extraction_status === 'completed' ? (
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                            <CheckCircle className="h-3 w-3" />
+                            <span>{document.extraction_confidence}%</span>
+                          </div>
+                        </div>
+                      ) : document.extraction_status === 'processing' ? (
+                        <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          <span>Processing</span>
+                        </div>
+                      ) : (
+                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                          Not analyzed
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => {
+                          setSelectedDocument(document);
+                          setShowAIAnalysisModal(true);
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-xs font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200"
+                      >
+                        <Brain className="h-3 w-3" />
+                        <span>AI Analysis</span>
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -523,6 +568,43 @@ export function Documents() {
                   fetchDocuments();
                 }}
                 onCancel={() => setShowBulkUploadModal(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAIAnalysisModal && selectedDocument && (
+        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            <div className="p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">AI Document Analysis</h2>
+                  <p className="text-gray-600 mt-1">
+                    {selectedDocument.employee.first_name_en} {selectedDocument.employee.last_name_en} - {selectedDocument.document_type}
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowAIAnalysisModal(false);
+                    setSelectedDocument(null);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <DocumentAIAnalysis
+                documentId={selectedDocument.id}
+                documentType={selectedDocument.document_type}
+                fileUrl={selectedDocument.document_url}
+                onAnalysisComplete={() => {
+                  fetchDocuments();
+                }}
               />
             </div>
           </div>
