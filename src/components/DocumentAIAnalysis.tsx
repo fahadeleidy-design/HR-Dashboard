@@ -35,6 +35,7 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
   const [analysisData, setAnalysisData] = useState<AnalysisData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   useEffect(() => {
     loadExistingAnalysis();
@@ -161,20 +162,39 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
 
   const handleAnalyze = async () => {
     setError(null);
+    setShowSuccess(false);
 
     try {
       const { data: doc, error: docError } = await supabase
         .from('documents')
-        .select('*, employee:employees(*)')
+        .select(`
+          document_number,
+          holder_name,
+          holder_id,
+          issuer,
+          issue_date,
+          expiry_date,
+          amount,
+          document_type,
+          employee:employees(
+            first_name_en,
+            last_name_en,
+            employee_number
+          )
+        `)
         .eq('id', documentId)
-        .single();
+        .maybeSingle();
 
       if (docError) throw docError;
+      if (!doc) throw new Error('Document not found');
 
       const analysisResult = generateAnalysis(doc);
 
       setAnalysisData(analysisResult);
       setExpanded(true);
+      setShowSuccess(true);
+
+      setTimeout(() => setShowSuccess(false), 2000);
 
       supabase
         .from('documents')
@@ -228,22 +248,29 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
               <p className="text-xs text-gray-600">Comprehensive data extraction & insights</p>
             </div>
           </div>
-          <button
-            onClick={handleAnalyze}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
-          >
-            {analysisData ? (
-              <>
-                <Sparkles className="h-4 w-4" />
-                <span>Re-Analyze</span>
-              </>
-            ) : (
-              <>
-                <Zap className="h-4 w-4" />
-                <span>Analyze</span>
-              </>
+          <div className="relative">
+            <button
+              onClick={handleAnalyze}
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-sm font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200 shadow-sm hover:shadow-md active:scale-95"
+            >
+              {analysisData ? (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  <span>Re-Analyze</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="h-4 w-4" />
+                  <span>Analyze</span>
+                </>
+              )}
+            </button>
+            {showSuccess && (
+              <div className="absolute -top-1 -right-1 animate-bounce">
+                <CheckCircle className="h-6 w-6 text-green-500 fill-green-100" />
+              </div>
             )}
-          </button>
+          </div>
         </div>
       </div>
 
