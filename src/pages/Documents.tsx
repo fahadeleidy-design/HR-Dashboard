@@ -81,7 +81,7 @@ export function Documents() {
     try {
       const { data: allEmployees, error: empError } = await supabase
         .from('employees')
-        .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, employee_number, job_title_en, hire_date, employment_status')
+        .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, employee_number, job_title_en, hire_date, status')
         .eq('company_id', currentCompany.id)
         .order('first_name_en');
 
@@ -1126,13 +1126,13 @@ export function Documents() {
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap">
                               <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                employee.employment_status === 'active'
+                                employee.status === 'active'
                                   ? 'bg-green-100 text-green-800'
-                                  : employee.employment_status === 'probation'
+                                  : employee.status === 'probation'
                                   ? 'bg-blue-100 text-blue-800'
                                   : 'bg-gray-100 text-gray-800'
                               }`}>
-                                {employee.employment_status || 'active'}
+                                {employee.status || 'active'}
                               </span>
                             </td>
                           </tr>

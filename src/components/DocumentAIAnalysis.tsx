@@ -167,9 +167,21 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
     setIsAnalyzing(true);
 
     try {
-      const response = await fetch(fileUrl);
-      const blob = await response.blob();
-      const file = new File([blob], 'document.pdf', { type: blob.type });
+      const { data: doc } = await supabase
+        .from('documents')
+        .select('file_path')
+        .eq('id', documentId)
+        .single();
+
+      if (!doc?.file_path) throw new Error('Document file path not found');
+
+      const { data: fileData, error: downloadError } = await supabase.storage
+        .from('documents')
+        .download(doc.file_path);
+
+      if (downloadError) throw downloadError;
+
+      const file = new File([fileData], 'document.pdf', { type: fileData.type });
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) throw new Error('Not authenticated');
