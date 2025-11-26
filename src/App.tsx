@@ -35,6 +35,7 @@ import { OrgChart } from './pages/OrgChart';
 import { EmployeeHandbook } from './pages/EmployeeHandbook';
 import { EmployeeContracts } from './pages/EmployeeContracts';
 import { ComplianceDashboard } from './pages/ComplianceDashboard';
+import { SalaryScale } from './pages/SalaryScale';
 
 function App() {
   return (
@@ -181,6 +182,7 @@ function App() {
             <Route path="/end-of-service" element={<ProtectedRoute><Layout><EndOfService /></Layout></ProtectedRoute>} />
             <Route path="/audit-log" element={<ProtectedRoute><Layout><AuditLog /></Layout></ProtectedRoute>} />
             <Route path="/compliance" element={<ProtectedRoute><Layout><ComplianceDashboard /></Layout></ProtectedRoute>} />
+            <Route path="/salary-scale" element={<ProtectedRoute><Layout><SalaryScale /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
