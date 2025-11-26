@@ -131,12 +131,18 @@ Deno.serve(async (req: Request) => {
 
         const existingUser = users.find(u => u.email === body.email);
         let userId: string;
+        const defaultPassword = 'TestPass123';
 
         if (existingUser) {
           userId = existingUser.id;
+          // Update password for existing user to ensure they can log in
+          const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+            userId,
+            { password: defaultPassword }
+          );
+          if (updateError) throw updateError;
         } else {
           // Create new user with default password
-          const defaultPassword = 'TestPass123';
           const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
             email: body.email,
             password: defaultPassword,
