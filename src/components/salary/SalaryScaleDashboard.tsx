@@ -11,10 +11,14 @@ interface DashboardStats {
   avgSalary: number;
   minSalary: number;
   maxSalary: number;
+  medianSalary: number;
+  salaryRangeSpread: number;
   activeReviewCycles: number;
   pendingProposals: number;
   budgetUtilization: number;
   marketAlignment: number;
+  avgCompaRatio: number;
+  positionCoverage: number;
 }
 
 export function SalaryScaleDashboard() {
@@ -27,10 +31,14 @@ export function SalaryScaleDashboard() {
     avgSalary: 0,
     minSalary: 0,
     maxSalary: 0,
+    medianSalary: 0,
+    salaryRangeSpread: 0,
     activeReviewCycles: 0,
     pendingProposals: 0,
     budgetUtilization: 0,
-    marketAlignment: 0
+    marketAlignment: 0,
+    avgCompaRatio: 0,
+    positionCoverage: 0
   });
 
   useEffect(() => {
@@ -47,42 +55,41 @@ export function SalaryScaleDashboard() {
       const [
         gradesData,
         positionsData,
-        employeesData,
+        companyStats,
+        gradeStats,
         reviewCyclesData,
-        proposalsData,
-        salaryBandsData
+        proposalsData
       ] = await Promise.all([
         supabase.from('job_grades').select('id').eq('company_id', currentCompany.id).eq('is_active', true),
         supabase.from('job_positions').select('id').eq('company_id', currentCompany.id).eq('is_active', true),
-        supabase.from('employees').select('basic_salary').eq('company_id', currentCompany.id).eq('status', 'active'),
+        supabase.from('company_salary_statistics').select('*').eq('company_id', currentCompany.id).maybeSingle(),
+        supabase.from('grade_salary_statistics').select('*').eq('company_id', currentCompany.id),
         supabase.from('salary_review_cycles').select('id, status').eq('company_id', currentCompany.id).in('status', ['open', 'review']),
-        supabase.from('salary_proposals').select('id, status').in('status', ['draft', 'submitted', 'hr_review']),
-        supabase.from('salary_bands').select('minimum_salary, maximum_salary')
+        supabase.from('salary_proposals').select('id, status').in('status', ['draft', 'submitted', 'hr_review'])
       ]);
 
-      const employees = employeesData.data || [];
-      const salaries = employees.map(e => e.basic_salary || 0).filter(s => s > 0);
-      const avgSalary = salaries.length > 0 ? salaries.reduce((a, b) => a + b, 0) / salaries.length : 0;
-      const minSalary = salaries.length > 0 ? Math.min(...salaries) : 0;
-      const maxSalary = salaries.length > 0 ? Math.max(...salaries) : 0;
+      const compStats = companyStats.data;
+      const grades = gradeStats.data || [];
 
-      const bands = salaryBandsData.data || [];
-      const marketMin = bands.length > 0 ? Math.min(...bands.map(b => b.minimum_salary)) : 0;
-      const marketMax = bands.length > 0 ? Math.max(...bands.map(b => b.maximum_salary)) : 0;
-      const marketMid = (marketMin + marketMax) / 2;
-      const marketAlignment = marketMid > 0 ? (avgSalary / marketMid) * 100 : 100;
+      const totalPositionCoverage = grades.length > 0
+        ? grades.reduce((sum, g) => sum + (g.position_coverage_pct || 0), 0) / grades.length
+        : 0;
 
       setStats({
         totalGrades: gradesData.data?.length || 0,
         totalPositions: positionsData.data?.length || 0,
-        totalEmployees: employees.length,
-        avgSalary: avgSalary,
-        minSalary: minSalary,
-        maxSalary: maxSalary,
+        totalEmployees: compStats?.total_employees || 0,
+        avgSalary: compStats?.avg_basic_salary || 0,
+        minSalary: compStats?.min_basic_salary || 0,
+        maxSalary: compStats?.max_basic_salary || 0,
+        medianSalary: compStats?.median_basic_salary || 0,
+        salaryRangeSpread: compStats?.salary_range_spread_pct || 0,
         activeReviewCycles: reviewCyclesData.data?.length || 0,
         pendingProposals: proposalsData.data?.length || 0,
         budgetUtilization: 0,
-        marketAlignment: Math.round(marketAlignment)
+        marketAlignment: 100,
+        avgCompaRatio: compStats?.avg_compa_ratio || 100,
+        positionCoverage: totalPositionCoverage
       });
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
@@ -184,6 +191,16 @@ export function SalaryScaleDashboard() {
 
             <div className="p-4 bg-gray-50 rounded-lg">
               <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium text-gray-700">Median Salary</span>
+                <span className="text-lg font-bold text-gray-900">{formatNumber(stats.medianSalary, 'en')} SAR</span>
+              </div>
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div className="h-full bg-orange-500" style={{ width: '50%' }}></div>
+              </div>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-between mb-2">
                 <span className="text-sm font-medium text-gray-700">Maximum Salary</span>
                 <span className="text-lg font-bold text-gray-900">{formatNumber(stats.maxSalary, 'en')} SAR</span>
               </div>
@@ -269,30 +286,30 @@ export function SalaryScaleDashboard() {
       </div>
 
       <div className="bg-white rounded-xl shadow-md p-6 border border-gray-200">
-        <h3 className="text-lg font-bold text-gray-900 mb-4">Quick Insights</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Salary Statistics from Employee Data</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
             <p className="text-sm text-blue-800 font-medium">Salary Range Spread</p>
-            <p className="text-2xl font-bold text-blue-900 mt-2">
-              {stats.maxSalary > 0 ? ((stats.maxSalary - stats.minSalary) / stats.minSalary * 100).toFixed(0) : 0}%
-            </p>
+            <p className="text-2xl font-bold text-blue-900 mt-2">{stats.salaryRangeSpread.toFixed(1)}%</p>
             <p className="text-xs text-blue-700 mt-1">Min to Max variation</p>
           </div>
 
           <div className="p-4 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-            <p className="text-sm text-green-800 font-medium">Active Employees</p>
-            <p className="text-2xl font-bold text-green-900 mt-2">{stats.totalEmployees}</p>
-            <p className="text-xs text-green-700 mt-1">In salary structure</p>
+            <p className="text-sm text-green-800 font-medium">Average Compa-Ratio</p>
+            <p className="text-2xl font-bold text-green-900 mt-2">{stats.avgCompaRatio.toFixed(1)}%</p>
+            <p className="text-xs text-green-700 mt-1">Market positioning</p>
           </div>
 
           <div className="p-4 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
             <p className="text-sm text-purple-800 font-medium">Position Coverage</p>
-            <p className="text-2xl font-bold text-purple-900 mt-2">
-              {stats.totalPositions > 0 && stats.totalEmployees > 0
-                ? ((stats.totalEmployees / stats.totalPositions) * 100).toFixed(0)
-                : 0}%
-            </p>
-            <p className="text-xs text-purple-700 mt-1">Positions filled</p>
+            <p className="text-2xl font-bold text-purple-900 mt-2">{stats.positionCoverage.toFixed(1)}%</p>
+            <p className="text-xs text-purple-700 mt-1">Within salary bands</p>
+          </div>
+
+          <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
+            <p className="text-sm text-orange-800 font-medium">Active Employees</p>
+            <p className="text-2xl font-bold text-orange-900 mt-2">{stats.totalEmployees}</p>
+            <p className="text-xs text-orange-700 mt-1">With salary data</p>
           </div>
         </div>
       </div>
