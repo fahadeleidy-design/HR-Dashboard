@@ -29,7 +29,7 @@ interface LeaveRequest {
   leave_type: {
     name_en: string;
     name_ar: string;
-    days_allowed: number;
+    max_days_per_year: number;
   };
 }
 
@@ -37,7 +37,7 @@ interface LeaveType {
   id: string;
   name_en: string;
   name_ar: string;
-  days_allowed: number;
+  max_days_per_year: number;
   paid: boolean;
 }
 
@@ -79,7 +79,7 @@ export function Leave() {
         .select(`
           *,
           employee:employees!leave_requests_employee_id_fkey(employee_number, first_name_en, last_name_en),
-          leave_type:leave_types!leave_requests_leave_type_id_fkey(name_en, name_ar, days_allowed)
+          leave_type:leave_types!leave_requests_leave_type_id_fkey(name_en, name_ar, max_days_per_year)
         `)
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
