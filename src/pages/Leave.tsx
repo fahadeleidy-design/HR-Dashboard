@@ -41,6 +41,25 @@ interface LeaveType {
   paid: boolean;
 }
 
+interface LeaveBalance {
+  id: string;
+  employee_id: string;
+  leave_type_id: string;
+  year: number;
+  total_entitlement: number;
+  used_days: number;
+  pending_days: number;
+  remaining_days: number;
+  leave_type: {
+    name_en: string;
+    name_ar: string;
+  };
+  employee: {
+    first_name_en: string;
+    last_name_en: string;
+  };
+}
+
 export function Leave() {
   const { currentCompany } = useCompany();
   const { user } = useAuth();
@@ -48,8 +67,10 @@ export function Leave() {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [showBalances, setShowBalances] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   const [requestForm, setRequestForm] = useState({
@@ -65,6 +86,7 @@ export function Leave() {
       fetchLeaveRequests();
       fetchLeaveTypes();
       fetchEmployees();
+      fetchLeaveBalances();
       subscribeToChanges();
     }
   }, [currentCompany]);
@@ -124,6 +146,29 @@ export function Leave() {
       setEmployees(data || []);
     } catch (error) {
       console.error('Error fetching employees:', error);
+    }
+  };
+
+  const fetchLeaveBalances = async () => {
+    if (!currentCompany) return;
+
+    try {
+      const currentYear = new Date().getFullYear();
+      const { data, error } = await supabase
+        .from('leave_balances')
+        .select(`
+          *,
+          leave_type:leave_types!leave_balances_leave_type_id_fkey(name_en, name_ar),
+          employee:employees!leave_balances_employee_id_fkey(first_name_en, last_name_en)
+        `)
+        .eq('company_id', currentCompany.id)
+        .eq('year', currentYear)
+        .order('employee.first_name_en');
+
+      if (error) throw error;
+      setLeaveBalances(data || []);
+    } catch (error) {
+      console.error('Error fetching leave balances:', error);
     }
   };
 
@@ -275,6 +320,71 @@ export function Leave() {
           <Plus className="h-4 w-4" />
           <span>{t.leave.requestLeave}</span>
         </button>
+      </div>
+
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-4 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-lg font-semibold text-gray-900">Leave Balances ({new Date().getFullYear()})</h2>
+          <button
+            onClick={() => setShowBalances(!showBalances)}
+            className="text-sm text-primary-600 hover:text-primary-700"
+          >
+            {showBalances ? 'Hide' : 'Show'}
+          </button>
+        </div>
+
+        {showBalances && (
+          <div className="p-6">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Entitlement</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Used</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Pending</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Remaining</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {leaveBalances.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                        No leave balances found
+                      </td>
+                    </tr>
+                  ) : (
+                    leaveBalances.map((balance) => (
+                      <tr key={balance.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {balance.employee.first_name_en} {balance.employee.last_name_en}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {balance.leave_type.name_en}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center text-gray-900">
+                          {balance.total_entitlement} days
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          <span className="text-red-600 font-medium">{balance.used_days} days</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          <span className="text-yellow-600 font-medium">{balance.pending_days} days</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          <span className={`font-medium ${balance.remaining_days > 0 ? 'text-green-600' : 'text-gray-400'}`}>
+                            {balance.remaining_days} days
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
