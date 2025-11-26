@@ -20,6 +20,7 @@ import {
   Phone,
   Calendar,
   Briefcase,
+  Pencil,
   X,
   ChevronRight,
   TrendingUp,
@@ -84,6 +85,10 @@ export function OrgChart() {
   const [compactMode, setCompactMode] = useState(false);
   const [highlightedEmployee, setHighlightedEmployee] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showEditManager, setShowEditManager] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [newManagerId, setNewManagerId] = useState<string>('');
+  const [potentialManagers, setPotentialManagers] = useState<Employee[]>([]);
 
   useEffect(() => {
     if (currentCompany) {
@@ -164,6 +169,51 @@ export function OrgChart() {
     }
 
     setFilteredEmployees(filtered);
+  };
+
+  const openEditManager = (employee: Employee) => {
+    setEditingEmployee(employee);
+    setNewManagerId(employee.manager_id || '');
+    const managers = employees.filter(emp =>
+      emp.id !== employee.id &&
+      !isSubordinate(employee.id, emp.id)
+    );
+    setPotentialManagers(managers);
+    setShowEditManager(true);
+  };
+
+  const isSubordinate = (managerId: string, potentialSubId: string): boolean => {
+    const subs = employees.filter(emp => emp.manager_id === managerId);
+    if (subs.some(s => s.id === potentialSubId)) return true;
+    return subs.some(s => isSubordinate(s.id, potentialSubId));
+  };
+
+  const handleUpdateManager = async () => {
+    if (!editingEmployee) return;
+
+    const { error } = await supabase
+      .from('employees')
+      .update({ manager_id: newManagerId || null })
+      .eq('id', editingEmployee.id);
+
+    if (error) {
+      showToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: error.message
+      });
+      return;
+    }
+
+    showToast({
+      type: 'success',
+      title: 'Manager Updated',
+      message: 'Reporting relationship has been updated successfully'
+    });
+
+    setShowEditManager(false);
+    setEditingEmployee(null);
+    await loadOrgData();
   };
 
   const loadEmployeeDetails = async (employee: Employee) => {
@@ -514,6 +564,7 @@ export function OrgChart() {
                     onEmployeeClick={loadEmployeeDetails}
                     compactMode={compactMode}
                     highlightedId={highlightedEmployee}
+                    onEditManager={openEditManager}
                   />
                 ))}
               </div>
@@ -600,6 +651,18 @@ export function OrgChart() {
             </div>
 
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
+              <div className="mb-4">
+                <button
+                  onClick={() => {
+                    setShowDetails(false);
+                    openEditManager(selectedEmployee);
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                >
+                  <Pencil className="h-4 w-4" />
+                  Edit Reporting Relationship
+                </button>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div>
                   <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
@@ -702,6 +765,81 @@ export function OrgChart() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEditManager && editingEmployee && (
+        <div className="fixed inset-0 bg-gradient-to-br from-black/60 to-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
+            <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-t-2xl">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-2xl font-bold">Edit Reporting Relationship</h3>
+                  <p className="text-primary-100 mt-1">
+                    {editingEmployee.first_name_en} {editingEmployee.last_name_en}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowEditManager(false)}
+                  className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-all duration-200"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Current Manager
+                </label>
+                <div className="p-3 bg-gray-50 rounded-lg border border-gray-200">
+                  <p className="text-gray-900 font-medium">
+                    {editingEmployee.manager_name || 'No Manager (Top Level)'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  New Manager <span className="text-gray-500">(Leave empty for top level)</span>
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+                  <select
+                    value={newManagerId}
+                    onChange={(e) => setNewManagerId(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-100 focus:border-primary-500 transition-all duration-200 bg-white appearance-none cursor-pointer"
+                  >
+                    <option value="">No Manager (Top Level)</option>
+                    {potentialManagers.map((emp) => (
+                      <option key={emp.id} value={emp.id}>
+                        {emp.first_name_en} {emp.last_name_en} - {emp.job_title_en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <p className="mt-2 text-xs text-gray-500">
+                  Note: You cannot select subordinates or create circular reporting relationships
+                </p>
+              </div>
+
+              <div className="flex gap-3 justify-end">
+                <button
+                  onClick={() => setShowEditManager(false)}
+                  className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleUpdateManager}
+                  className="px-4 py-2 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all duration-200 font-medium shadow-lg shadow-primary-200"
+                >
+                  Update Manager
+                </button>
+              </div>
             </div>
           </div>
         </div>

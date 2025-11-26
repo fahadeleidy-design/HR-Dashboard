@@ -1,4 +1,4 @@
-import { User, ChevronDown, ChevronRight, Mail, Phone, Building2, Users, Crown, Star } from 'lucide-react';
+import { User, ChevronDown, ChevronRight, Mail, Phone, Building2, Users, Crown, Star, Edit3 } from 'lucide-react';
 import { useState } from 'react';
 
 interface OrgChartNodeProps {
@@ -19,9 +19,10 @@ interface OrgChartNodeProps {
   onEmployeeClick: (employee: any) => void;
   compactMode?: boolean;
   highlightedId?: string | null;
+  onEditManager?: (employee: any) => void;
 }
 
-export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, compactMode = false, highlightedId = null }: OrgChartNodeProps) {
+export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, compactMode = false, highlightedId = null, onEditManager }: OrgChartNodeProps) {
   const [isExpanded, setIsExpanded] = useState(level < 2);
   const [isHovered, setIsHovered] = useState(false);
   const isHighlighted = highlightedId === employee.id;
@@ -57,6 +58,20 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, c
             <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full p-1.5 shadow-lg animate-pulse">
               <Crown className="h-4 w-4 text-white" />
             </div>
+          )}
+
+          {/* Edit button */}
+          {onEditManager && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onEditManager(employee);
+              }}
+              className="absolute top-2 left-2 bg-white/90 hover:bg-white rounded-lg p-1.5 shadow-md hover:shadow-lg transition-all duration-200 opacity-0 group-hover:opacity-100 hover:scale-110"
+              title="Edit Reporting Relationship"
+            >
+              <Edit3 className="h-3.5 w-3.5 text-gray-600 hover:text-primary-600" />
+            </button>
           )}
           <div className="relative flex items-start gap-4">
             <div className="relative flex-shrink-0">
@@ -159,6 +174,7 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, c
                   onEmployeeClick={onEmployeeClick}
                   compactMode={compactMode}
                   highlightedId={highlightedId}
+                  onEditManager={onEditManager}
                 />
               </div>
             ))}
