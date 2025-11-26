@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
-import { Plus, Filter, Search, Edit, Eye, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { useToast } from '@/contexts/ToastContext';
+import { Plus, Filter, Search, Edit, Eye, CheckCircle, XCircle, Clock, X } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 
 interface JobRequisition {
@@ -20,10 +21,14 @@ interface JobRequisition {
 
 export function JobRequisitions() {
   const { currentCompany } = useCompany();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [requisitions, setRequisitions] = useState<JobRequisition[]>([]);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [viewingReq, setViewingReq] = useState<JobRequisition | null>(null);
+  const [editingReq, setEditingReq] = useState<JobRequisition | null>(null);
 
   useEffect(() => {
     if (currentCompany) {
@@ -139,7 +144,10 @@ export function JobRequisitions() {
           </select>
         </div>
 
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+        <button
+          onClick={() => setShowModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
           <Plus className="h-5 w-5" />
           New Requisition
         </button>
@@ -238,10 +246,18 @@ export function JobRequisitions() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">
+                      <button
+                        onClick={() => setViewingReq(req)}
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                        title="View Details"
+                      >
                         <Eye className="h-4 w-4" />
                       </button>
-                      <button className="text-green-600 hover:text-green-900">
+                      <button
+                        onClick={() => setEditingReq(req)}
+                        className="text-green-600 hover:text-green-900"
+                        title="Edit"
+                      >
                         <Edit className="h-4 w-4" />
                       </button>
                     </td>
@@ -252,6 +268,107 @@ export function JobRequisitions() {
           </table>
         </div>
       </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
+              <h2 className="text-2xl font-bold text-gray-900">New Job Requisition</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 text-center py-8">
+                Job Requisition form will be implemented here.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {viewingReq && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
+              <h2 className="text-2xl font-bold text-gray-900">Requisition Details</h2>
+              <button onClick={() => setViewingReq(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Requisition #</label>
+                  <p className="font-mono font-semibold text-gray-900">{viewingReq.requisition_number}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  {getStatusBadge(viewingReq.status)}
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Job Title</label>
+                  <p className="text-gray-900 font-semibold">{viewingReq.job_title}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                  <p className="text-gray-900">{viewingReq.department?.name || '-'}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Number of Positions</label>
+                  <p className="text-gray-900 font-semibold">{viewingReq.number_of_positions}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Employment Type</label>
+                  <p className="text-gray-900">{viewingReq.employment_type.replace('_', ' ')}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nationality Preference</label>
+                  <p className="text-gray-900">{viewingReq.nationality_preference.replace('_', ' ')}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  {getPriorityBadge(viewingReq.priority)}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Requested Date</label>
+                  <p className="text-gray-900">{formatDate(viewingReq.requested_date, 'en')}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Target Start Date</label>
+                  <p className="text-gray-900">{formatDate(viewingReq.target_start_date, 'en')}</p>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setViewingReq(null)}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editingReq && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
+              <h2 className="text-2xl font-bold text-gray-900">Edit Requisition</h2>
+              <button onClick={() => setEditingReq(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <p className="text-gray-600 text-center py-8">
+                Edit requisition form will be implemented here.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
