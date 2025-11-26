@@ -35,7 +35,9 @@ import {
   Eye,
   EyeOff,
   Camera,
-  FileImage
+  FileImage,
+  Hand,
+  Move
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { OrgChartNode } from '@/components/OrgChartNode';
@@ -89,6 +91,10 @@ export function OrgChart() {
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newManagerId, setNewManagerId] = useState<string>('');
   const [potentialManagers, setPotentialManagers] = useState<Employee[]>([]);
+  const [panPosition, setPanPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isPanning, setIsPanning] = useState(false);
 
   useEffect(() => {
     if (currentCompany) {
@@ -271,6 +277,34 @@ export function OrgChart() {
 
   const handleResetZoom = () => {
     setZoom(1);
+    setPanPosition({ x: 0, y: 0 });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!isPanning) return;
+    setIsDragging(true);
+    setDragStart({
+      x: e.clientX - panPosition.x,
+      y: e.clientY - panPosition.y
+    });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !isPanning) return;
+    setPanPosition({
+      x: e.clientX - dragStart.x,
+      y: e.clientY - dragStart.y
+    });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.05 : 0.05;
+    setZoom(prev => Math.max(0.5, Math.min(2, prev + delta)));
   };
 
   const exportOrgChart = () => {
@@ -452,18 +486,32 @@ export function OrgChart() {
                 </div>
 
                 {viewMode === 'hierarchy' && (
-                  <button
-                    onClick={() => setCompactMode(!compactMode)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
-                      compactMode
-                        ? 'bg-primary-100 text-primary-700 border-2 border-primary-300'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                    title="Toggle Compact View"
-                  >
-                    {compactMode ? <Layers className="h-4 w-4" /> : <Layers className="h-4 w-4" />}
-                    <span className="hidden lg:inline">{compactMode ? 'Expanded' : 'Compact'}</span>
-                  </button>
+                  <>
+                    <button
+                      onClick={() => setCompactMode(!compactMode)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                        compactMode
+                          ? 'bg-primary-100 text-primary-700 border-2 border-primary-300'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      title="Toggle Compact View"
+                    >
+                      {compactMode ? <Layers className="h-4 w-4" /> : <Layers className="h-4 w-4" />}
+                      <span className="hidden lg:inline">{compactMode ? 'Expanded' : 'Compact'}</span>
+                    </button>
+                    <button
+                      onClick={() => setIsPanning(!isPanning)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                        isPanning
+                          ? 'bg-primary-100 text-primary-700 border-2 border-primary-300'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      title="Toggle Pan Mode"
+                    >
+                      <Hand className="h-4 w-4" />
+                      <span className="hidden lg:inline">Pan Mode</span>
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -544,13 +592,31 @@ export function OrgChart() {
           description="Start building your organization structure by adding employees with reporting relationships"
         />
       ) : (
-        <div ref={chartRef} className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 overflow-auto hover:shadow-md transition-all duration-300 print:shadow-none">
+        <div
+          ref={chartRef}
+          className={`bg-white rounded-xl shadow-sm border border-gray-100 p-8 overflow-hidden hover:shadow-md transition-all duration-300 print:shadow-none relative ${
+            isPanning ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'
+          }`}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onWheel={handleWheel}
+          style={{ height: 'calc(100vh - 400px)', minHeight: '600px' }}
+        >
+          {isPanning && (
+            <div className="absolute top-4 left-4 bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg z-10 flex items-center gap-2 animate-pulse">
+              <Hand className="h-4 w-4" />
+              <span>Pan Mode Active - Drag to move</span>
+            </div>
+          )}
           <div
             className="inline-block min-w-full"
             style={{
-              transform: `scale(${zoom})`,
+              transform: `translate(${panPosition.x}px, ${panPosition.y}px) scale(${zoom})`,
               transformOrigin: 'top center',
-              transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+              transition: isDragging ? 'none' : 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+              pointerEvents: isPanning && isDragging ? 'none' : 'auto'
             }}
           >
             {viewMode === 'hierarchy' ? (
