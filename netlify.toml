@@ -9,3 +9,5 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  VITE_SUPABASE_URL = "https://dazlsehyxuwsheksmyey.supabase.co"
+  VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhemxzZWh5eHV3c2hla3NteWV5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM4Mzg5NDQsImV4cCI6MjA3OTQxNDk0NH0.A_9Fin7KhhoF9i8lu4GkThIBDTe5sGU9yYx_cCxCWLU"
