@@ -65,12 +65,17 @@ export function SalaryScaleDashboard() {
       ] = await Promise.all([
         supabase.from('job_grades').select('id').eq('company_id', currentCompany.id).eq('is_active', true),
         supabase.from('job_positions').select('id').eq('company_id', currentCompany.id).eq('is_active', true),
-        supabase.from('employees').select('id, basic_salary').eq('company_id', currentCompany.id).eq('status', 'active'),
+        supabase.from('employees').select('id, basic_salary, company_id').eq('company_id', currentCompany.id).eq('status', 'active'),
         supabase.from('company_salary_statistics').select('*').eq('company_id', currentCompany.id).maybeSingle(),
         supabase.from('grade_salary_statistics').select('*').eq('company_id', currentCompany.id),
         supabase.from('salary_review_cycles').select('id, status').eq('company_id', currentCompany.id).in('status', ['open', 'review']),
         supabase.from('salary_proposals').select('id, status').in('status', ['draft', 'submitted', 'hr_review'])
       ]);
+
+      console.log('Company ID:', currentCompany.id);
+      console.log('All Employees Data:', allEmployeesData);
+      console.log('Employees count:', allEmployeesData.data?.length);
+      console.log('Company Stats:', companyStats.data);
 
       const compStats = companyStats.data;
       const grades = gradeStats.data || [];
