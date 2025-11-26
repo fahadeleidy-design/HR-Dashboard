@@ -38,6 +38,7 @@ export function JobArchitecture() {
   const { currentCompany } = useCompany();
   const [activeView, setActiveView] = useState<'families' | 'grades' | 'positions'>('grades');
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
 
   const [families, setFamilies] = useState<JobFamily[]>([]);
   const [grades, setGrades] = useState<JobGrade[]>([]);
@@ -137,7 +138,10 @@ export function JobArchitecture() {
         <div className="bg-white rounded-xl shadow-md border border-gray-200">
           <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-bold text-gray-900">Job Families</h3>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <Plus className="h-4 w-4" />
               Add Family
             </button>
@@ -191,7 +195,10 @@ export function JobArchitecture() {
         <div className="bg-white rounded-xl shadow-md border border-gray-200">
           <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-bold text-gray-900">Job Grades (15-Level Structure)</h3>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <Plus className="h-4 w-4" />
               Add Grade
             </button>
@@ -290,7 +297,10 @@ export function JobArchitecture() {
         <div className="bg-white rounded-xl shadow-md border border-gray-200">
           <div className="p-6 border-b border-gray-200 flex items-center justify-between">
             <h3 className="text-lg font-bold text-gray-900">Job Positions</h3>
-            <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <Plus className="h-4 w-4" />
               Add Position
             </button>
@@ -388,6 +398,47 @@ export function JobArchitecture() {
               </table>
             </div>
           )}
+        </div>
+      )}
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                {activeView === 'families' && 'Add Job Family'}
+                {activeView === 'grades' && 'Add Job Grade'}
+                {activeView === 'positions' && 'Add Job Position'}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                This feature allows you to create and manage {activeView === 'families' ? 'job families' : activeView === 'grades' ? 'job grades' : 'job positions'}.
+                The system comes pre-configured with Saudi market standards.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> The system includes 8 job families, 15 job grades (aligned with Saudi labor market),
+                  and positions can be created based on your organizational structure.
+                </p>
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    alert('Full CRUD functionality for creating ' + activeView + ' will be implemented here.\n\nFor now, the system uses pre-seeded data from the database migrations.');
+                    setShowAddModal(false);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

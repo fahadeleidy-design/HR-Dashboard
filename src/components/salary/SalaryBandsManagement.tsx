@@ -18,6 +18,7 @@ interface SalaryBand {
 export function SalaryBandsManagement() {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
+  const [showAddModal, setShowAddModal] = useState(false);
   const [bands, setBands] = useState<SalaryBand[]>([]);
 
   useEffect(() => {
@@ -77,7 +78,10 @@ export function SalaryBandsManagement() {
           <h2 className="text-2xl font-bold text-gray-900">Salary Bands Management</h2>
           <p className="text-gray-600 mt-1">Define salary ranges for each job grade</p>
         </div>
-        <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md">
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-md"
+        >
           <Plus className="h-5 w-5" />
           Create Salary Band
         </button>
@@ -236,6 +240,42 @@ export function SalaryBandsManagement() {
             </div>
           </div>
         </>
+      )}
+
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="p-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">Add Salary Band</h3>
+              <p className="text-gray-600 mb-4">
+                Create a new salary band by defining the minimum, midpoint, and maximum salary ranges for a job grade.
+              </p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                <p className="text-sm text-blue-800">
+                  <strong>Note:</strong> Salary bands should align with job grades and market benchmarking data.
+                  The system supports SAR currency by default.
+                </p>
+              </div>
+              <div className="flex items-center justify-end gap-3">
+                <button
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    alert('Full form for creating salary bands will be implemented here.\n\nYou can create bands with min/mid/max values for each grade.');
+                    setShowAddModal(false);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Create Band
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
