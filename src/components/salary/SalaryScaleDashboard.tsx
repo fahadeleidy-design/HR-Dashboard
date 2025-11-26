@@ -8,6 +8,7 @@ interface DashboardStats {
   totalGrades: number;
   totalPositions: number;
   totalEmployees: number;
+  employeesWithSalary: number;
   avgSalary: number;
   minSalary: number;
   maxSalary: number;
@@ -28,6 +29,7 @@ export function SalaryScaleDashboard() {
     totalGrades: 0,
     totalPositions: 0,
     totalEmployees: 0,
+    employeesWithSalary: 0,
     avgSalary: 0,
     minSalary: 0,
     maxSalary: 0,
@@ -55,6 +57,7 @@ export function SalaryScaleDashboard() {
       const [
         gradesData,
         positionsData,
+        allEmployeesData,
         companyStats,
         gradeStats,
         reviewCyclesData,
@@ -62,6 +65,7 @@ export function SalaryScaleDashboard() {
       ] = await Promise.all([
         supabase.from('job_grades').select('id').eq('company_id', currentCompany.id).eq('is_active', true),
         supabase.from('job_positions').select('id').eq('company_id', currentCompany.id).eq('is_active', true),
+        supabase.from('employees').select('id, basic_salary').eq('company_id', currentCompany.id).eq('status', 'active'),
         supabase.from('company_salary_statistics').select('*').eq('company_id', currentCompany.id).maybeSingle(),
         supabase.from('grade_salary_statistics').select('*').eq('company_id', currentCompany.id),
         supabase.from('salary_review_cycles').select('id, status').eq('company_id', currentCompany.id).in('status', ['open', 'review']),
@@ -70,6 +74,8 @@ export function SalaryScaleDashboard() {
 
       const compStats = companyStats.data;
       const grades = gradeStats.data || [];
+      const allEmployees = allEmployeesData.data || [];
+      const employeesWithSalary = allEmployees.filter(e => e.basic_salary && e.basic_salary > 0).length;
 
       const totalPositionCoverage = grades.length > 0
         ? grades.reduce((sum, g) => sum + (g.position_coverage_pct || 0), 0) / grades.length
@@ -78,7 +84,8 @@ export function SalaryScaleDashboard() {
       setStats({
         totalGrades: gradesData.data?.length || 0,
         totalPositions: positionsData.data?.length || 0,
-        totalEmployees: compStats?.total_employees || 0,
+        totalEmployees: allEmployees.length,
+        employeesWithSalary: employeesWithSalary,
         avgSalary: compStats?.avg_basic_salary || 0,
         minSalary: compStats?.min_basic_salary || 0,
         maxSalary: compStats?.max_basic_salary || 0,
@@ -108,6 +115,29 @@ export function SalaryScaleDashboard() {
 
   return (
     <div className="space-y-6">
+      {stats.totalEmployees > 0 && stats.employeesWithSalary === 0 && (
+        <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200">
+          <div className="flex items-start gap-4">
+            <AlertCircle className="h-6 w-6 text-blue-600 flex-shrink-0 mt-1" />
+            <div>
+              <h3 className="font-bold text-gray-900 mb-2">No Salary Data Assigned</h3>
+              <p className="text-gray-700 text-sm mb-3">
+                You have {stats.totalEmployees} active employees but none have been assigned salary data yet.
+                To see salary statistics, you need to:
+              </p>
+              <ol className="list-decimal list-inside space-y-1 text-sm text-gray-700 ml-2">
+                <li>Assign employees to job positions and grades</li>
+                <li>Link employees to salary bands</li>
+                <li>Set basic salary and allowances for each employee</li>
+              </ol>
+              <p className="text-gray-600 text-xs mt-3">
+                Go to Employees → Select an employee → Assign compensation details
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
           <div className="flex items-center justify-between">
@@ -139,8 +169,12 @@ export function SalaryScaleDashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-purple-100 text-sm font-medium">Average Salary</p>
-              <p className="text-3xl font-bold mt-2">{formatNumber(stats.avgSalary, 'en')} SAR</p>
-              <p className="text-purple-100 text-xs mt-1">{stats.totalEmployees} employees</p>
+              <p className="text-3xl font-bold mt-2">
+                {stats.employeesWithSalary > 0 ? formatNumber(stats.avgSalary, 'en') : '0'} SAR
+              </p>
+              <p className="text-purple-100 text-xs mt-1">
+                {stats.employeesWithSalary} of {stats.totalEmployees} employees
+              </p>
             </div>
             <div className="bg-white/20 p-3 rounded-lg">
               <DollarSign className="h-8 w-8" />
@@ -308,8 +342,10 @@ export function SalaryScaleDashboard() {
 
           <div className="p-4 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg border border-orange-200">
             <p className="text-sm text-orange-800 font-medium">Active Employees</p>
-            <p className="text-2xl font-bold text-orange-900 mt-2">{stats.totalEmployees}</p>
-            <p className="text-xs text-orange-700 mt-1">With salary data</p>
+            <p className="text-2xl font-bold text-orange-900 mt-2">{stats.employeesWithSalary}</p>
+            <p className="text-xs text-orange-700 mt-1">
+              With salary ({stats.totalEmployees} total)
+            </p>
           </div>
         </div>
       </div>
