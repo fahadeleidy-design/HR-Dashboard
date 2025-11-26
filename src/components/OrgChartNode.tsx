@@ -23,12 +23,30 @@ interface OrgChartNodeProps {
   compactMode?: boolean;
   highlightedId?: string | null;
   onEditManager?: (employee: any) => void;
+  expandedNodes?: Set<string>;
+  setExpandedNodes?: (nodes: Set<string>) => void;
 }
 
-export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, compactMode = false, highlightedId = null, onEditManager }: OrgChartNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(level < 2);
+export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, compactMode = false, highlightedId = null, onEditManager, expandedNodes, setExpandedNodes }: OrgChartNodeProps) {
+  const [localExpanded, setLocalExpanded] = useState(level < 2);
   const [isHovered, setIsHovered] = useState(false);
   const isHighlighted = highlightedId === employee.id;
+
+  const isExpanded = expandedNodes ? expandedNodes.has(employee.id) : localExpanded;
+
+  const handleToggle = () => {
+    if (expandedNodes && setExpandedNodes) {
+      const newSet = new Set(expandedNodes);
+      if (newSet.has(employee.id)) {
+        newSet.delete(employee.id);
+      } else {
+        newSet.add(employee.id);
+      }
+      setExpandedNodes(newSet);
+    } else {
+      setLocalExpanded(!localExpanded);
+    }
+  };
 
   const directSubordinates = subordinates.filter(s => s.manager_id === employee.id);
   const hasSubordinates = directSubordinates.length > 0;
@@ -166,7 +184,7 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, c
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setIsExpanded(!isExpanded);
+                handleToggle();
               }}
               className={`absolute -bottom-5 left-1/2 transform -translate-x-1/2 bg-gradient-to-br ${colors.bg} border-3 border-white rounded-full p-2.5 hover:scale-125 transition-all duration-300 shadow-2xl z-10 group/btn hover:shadow-3xl`}
             >
@@ -196,15 +214,19 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, c
                   <div className={`absolute top-0 left-full w-10 h-1 bg-gradient-to-l ${colors.bg} transform -translate-y-10 rounded-full opacity-60`} />
                 )}
                 <div className={`absolute top-0 left-1/2 w-1 bg-gradient-to-b ${colors.bg} h-10 transform -translate-x-1/2 -translate-y-10 rounded-full opacity-60`} />
-                <OrgChartNode
-                  employee={sub}
-                  subordinates={subordinates}
-                  level={level + 1}
-                  onEmployeeClick={onEmployeeClick}
-                  compactMode={compactMode}
-                  highlightedId={highlightedId}
-                  onEditManager={onEditManager}
-                />
+                <div id={`employee-${sub.id}`}>
+                  <OrgChartNode
+                    employee={sub}
+                    subordinates={subordinates}
+                    level={level + 1}
+                    onEmployeeClick={onEmployeeClick}
+                    compactMode={compactMode}
+                    highlightedId={highlightedId}
+                    onEditManager={onEditManager}
+                    expandedNodes={expandedNodes}
+                    setExpandedNodes={setExpandedNodes}
+                  />
+                </div>
               </div>
             ))}
           </div>

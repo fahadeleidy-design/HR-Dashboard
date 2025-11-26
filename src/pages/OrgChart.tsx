@@ -42,10 +42,19 @@ import {
   Target,
   BarChart3,
   Sparkles,
-  Navigation
+  Navigation,
+  Keyboard,
+  Maximize2 as ExpandAll,
+  Minimize2 as CollapseAll,
+  Focus,
+  ArrowUp,
+  ArrowDown,
+  History,
+  Info
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { OrgChartNode } from '@/components/OrgChartNode';
+import { KeyboardShortcutsModal } from '@/components/KeyboardShortcutsModal';
 
 interface Employee {
   id: string;
@@ -106,6 +115,10 @@ export function OrgChart() {
     avgTeamSize: 0,
     maxDepth: 0
   });
+  const [expandedNodes, setExpandedNodes] = useState<Set<string>>(new Set());
+  const [focusedEmployeeId, setFocusedEmployeeId] = useState<string | null>(null);
+  const [showKeyboardHelp, setShowKeyboardHelp] = useState(false);
+  const [navigationHistory, setNavigationHistory] = useState<Employee[]>([]);
 
   useEffect(() => {
     if (currentCompany) {
@@ -142,9 +155,54 @@ export function OrgChart() {
   }, []);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch(e.key) {
+          case '+':
+          case '=':
+            e.preventDefault();
+            handleZoomIn();
+            break;
+          case '-':
+            e.preventDefault();
+            handleZoomOut();
+            break;
+          case '0':
+            e.preventDefault();
+            handleResetZoom();
+            break;
+          case 'f':
+            e.preventDefault();
+            document.querySelector<HTMLInputElement>('input[type=\"text\"]')?.focus();
+            break;
+          case 'e':
+            e.preventDefault();
+            expandAll();
+            break;
+          case 'c':
+            e.preventDefault();
+            collapseAll();
+            break;
+        }
+      }
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        setShowKeyboardHelp(!showKeyboardHelp);
+      }
+      if (e.key === 'Escape') {
+        setShowDetails(false);
+        setShowEditManager(false);
+        setShowKeyboardHelp(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showKeyboardHelp]);
+
+  useEffect(() => {
     if (searchTerm && filteredEmployees.length > 0) {
       const firstMatch = filteredEmployees[0];
       setHighlightedEmployee(firstMatch.id);
+      setFocusedEmployeeId(firstMatch.id);
       setTimeout(() => setHighlightedEmployee(null), 3000);
     } else {
       setHighlightedEmployee(null);
@@ -331,6 +389,43 @@ export function OrgChart() {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -0.05 : 0.05;
     setZoom(prev => Math.max(0.5, Math.min(2, prev + delta)));
+  };
+
+  const expandAll = () => {
+    const allIds = new Set(employees.map(e => e.id));
+    setExpandedNodes(allIds);
+    showToast({
+      type: 'success',
+      title: 'Expanded All',
+      message: 'All organization levels are now visible'
+    });
+  };
+
+  const collapseAll = () => {
+    setExpandedNodes(new Set());
+    showToast({
+      type: 'success',
+      title: 'Collapsed All',
+      message: 'Organization chart collapsed to top level'
+    });
+  };
+
+  const handleEmployeeClick = (employee: Employee) => {
+    setNavigationHistory(prev => {
+      const newHistory = [...prev, employee];
+      return newHistory.slice(-5);
+    });
+    loadEmployeeDetails(employee);
+  };
+
+  const handleBreadcrumbClick = (employee: Employee) => {
+    const element = document.getElementById(`employee-${employee.id}`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setHighlightedEmployee(employee.id);
+      setFocusedEmployeeId(employee.id);
+      setTimeout(() => setHighlightedEmployee(null), 3000);
+    }
   };
 
   const exportOrgChart = () => {
@@ -549,8 +644,32 @@ export function OrgChart() {
                       <Navigation className="h-4 w-4" />
                       <span className="hidden lg:inline">Minimap</span>
                     </button>
+                    <button
+                      onClick={expandAll}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      title="Expand All (Ctrl+E)"
+                    >
+                      <ExpandAll className="h-4 w-4" />
+                      <span className="hidden lg:inline">Expand All</span>
+                    </button>
+                    <button
+                      onClick={collapseAll}
+                      className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      title="Collapse All (Ctrl+C)"
+                    >
+                      <CollapseAll className="h-4 w-4" />
+                      <span className="hidden lg:inline">Collapse All</span>
+                    </button>
                   </>
                 )}
+                <button
+                  onClick={() => setShowKeyboardHelp(!showKeyboardHelp)}
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  title="Keyboard Shortcuts (?)"
+                >
+                  <Keyboard className="h-4 w-4" />
+                  <span className="hidden lg:inline">Shortcuts</span>
+                </button>
               </div>
             </div>
 
@@ -648,6 +767,32 @@ export function OrgChart() {
             )}
           </div>
         </div>
+
+        {navigationHistory.length > 0 && (
+          <div className="mt-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-4 border-2 border-blue-200 animate-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-2 mb-3">
+              <History className="h-4 w-4 text-blue-600" />
+              <span className="text-sm font-semibold text-blue-900">Recently Viewed</span>
+            </div>
+            <div className="flex items-center gap-2 flex-wrap">
+              {navigationHistory.map((emp, index) => (
+                <button
+                  key={`${emp.id}-${index}`}
+                  onClick={() => handleBreadcrumbClick(emp)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-blue-100 rounded-lg border border-blue-200 transition-all duration-200 hover:shadow-md group"
+                >
+                  <User className="h-3.5 w-3.5 text-blue-600" />
+                  <span className="text-xs font-medium text-gray-700 group-hover:text-blue-700">
+                    {emp.first_name_en} {emp.last_name_en}
+                  </span>
+                  {index < navigationHistory.length - 1 && (
+                    <ChevronRight className="h-3 w-3 text-gray-400" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {filteredEmployees.length === 0 ? (
@@ -715,16 +860,20 @@ export function OrgChart() {
             {viewMode === 'hierarchy' ? (
               <div className="space-y-16">
                 {topLevelEmployees.map((topEmp) => (
-                  <OrgChartNode
-                    key={topEmp.id}
-                    employee={topEmp}
-                    subordinates={filteredEmployees}
-                    level={0}
-                    onEmployeeClick={loadEmployeeDetails}
-                    compactMode={compactMode}
-                    highlightedId={highlightedEmployee}
-                    onEditManager={openEditManager}
-                  />
+                  <div id={`employee-${topEmp.id}`}>
+                    <OrgChartNode
+                      key={topEmp.id}
+                      employee={topEmp}
+                      subordinates={filteredEmployees}
+                      level={0}
+                      onEmployeeClick={handleEmployeeClick}
+                      compactMode={compactMode}
+                      highlightedId={highlightedEmployee}
+                      onEditManager={openEditManager}
+                      expandedNodes={expandedNodes}
+                      setExpandedNodes={setExpandedNodes}
+                    />
+                  </div>
                 ))}
               </div>
             ) : (
@@ -1003,6 +1152,8 @@ export function OrgChart() {
           </div>
         </div>
       )}
+
+      <KeyboardShortcutsModal isOpen={showKeyboardHelp} onClose={() => setShowKeyboardHelp(false)} />
     </div>
   );
 }
