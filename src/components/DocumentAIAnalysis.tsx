@@ -172,10 +172,16 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
         throw new Error('Not authenticated');
       }
 
-      const storagePath = fileUrl.split('/documents/')[1];
-      if (!storagePath) {
-        throw new Error('Invalid document URL');
+      // Extract storage path from URL
+      const url = new URL(fileUrl);
+      const pathParts = url.pathname.split('/');
+      const documentsIndex = pathParts.indexOf('documents');
+
+      if (documentsIndex === -1 || documentsIndex >= pathParts.length - 1) {
+        throw new Error('Invalid document URL format');
       }
+
+      const storagePath = pathParts.slice(documentsIndex + 1).join('/');
 
       const { data: fileData, error: downloadError } = await supabase.storage
         .from('documents')
