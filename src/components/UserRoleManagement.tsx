@@ -79,24 +79,38 @@ export function UserRoleManagement() {
     if (!currentCompany) return;
 
     setLoading(true);
-    const { data, error } = await supabase
-      .from('user_role_permissions')
-      .select('*')
-      .eq('company_id', currentCompany.id)
-      .order('created_at', { ascending: false });
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
 
-    if (!error && data) {
-      const { data: usersData } = await supabase.auth.admin.listUsers();
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/user-management`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'list_users',
+            companyId: currentCompany.id,
+          }),
+        }
+      );
 
-      const rolesWithEmails = data.map(role => {
-        const user = usersData?.users.find(u => u.id === role.user_id);
-        return {
-          ...role,
-          email: user?.email || null
-        };
-      });
+      const result = await response.json();
 
-      setUserRoles(rolesWithEmails as any);
+      if (result.success && result.data) {
+        setUserRoles(result.data as any);
+      } else {
+        throw new Error(result.error || 'Failed to load user roles');
+      }
+    } catch (error: any) {
+      console.error('Failed to load user roles:', error);
+      setMessage({ type: 'error', text: error.message || 'Failed to load user roles' });
     }
     setLoading(false);
   };
@@ -124,31 +138,40 @@ export function UserRoleManagement() {
     setMessage(null);
 
     try {
-      let userId = null;
-
-      const { data: existingUsers } = await supabase.auth.admin.listUsers();
-      const existingUser = existingUsers?.users.find(u => u.email === form.email);
-
-      if (existingUser) {
-        userId = existingUser.id;
-      } else {
-        const tempPassword = Math.random().toString(36).slice(-12) + 'A1!';
-        const { data: newUser, error: signUpError } = await supabase.auth.admin.createUser({
-          email: form.email,
-          password: tempPassword,
-          email_confirm: true
-        });
-
-        if (signUpError) throw signUpError;
-        if (!newUser.user) throw new Error('Failed to create user');
-
-        userId = newUser.user.id;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
       }
 
+      // Create or get user via edge function
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/user-management`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'create_user',
+            email: form.email,
+            companyId: currentCompany.id,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success || !result.userId) {
+        throw new Error(result.error || 'Failed to create user');
+      }
+
+      // Insert user role
       const { error: roleError } = await supabase
         .from('user_roles')
         .insert({
-          user_id: userId,
+          user_id: result.userId,
           company_id: currentCompany.id,
           employee_id: form.employee_id || null,
           role: form.role
