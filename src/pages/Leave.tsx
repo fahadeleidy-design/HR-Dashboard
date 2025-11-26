@@ -187,6 +187,9 @@ export function Leave() {
         end_date: '',
         reason: '',
       });
+
+      // Refresh the list immediately
+      await fetchLeaveRequests();
     } catch (error: any) {
       console.error('Error creating leave request:', error);
       alert(error.message || 'Failed to create leave request');
@@ -205,6 +208,9 @@ export function Leave() {
         .eq('id', requestId);
 
       if (error) throw error;
+
+      // Refresh the list immediately
+      await fetchLeaveRequests();
     } catch (error: any) {
       console.error('Error approving leave:', error);
       alert(error.message || 'Failed to approve leave request');
@@ -227,6 +233,9 @@ export function Leave() {
         .eq('id', requestId);
 
       if (error) throw error;
+
+      // Refresh the list immediately
+      await fetchLeaveRequests();
     } catch (error: any) {
       console.error('Error rejecting leave:', error);
       alert(error.message || 'Failed to reject leave request');
