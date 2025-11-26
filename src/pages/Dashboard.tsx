@@ -226,14 +226,14 @@ export function Dashboard() {
       ).length;
 
       const in90Days = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-      const expiringDocuments = documents.filter(d => d.expiry_date && d.expiry_date <= in90Days).length;
+      const expiringDocuments = documents.filter(d => d.expiry_date && d.expiry_date >= today && d.expiry_date <= in90Days).length;
 
       const expiringIqamas = employees.filter(e =>
-        e.iqama_expiry && e.iqama_expiry <= in90Days && e.status === 'active'
+        e.iqama_expiry && e.iqama_expiry >= today && e.iqama_expiry <= in90Days && e.status === 'active'
       ).length;
 
       const expiringPassports = employees.filter(e =>
-        e.passport_expiry && e.passport_expiry <= in90Days && e.status === 'active'
+        e.passport_expiry && e.passport_expiry >= today && e.passport_expiry <= in90Days && e.status === 'active'
       ).length;
 
       const uniqueEmployeeIds = new Set(payrollRecords.map(p => p.employee_id));
@@ -244,7 +244,7 @@ export function Dashboard() {
       const totalProperties = properties.length;
       const activeContracts = contracts.filter(c => c.status === 'active').length;
       const expiringContracts = contracts.filter(c =>
-        c.status === 'active' && c.end_date && c.end_date <= in90Days
+        c.status === 'active' && c.end_date && c.end_date >= today && c.end_date <= in90Days
       ).length;
       const activeInsurancePolicies = insurance.filter(i => i.status === 'active').length;
       const pendingTravelRequests = travel.filter(t => t.approval_status === 'pending').length;
