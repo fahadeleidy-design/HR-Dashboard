@@ -60,6 +60,8 @@ export function Layout({ children }: LayoutProps) {
       items: [
         { path: '/', icon: LayoutDashboard, label: t.nav.dashboard },
         { path: '/employees', icon: Users, label: t.nav.employees },
+        { path: '/recruitment', icon: UserPlus, label: t.nav.recruitment || 'Recruitment' },
+        { path: '/salary-scale', icon: DollarSign, label: t.nav.salaryScale || 'Salary Scale' },
         { path: '/org-chart', icon: TrendingUp, label: t.nav.orgChart },
         { path: '/handbook', icon: BookOpen, label: t.nav.handbook },
         { path: '/attendance', icon: Clock, label: t.nav.attendance },

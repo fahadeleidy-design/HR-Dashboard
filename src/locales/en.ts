@@ -88,6 +88,8 @@ export const enTranslations = {
     coreHR: 'Core HR',
     dashboard: 'Dashboard',
     employees: 'Employees',
+    recruitment: 'Recruitment',
+    salaryScale: 'Salary Scale',
     orgChart: 'Org Chart',
     handbook: 'Employee Handbook',
     attendance: 'Attendance',

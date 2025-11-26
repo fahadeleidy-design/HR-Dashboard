@@ -108,6 +108,8 @@ export const arTranslations = {
     coreHR: 'الموارد البشرية الأساسية',
     dashboard: 'لوحة المعلومات',
     employees: 'الموظفون',
+    recruitment: 'التوظيف والتعيين',
+    salaryScale: 'سلم الرواتب',
     orgChart: 'الهيكل التنظيمي',
     handbook: 'دليل الموظف',
     attendance: 'الحضور والانصراف',
