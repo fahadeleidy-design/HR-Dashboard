@@ -14,7 +14,7 @@ interface LeaveRequest {
   leave_type_id: string;
   start_date: string;
   end_date: string;
-  days_requested: number;
+  total_days: number;
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
   approved_by: string | null;
@@ -172,7 +172,7 @@ export function Leave() {
         leave_type_id: requestForm.leave_type_id,
         start_date: requestForm.start_date,
         end_date: requestForm.end_date,
-        days_requested: days,
+        total_days: days,
         reason: requestForm.reason,
         status: 'pending',
       }]);
@@ -359,7 +359,7 @@ export function Leave() {
                 />
                 <SortableTableHeader
                   label="Days"
-                  sortKey="days_requested"
+                  sortKey="total_days"
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
@@ -403,7 +403,7 @@ export function Leave() {
                       {new Date(request.end_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {request.days_requested} days
+                      {request.total_days} days
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

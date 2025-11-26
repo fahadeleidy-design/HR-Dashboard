@@ -76,7 +76,7 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
 
       const { data: leaveData } = await supabase
         .from('leave_requests')
-        .select('leave_type_id, days_requested, status')
+        .select('leave_type_id, total_days, status')
         .eq('employee_id', employeeId)
         .eq('status', 'approved');
 
@@ -84,7 +84,7 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
         if (!acc[req.leave_type_id]) {
           acc[req.leave_type_id] = 0;
         }
-        acc[req.leave_type_id] += req.days_requested;
+        acc[req.leave_type_id] += req.total_days;
         return acc;
       }, {});
 
