@@ -143,7 +143,7 @@ export function UserRoleManagement() {
         throw new Error('Not authenticated');
       }
 
-      // Create or get user via edge function
+      // Create user and assign role via edge function
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(
         `${supabaseUrl}/functions/v1/user-management`,
@@ -157,27 +157,17 @@ export function UserRoleManagement() {
             action: 'create_user',
             email: form.email,
             companyId: currentCompany.id,
+            employeeId: form.employee_id || null,
+            role: form.role,
           }),
         }
       );
 
       const result = await response.json();
 
-      if (!result.success || !result.userId) {
+      if (!result.success) {
         throw new Error(result.error || 'Failed to create user');
       }
-
-      // Insert user role
-      const { error: roleError } = await supabase
-        .from('user_roles')
-        .insert({
-          user_id: result.userId,
-          company_id: currentCompany.id,
-          employee_id: form.employee_id || null,
-          role: form.role
-        });
-
-      if (roleError) throw roleError;
 
       setMessage({ type: 'success', text: 'User role added successfully!' });
       setShowAddForm(false);

@@ -11,6 +11,8 @@ interface RequestBody {
   email?: string;
   companyId?: string;
   userIds?: string[];
+  employeeId?: string | null;
+  role?: 'super_admin' | 'hr' | 'finance' | 'employee';
 }
 
 Deno.serve(async (req: Request) => {
@@ -119,8 +121,8 @@ Deno.serve(async (req: Request) => {
       }
 
       case 'create_user': {
-        if (!body.email || !body.companyId) {
-          throw new Error('Email and company ID are required');
+        if (!body.email || !body.companyId || !body.role) {
+          throw new Error('Email, company ID, and role are required');
         }
 
         // Check if user exists
@@ -146,6 +148,18 @@ Deno.serve(async (req: Request) => {
 
           userId = newUser.user.id;
         }
+
+        // Insert user role using service role (bypasses RLS)
+        const { error: roleError } = await supabaseAdmin
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            company_id: body.companyId,
+            employee_id: body.employeeId || null,
+            role: body.role
+          });
+
+        if (roleError) throw roleError;
 
         return new Response(
           JSON.stringify({ success: true, userId }),
