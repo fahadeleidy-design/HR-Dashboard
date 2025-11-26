@@ -37,7 +37,12 @@ import {
   Camera,
   FileImage,
   Hand,
-  Move
+  Move,
+  Award,
+  Target,
+  BarChart3,
+  Sparkles,
+  Navigation
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { OrgChartNode } from '@/components/OrgChartNode';
@@ -95,6 +100,12 @@ export function OrgChart() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  const [showMinimap, setShowMinimap] = useState(true);
+  const [stats, setStats] = useState({
+    totalManagers: 0,
+    avgTeamSize: 0,
+    maxDepth: 0
+  });
 
   useEffect(() => {
     if (currentCompany) {
@@ -102,6 +113,21 @@ export function OrgChart() {
       loadDepartments();
     }
   }, [currentCompany]);
+
+  useEffect(() => {
+    if (employees.length > 0) {
+      const managers = employees.filter(e => e.direct_reports_count > 0);
+      const totalReports = managers.reduce((sum, m) => sum + m.direct_reports_count, 0);
+      const avgTeam = managers.length > 0 ? (totalReports / managers.length).toFixed(1) : 0;
+      const maxDepth = Math.max(...employees.map(e => e.level));
+
+      setStats({
+        totalManagers: managers.length,
+        avgTeamSize: parseFloat(avgTeam.toString()),
+        maxDepth
+      });
+    }
+  }, [employees]);
 
   useEffect(() => {
     applyFilters();
@@ -511,6 +537,18 @@ export function OrgChart() {
                       <Hand className="h-4 w-4" />
                       <span className="hidden lg:inline">Pan Mode</span>
                     </button>
+                    <button
+                      onClick={() => setShowMinimap(!showMinimap)}
+                      className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+                        showMinimap
+                          ? 'bg-primary-100 text-primary-700 border-2 border-primary-300'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      title="Toggle Minimap"
+                    >
+                      <Navigation className="h-4 w-4" />
+                      <span className="hidden lg:inline">Minimap</span>
+                    </button>
                   </>
                 )}
               </div>
@@ -551,33 +589,60 @@ export function OrgChart() {
             </div>
           </div>
 
-          <div className="mt-6 flex gap-4">
-            <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg border border-blue-200">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
+          <div className="mt-6 flex flex-wrap gap-3">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-br from-blue-50 via-blue-50 to-blue-100 rounded-xl border-2 border-blue-200 hover:border-blue-300 hover:shadow-md transition-all duration-200 group">
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
                 <Users className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs font-medium text-blue-600">Employees</p>
-                <p className="text-lg font-bold text-blue-900">{filteredEmployees.length}</p>
+                <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide">Total Employees</p>
+                <p className="text-2xl font-bold text-blue-900 tabular-nums">{filteredEmployees.length}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-br from-green-50 to-green-100 rounded-lg border border-green-200">
-              <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-br from-green-50 via-green-50 to-green-100 rounded-xl border-2 border-green-200 hover:border-green-300 hover:shadow-md transition-all duration-200 group">
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
                 <Building2 className="h-5 w-5 text-white" />
               </div>
               <div>
-                <p className="text-xs font-medium text-green-600">Departments</p>
-                <p className="text-lg font-bold text-green-900">{departmentGroups.length}</p>
+                <p className="text-xs font-semibold text-green-600 uppercase tracking-wide">Departments</p>
+                <p className="text-2xl font-bold text-green-900 tabular-nums">{departmentGroups.length}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-br from-amber-50 via-amber-50 to-amber-100 rounded-xl border-2 border-amber-200 hover:border-amber-300 hover:shadow-md transition-all duration-200 group">
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                <Award className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-amber-600 uppercase tracking-wide">Managers</p>
+                <p className="text-2xl font-bold text-amber-900 tabular-nums">{stats.totalManagers}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-br from-cyan-50 via-cyan-50 to-cyan-100 rounded-xl border-2 border-cyan-200 hover:border-cyan-300 hover:shadow-md transition-all duration-200 group">
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                <Target className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-cyan-600 uppercase tracking-wide">Avg Team Size</p>
+                <p className="text-2xl font-bold text-cyan-900 tabular-nums">{stats.avgTeamSize}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-br from-violet-50 via-violet-50 to-violet-100 rounded-xl border-2 border-violet-200 hover:border-violet-300 hover:shadow-md transition-all duration-200 group">
+              <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                <BarChart3 className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-violet-600 uppercase tracking-wide">Max Depth</p>
+                <p className="text-2xl font-bold text-violet-900 tabular-nums">{stats.maxDepth + 1}</p>
               </div>
             </div>
             {viewMode === 'hierarchy' && (
-              <div className="flex items-center gap-3 px-4 py-2 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg border border-purple-200">
-                <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
-                  <TrendingUp className="h-5 w-5 text-white" />
+              <div className="flex items-center gap-3 px-4 py-2.5 bg-gradient-to-br from-rose-50 via-rose-50 to-rose-100 rounded-xl border-2 border-rose-200 hover:border-rose-300 hover:shadow-md transition-all duration-200 group">
+                <div className="h-11 w-11 rounded-xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform duration-200">
+                  <Sparkles className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-purple-600">Zoom Level</p>
-                  <p className="text-lg font-bold text-purple-900">{(zoom * 100).toFixed(0)}%</p>
+                  <p className="text-xs font-semibold text-rose-600 uppercase tracking-wide">Zoom Level</p>
+                  <p className="text-2xl font-bold text-rose-900 tabular-nums">{(zoom * 100).toFixed(0)}%</p>
                 </div>
               </div>
             )}
@@ -605,9 +670,37 @@ export function OrgChart() {
           style={{ height: 'calc(100vh - 400px)', minHeight: '600px' }}
         >
           {isPanning && (
-            <div className="absolute top-4 left-4 bg-primary-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium shadow-lg z-10 flex items-center gap-2 animate-pulse">
-              <Hand className="h-4 w-4" />
+            <div className="absolute top-4 left-4 bg-gradient-to-r from-primary-600 to-primary-700 text-white px-4 py-2 rounded-xl text-sm font-semibold shadow-2xl z-10 flex items-center gap-2 border-2 border-white/20">
+              <Hand className="h-4 w-4 animate-bounce" />
               <span>Pan Mode Active - Drag to move</span>
+            </div>
+          )}
+          {showMinimap && viewMode === 'hierarchy' && filteredEmployees.length > 0 && (
+            <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur-sm rounded-xl shadow-2xl border-2 border-gray-200 p-3 z-10">
+              <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-200">
+                <Navigation className="h-4 w-4 text-primary-600" />
+                <span className="text-xs font-bold text-gray-700 uppercase tracking-wide">Navigation</span>
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600 font-medium">Position:</span>
+                  <span className="text-gray-900 font-mono bg-gray-100 px-2 py-0.5 rounded">
+                    {panPosition.x.toFixed(0)}, {panPosition.y.toFixed(0)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-gray-600 font-medium">Zoom:</span>
+                  <span className="text-gray-900 font-mono bg-gray-100 px-2 py-0.5 rounded">
+                    {(zoom * 100).toFixed(0)}%
+                  </span>
+                </div>
+                <button
+                  onClick={handleResetZoom}
+                  className="w-full mt-2 px-3 py-1.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg text-xs font-semibold hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-md hover:shadow-lg"
+                >
+                  Reset View
+                </button>
+              </div>
             </div>
           )}
           <div
@@ -717,13 +810,13 @@ export function OrgChart() {
             </div>
 
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-200px)]">
-              <div className="mb-4">
+              <div className="mb-6 p-4 bg-gradient-to-r from-primary-50 to-blue-50 rounded-xl border border-primary-200">
                 <button
                   onClick={() => {
                     setShowDetails(false);
                     openEditManager(selectedEmployee);
                   }}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-105 font-medium"
                 >
                   <Pencil className="h-4 w-4" />
                   Edit Reporting Relationship

@@ -1,4 +1,4 @@
-import { User, ChevronDown, ChevronRight, Mail, Phone, Building2, Users, Crown, Star, Edit3 } from 'lucide-react';
+import { User, ChevronDown, ChevronRight, Mail, Phone, Building2, Users, Crown, Star, Edit3, Badge, Briefcase, MapPin, TrendingUp } from 'lucide-react';
 import { useState } from 'react';
 
 interface OrgChartNodeProps {
@@ -13,6 +13,9 @@ interface OrgChartNodeProps {
     department_name: string | null;
     direct_reports: any[];
     direct_reports_count: number;
+    total_reports_count: number;
+    level: number;
+    hire_date: string;
   };
   subordinates: any[];
   level: number;
@@ -31,11 +34,11 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, c
   const hasSubordinates = directSubordinates.length > 0;
 
   const levelColors = [
-    { bg: 'from-red-500 to-red-600', border: 'border-red-300', light: 'from-red-50 to-red-100', glow: 'shadow-red-200' },
-    { bg: 'from-blue-500 to-blue-600', border: 'border-blue-300', light: 'from-blue-50 to-blue-100', glow: 'shadow-blue-200' },
-    { bg: 'from-green-500 to-green-600', border: 'border-green-300', light: 'from-green-50 to-green-100', glow: 'shadow-green-200' },
-    { bg: 'from-purple-500 to-purple-600', border: 'border-purple-300', light: 'from-purple-50 to-purple-100', glow: 'shadow-purple-200' },
-    { bg: 'from-orange-500 to-orange-600', border: 'border-orange-300', light: 'from-orange-50 to-orange-100', glow: 'shadow-orange-200' },
+    { bg: 'from-red-500 to-red-600', border: 'border-red-300', light: 'from-red-50 to-red-100', glow: 'shadow-red-200', text: 'text-red-700', badge: 'bg-red-100 text-red-700' },
+    { bg: 'from-blue-500 to-blue-600', border: 'border-blue-300', light: 'from-blue-50 to-blue-100', glow: 'shadow-blue-200', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-700' },
+    { bg: 'from-green-500 to-green-600', border: 'border-green-300', light: 'from-green-50 to-green-100', glow: 'shadow-green-200', text: 'text-green-700', badge: 'bg-green-100 text-green-700' },
+    { bg: 'from-teal-500 to-teal-600', border: 'border-teal-300', light: 'from-teal-50 to-teal-100', glow: 'shadow-teal-200', text: 'text-teal-700', badge: 'bg-teal-100 text-teal-700' },
+    { bg: 'from-amber-500 to-amber-600', border: 'border-amber-300', light: 'from-amber-50 to-amber-100', glow: 'shadow-amber-200', text: 'text-amber-700', badge: 'bg-amber-100 text-amber-700' },
   ];
 
   const colorIndex = Math.min(level, levelColors.length - 1);
@@ -45,20 +48,31 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, c
     <div className="flex flex-col items-center animate-in fade-in slide-in-from-top-4 duration-500">
       <div className="relative group">
         <div
-          className={`relative bg-white rounded-xl shadow-lg border-2 ${isHighlighted ? 'border-primary-500 ring-4 ring-primary-200 animate-pulse' : colors.border} ${compactMode ? 'p-3 w-64' : 'p-5 w-80'} cursor-pointer hover:shadow-2xl ${colors.glow} transition-all duration-300 transform hover:scale-110 overflow-hidden`}
+          className={`relative bg-white rounded-2xl shadow-xl border-2 ${isHighlighted ? 'border-primary-500 ring-4 ring-primary-200 animate-pulse' : colors.border} ${compactMode ? 'p-4 w-72' : 'p-6 w-96'} cursor-pointer hover:shadow-2xl ${colors.glow} transition-all duration-500 transform hover:scale-105 hover:-translate-y-1 overflow-hidden`}
           onClick={() => onEmployeeClick(employee)}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
           {/* Background gradient overlay on hover */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${colors.light} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`}></div>
+          <div className={`absolute inset-0 bg-gradient-to-br ${colors.light} opacity-0 group-hover:opacity-50 transition-opacity duration-500 pointer-events-none`}></div>
+
+          {/* Animated background particles */}
+          <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none">
+            <div className={`absolute top-2 right-2 w-2 h-2 rounded-full bg-gradient-to-br ${colors.bg} animate-ping`}></div>
+            <div className={`absolute bottom-2 left-2 w-1.5 h-1.5 rounded-full bg-gradient-to-br ${colors.bg} animate-ping`} style={{ animationDelay: '0.3s' }}></div>
+          </div>
 
           {/* Top level badge */}
           {level === 0 && (
-            <div className="absolute top-2 right-2 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full p-1.5 shadow-lg animate-pulse">
-              <Crown className="h-4 w-4 text-white" />
+            <div className="absolute top-3 right-3 bg-gradient-to-r from-yellow-400 via-yellow-500 to-amber-500 rounded-full p-2 shadow-2xl animate-pulse border-2 border-white">
+              <Crown className="h-5 w-5 text-white" />
             </div>
           )}
+
+          {/* Level indicator */}
+          <div className={`absolute top-3 right-3 ${level === 0 ? 'right-14' : ''} ${colors.badge} px-2.5 py-1 rounded-full text-xs font-bold shadow-md`}>
+            L{level}
+          </div>
 
           {/* Edit button */}
           {onEditManager && (
@@ -76,26 +90,36 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, c
           <div className="relative flex items-start gap-4">
             <div className="relative flex-shrink-0">
               {/* Glow effect */}
-              <div className={`absolute inset-0 bg-gradient-to-br ${colors.bg} rounded-full blur-md opacity-40 group-hover:opacity-60 transition-opacity`}></div>
+              <div className={`absolute inset-0 bg-gradient-to-br ${colors.bg} rounded-2xl blur-lg opacity-40 group-hover:opacity-70 transition-opacity duration-500`}></div>
 
               {/* Avatar */}
-              <div className={`relative bg-gradient-to-br ${colors.bg} rounded-full p-4 text-white shadow-xl group-hover:scale-110 transition-transform duration-300`}>
-                <User className="h-7 w-7" />
+              <div className={`relative bg-gradient-to-br ${colors.bg} rounded-2xl ${compactMode ? 'p-3.5' : 'p-5'} text-white shadow-2xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                <User className={compactMode ? 'h-6 w-6' : 'h-8 w-8'} />
               </div>
             </div>
             <div className="relative flex-1 min-w-0">
-              <h3 className={`font-bold text-gray-900 truncate ${compactMode ? 'text-base' : 'text-lg'} group-hover:text-primary-700 transition-colors`}>
+              <h3 className={`font-bold text-gray-900 ${compactMode ? 'text-base' : 'text-xl'} group-hover:${colors.text} transition-colors duration-300 leading-tight`}>
                 {employee.first_name_en} {employee.last_name_en}
               </h3>
-              <p className={`${compactMode ? 'text-xs' : 'text-sm'} text-gray-600 truncate mt-1 font-medium`}>{employee.job_title_en}</p>
-              <div className="flex items-center gap-2 mt-2">
-                <span className="inline-flex items-center px-2 py-0.5 bg-gray-100 text-gray-700 rounded text-xs font-semibold">
+              <div className="flex items-center gap-2 mt-1.5">
+                <Briefcase className="h-3.5 w-3.5 text-gray-400" />
+                <p className={`${compactMode ? 'text-xs' : 'text-sm'} text-gray-600 font-medium line-clamp-1`}>{employee.job_title_en}</p>
+              </div>
+              <div className="flex items-center flex-wrap gap-2 mt-3">
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 rounded-lg text-xs font-bold shadow-sm">
+                  <Badge className="h-3 w-3" />
                   {employee.employee_number}
                 </span>
                 {level === 0 && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 rounded text-xs font-semibold">
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-yellow-100 via-yellow-200 to-amber-200 text-yellow-900 rounded-lg text-xs font-bold shadow-sm border border-yellow-300">
                     <Star className="h-3 w-3" />
                     <span>Executive</span>
+                  </span>
+                )}
+                {employee.total_reports_count > 0 && (
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-1 ${colors.badge} rounded-lg text-xs font-bold shadow-sm`}>
+                    <TrendingUp className="h-3 w-3" />
+                    <span>{employee.total_reports_count} Team</span>
                   </span>
                 )}
               </div>
@@ -103,31 +127,36 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, c
           </div>
 
           {!compactMode && (
-            <div className="relative mt-4 pt-4 border-t-2 border-gray-200 space-y-2">
+            <div className="relative mt-5 pt-4 border-t-2 border-gray-100 space-y-2.5">
             {employee.department_name && (
-              <div className="flex items-center gap-2 text-xs text-gray-600 hover:text-gray-900 transition-colors">
-                <div className="h-6 w-6 rounded-md bg-gray-100 flex items-center justify-center group-hover:bg-primary-100 transition-colors">
-                  <Building2 className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-2.5 text-xs text-gray-600 hover:text-gray-900 transition-colors group/item">
+                <div className={`h-7 w-7 rounded-lg bg-gradient-to-br ${colors.light} flex items-center justify-center group-hover/item:scale-110 transition-transform duration-200 border border-gray-200`}>
+                  <Building2 className="h-4 w-4" />
                 </div>
-                <span className="truncate font-medium">{employee.department_name}</span>
+                <span className="truncate font-semibold">{employee.department_name}</span>
               </div>
             )}
             {employee.email && (
-              <div className="flex items-center gap-2 text-xs text-gray-600 hover:text-primary-600 transition-colors">
-                <div className="h-6 w-6 rounded-md bg-gray-100 flex items-center justify-center group-hover:bg-primary-100 transition-colors">
-                  <Mail className="h-3.5 w-3.5" />
+              <div className="flex items-center gap-2.5 text-xs text-gray-600 hover:text-primary-600 transition-colors group/item">
+                <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center group-hover/item:scale-110 transition-transform duration-200 border border-primary-200">
+                  <Mail className="h-4 w-4" />
                 </div>
-                <span className="truncate font-medium">{employee.email}</span>
+                <span className="truncate font-semibold">{employee.email}</span>
               </div>
             )}
             {employee.direct_reports_count > 0 && (
-              <div className={`flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r ${colors.light} rounded-lg mt-2`}>
-                <div className={`h-6 w-6 rounded-md bg-gradient-to-br ${colors.bg} flex items-center justify-center shadow-sm`}>
-                  <Users className="h-3.5 w-3.5 text-white" />
+              <div className={`flex items-center gap-3 px-3.5 py-2.5 bg-gradient-to-r ${colors.light} rounded-xl border border-opacity-50 ${colors.border} shadow-sm group-hover:shadow-md transition-all duration-300`}>
+                <div className={`h-8 w-8 rounded-lg bg-gradient-to-br ${colors.bg} flex items-center justify-center shadow-md`}>
+                  <Users className="h-4 w-4 text-white" />
                 </div>
-                <span className="text-xs font-bold text-gray-800">
-                  {employee.direct_reports_count} Direct Report{employee.direct_reports_count !== 1 ? 's' : ''}
-                </span>
+                <div className="flex-1">
+                  <p className="text-xs font-bold text-gray-800">
+                    {employee.direct_reports_count} Direct Report{employee.direct_reports_count !== 1 ? 's' : ''}
+                  </p>
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    {employee.total_reports_count} Total Team Members
+                  </p>
+                </div>
               </div>
             )}
             </div>
@@ -139,19 +168,19 @@ export function OrgChartNode({ employee, subordinates, level, onEmployeeClick, c
                 e.stopPropagation();
                 setIsExpanded(!isExpanded);
               }}
-              className={`absolute -bottom-4 left-1/2 transform -translate-x-1/2 bg-gradient-to-br ${colors.bg} border-2 border-white rounded-full p-2 hover:scale-125 transition-all duration-200 shadow-lg z-10 group/btn`}
+              className={`absolute -bottom-5 left-1/2 transform -translate-x-1/2 bg-gradient-to-br ${colors.bg} border-3 border-white rounded-full p-2.5 hover:scale-125 transition-all duration-300 shadow-2xl z-10 group/btn hover:shadow-3xl`}
             >
               {isExpanded ? (
-                <ChevronDown className="h-4 w-4 text-white group-hover/btn:animate-bounce" />
+                <ChevronDown className="h-5 w-5 text-white group-hover/btn:animate-bounce" />
               ) : (
-                <ChevronRight className="h-4 w-4 text-white" />
+                <ChevronRight className="h-5 w-5 text-white group-hover/btn:rotate-90 transition-transform duration-300" />
               )}
             </button>
           )}
         </div>
 
         {hasSubordinates && level < 10 && (
-          <div className={`absolute top-full left-1/2 w-1 bg-gradient-to-b ${colors.bg} h-10 transform -translate-x-1/2 rounded-full opacity-60`} />
+          <div className={`absolute top-full left-1/2 w-0.5 bg-gradient-to-b ${colors.bg} h-12 transform -translate-x-1/2 opacity-50`} />
         )}
       </div>
 
