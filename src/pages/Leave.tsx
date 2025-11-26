@@ -78,8 +78,8 @@ export function Leave() {
         .from('leave_requests')
         .select(`
           *,
-          employee:employees(employee_number, first_name_en, last_name_en),
-          leave_type:leave_types(name_en, name_ar, days_allowed)
+          employee:employees!leave_requests_employee_id_fkey(employee_number, first_name_en, last_name_en),
+          leave_type:leave_types!leave_requests_leave_type_id_fkey(name_en, name_ar, days_allowed)
         `)
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
