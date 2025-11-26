@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
-import { X, User, Briefcase, Calendar, FileText, DollarSign, Clock } from 'lucide-react';
+import { X, User, Briefcase, Calendar, FileText, DollarSign, Clock, Edit3 } from 'lucide-react';
+import { AssignCompensationForm } from './employees/AssignCompensationForm';
 
 interface EmployeeDetailProps {
   employeeId: string;
@@ -39,6 +40,7 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
   const [leaveBalance, setLeaveBalance] = useState<any[]>([]);
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCompensationModal, setShowCompensationModal] = useState(false);
 
   useEffect(() => {
     fetchEmployeeData();
@@ -231,9 +233,18 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
 
           {payroll && (
             <div className="bg-gray-50 rounded-lg p-6">
-              <div className="flex items-center space-x-2 mb-4">
-                <DollarSign className="h-5 w-5 text-primary-600" />
-                <h3 className="text-lg font-bold text-gray-900">Current Salary</h3>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center space-x-2">
+                  <DollarSign className="h-5 w-5 text-primary-600" />
+                  <h3 className="text-lg font-bold text-gray-900">Current Salary</h3>
+                </div>
+                <button
+                  onClick={() => setShowCompensationModal(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Edit3 className="h-4 w-4" />
+                  Edit Compensation
+                </button>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
@@ -252,6 +263,29 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
                   <p className="text-sm text-gray-600">Net Salary</p>
                   <p className="text-lg font-bold text-green-600">SAR {payroll.net_salary.toLocaleString()}</p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {!payroll && (
+            <div className="bg-gradient-to-r from-blue-50 to-blue-100 rounded-lg p-6 border border-blue-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <DollarSign className="h-6 w-6 text-blue-600" />
+                  <div>
+                    <h3 className="font-bold text-gray-900">No Compensation Assigned</h3>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Assign salary details to this employee
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowCompensationModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <DollarSign className="h-4 w-4" />
+                  Assign Compensation
+                </button>
               </div>
             </div>
           )}
@@ -380,6 +414,33 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
           </button>
         </div>
       </div>
+
+      {showCompensationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-[60] overflow-y-auto p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between z-10">
+              <h2 className="text-2xl font-bold text-gray-900">
+                Assign Compensation - {employee.first_name_en} {employee.last_name_en}
+              </h2>
+              <button
+                onClick={() => setShowCompensationModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6">
+              <AssignCompensationForm
+                employeeId={employeeId}
+                onSuccess={() => {
+                  setShowCompensationModal(false);
+                  fetchEmployeeData();
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
