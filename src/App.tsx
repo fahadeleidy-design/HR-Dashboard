@@ -34,6 +34,7 @@ import { AuditLog } from './pages/AuditLog';
 import { OrgChart } from './pages/OrgChart';
 import { EmployeeHandbook } from './pages/EmployeeHandbook';
 import { EmployeeContracts } from './pages/EmployeeContracts';
+import { ComplianceDashboard } from './pages/ComplianceDashboard';
 
 function App() {
   return (
@@ -179,6 +180,7 @@ function App() {
             <Route path="/gov-subscriptions" element={<ProtectedRoute><Layout><GovSubscriptions /></Layout></ProtectedRoute>} />
             <Route path="/end-of-service" element={<ProtectedRoute><Layout><EndOfService /></Layout></ProtectedRoute>} />
             <Route path="/audit-log" element={<ProtectedRoute><Layout><AuditLog /></Layout></ProtectedRoute>} />
+            <Route path="/compliance" element={<ProtectedRoute><Layout><ComplianceDashboard /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
