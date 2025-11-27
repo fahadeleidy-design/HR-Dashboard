@@ -4,6 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import { RecruitmentDashboard } from '@/components/recruitment/RecruitmentDashboard';
 import { JobRequisitions } from '@/components/recruitment/JobRequisitions';
 import { CandidateManagement } from '@/components/recruitment/CandidateManagement';
+import { ScreeningManagement } from '@/components/recruitment/ScreeningManagement';
 import { InterviewManagement } from '@/components/recruitment/InterviewManagement';
 import { OfferManagement } from '@/components/recruitment/OfferManagement';
 import { RecruitmentAnalytics } from '@/components/recruitment/RecruitmentAnalytics';
@@ -27,7 +28,7 @@ export function Recruitment() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-6 bg-white border border-gray-200">
+        <TabsList className="grid w-full grid-cols-7 bg-white border border-gray-200">
           <TabsTrigger value="dashboard">
             {isRTL ? 'لوحة التحكم' : 'Dashboard'}
           </TabsTrigger>
@@ -36,6 +37,9 @@ export function Recruitment() {
           </TabsTrigger>
           <TabsTrigger value="candidates">
             {isRTL ? 'المرشحين' : 'Candidates'}
+          </TabsTrigger>
+          <TabsTrigger value="screening">
+            {isRTL ? 'الفرز' : 'Screening'}
           </TabsTrigger>
           <TabsTrigger value="interviews">
             {isRTL ? 'المقابلات' : 'Interviews'}
@@ -58,6 +62,10 @@ export function Recruitment() {
 
         <TabsContent value="candidates">
           <CandidateManagement />
+        </TabsContent>
+
+        <TabsContent value="screening">
+          <ScreeningManagement />
         </TabsContent>
 
         <TabsContent value="interviews">
