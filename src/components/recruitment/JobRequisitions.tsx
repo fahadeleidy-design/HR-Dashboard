@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
-import { Plus, Filter, Search, Edit, Eye, CheckCircle, XCircle, Clock, X } from 'lucide-react';
+import { Plus, Filter, Search, Edit, Eye, CheckCircle, XCircle, Clock, X, Send, Ban, Play } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
+import { JobRequisitionForm } from './JobRequisitionForm';
 
 interface JobRequisition {
   id: string;
@@ -270,21 +271,10 @@ export function JobRequisitions() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
-              <h2 className="text-2xl font-bold text-gray-900">New Job Requisition</h2>
-              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-600 text-center py-8">
-                Job Requisition form will be implemented here.
-              </p>
-            </div>
-          </div>
-        </div>
+        <JobRequisitionForm
+          onClose={() => setShowModal(false)}
+          onSuccess={() => fetchRequisitions()}
+        />
       )}
 
       {viewingReq && (
@@ -353,21 +343,11 @@ export function JobRequisitions() {
       )}
 
       {editingReq && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
-              <h2 className="text-2xl font-bold text-gray-900">Edit Requisition</h2>
-              <button onClick={() => setEditingReq(null)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            <div className="p-6">
-              <p className="text-gray-600 text-center py-8">
-                Edit requisition form will be implemented here.
-              </p>
-            </div>
-          </div>
-        </div>
+        <JobRequisitionForm
+          editingRequisition={editingReq}
+          onClose={() => setEditingReq(null)}
+          onSuccess={() => fetchRequisitions()}
+        />
       )}
     </div>
   );
