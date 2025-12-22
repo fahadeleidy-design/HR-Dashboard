@@ -159,8 +159,13 @@ export function Employees() {
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredEmployees);
 
   const fetchEmployees = async () => {
-    if (!currentCompany) return;
+    if (!currentCompany) {
+      console.log('No company context available');
+      setLoading(false);
+      return;
+    }
 
+    console.log('Fetching employees for company:', currentCompany.id);
     setLoading(true);
     try {
       const { data: employeesData, error: employeesError } = await supabase
@@ -169,7 +174,12 @@ export function Employees() {
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
 
-      if (employeesError) throw employeesError;
+      if (employeesError) {
+        console.error('Error fetching employees:', employeesError);
+        throw employeesError;
+      }
+
+      console.log('Fetched employees:', employeesData?.length || 0);
 
       const { data: payrollData, error: payrollError } = await supabase
         .from('payroll')
@@ -187,8 +197,9 @@ export function Employees() {
       });
 
       setEmployees(enrichedEmployees);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching employees:', error);
+      alert(`Failed to load employees: ${error.message || 'Unknown error'}. Please check the console for details.`);
     } finally {
       setLoading(false);
     }
@@ -620,6 +631,14 @@ export function Employees() {
           <p className="text-gray-600 mt-1">{t.employees.subtitle}</p>
         </div>
         <div className={`flex gap-2 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <button
+            onClick={fetchEmployees}
+            className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm hover:shadow text-sm"
+            title="Refresh employee data"
+          >
+            <RefreshCw className="h-4 w-4" />
+            <span>Refresh</span>
+          </button>
           <button
             onClick={() => setShowLifecycleTracker(true)}
             className="flex items-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm hover:shadow text-sm"
@@ -1257,7 +1276,34 @@ export function Employees() {
                       <div className="flex flex-col items-center justify-center space-y-3">
                         <Users className="h-12 w-12 text-gray-300" />
                         <p className="text-gray-500 font-medium">No employees found</p>
-                        <p className="text-sm text-gray-400">Click "Add Employee" or use keyboard shortcut Ctrl + N</p>
+                        {employees.length === 0 ? (
+                          <>
+                            <p className="text-sm text-gray-400">Click "Add Employee" or use keyboard shortcut Ctrl + N</p>
+                            <button
+                              onClick={() => setShowForm(true)}
+                              className="mt-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                            >
+                              Add Your First Employee
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-sm text-gray-400">
+                              {filteredEmployees.length === 0 && employees.length > 0
+                                ? `All ${employees.length} employees are hidden by active filters`
+                                : 'Try adjusting your search or filters'}
+                            </p>
+                            {hasActiveFilters && (
+                              <button
+                                onClick={handleClearFilters}
+                                className="mt-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                                Clear All Filters
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1412,7 +1458,34 @@ export function Employees() {
                 <div className="col-span-full flex flex-col items-center justify-center py-12 space-y-3">
                   <Users className="h-12 w-12 text-gray-300" />
                   <p className="text-gray-500 font-medium">No employees found</p>
-                  <p className="text-sm text-gray-400">Click "Add Employee" or use keyboard shortcut Ctrl + N</p>
+                  {employees.length === 0 ? (
+                    <>
+                      <p className="text-sm text-gray-400">Click "Add Employee" or use keyboard shortcut Ctrl + N</p>
+                      <button
+                        onClick={() => setShowForm(true)}
+                        className="mt-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                      >
+                        Add Your First Employee
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-gray-400">
+                        {filteredEmployees.length === 0 && employees.length > 0
+                          ? `All ${employees.length} employees are hidden by active filters`
+                          : 'Try adjusting your search or filters'}
+                      </p>
+                      {hasActiveFilters && (
+                        <button
+                          onClick={handleClearFilters}
+                          className="mt-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors flex items-center gap-2"
+                        >
+                          <RefreshCw className="h-4 w-4" />
+                          Clear All Filters
+                        </button>
+                      )}
+                    </>
+                  )}
                 </div>
               ) : (
                 sortedData.map((employee) => (
