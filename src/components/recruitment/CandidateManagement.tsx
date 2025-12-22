@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 import { Plus, Search, Eye, Edit, Mail, Phone, MapPin, Briefcase, FileText, X } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
+import { CandidateRegistrationForm } from './CandidateRegistrationForm';
 
 interface Candidate {
   id: string;
@@ -216,18 +217,24 @@ export function CandidateManagement() {
       </div>
 
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full my-8">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
               <h2 className="text-2xl font-bold text-gray-900">Add New Candidate</h2>
               <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                 <X className="h-6 w-6" />
               </button>
             </div>
-            <div className="p-6">
-              <p className="text-gray-600 text-center py-8">
-                Candidate registration form will be implemented here.
-              </p>
+            <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+              <CandidateRegistrationForm
+                companyId={currentCompany?.id || ''}
+                onSuccess={() => {
+                  setShowModal(false);
+                  fetchCandidates();
+                  showToast('Candidate application submitted successfully', 'success');
+                }}
+                onCancel={() => setShowModal(false)}
+              />
             </div>
           </div>
         </div>
