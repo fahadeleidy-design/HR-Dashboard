@@ -74,10 +74,22 @@ export function SavedViewsManager({
     if (!currentCompany || !user || !formData.name.trim()) return;
 
     try {
+      const trimmedName = formData.name.trim();
+
+      const existingView = views.find(
+        v => v.name.toLowerCase() === trimmedName.toLowerCase() &&
+        (!editingView || v.id !== editingView.id)
+      );
+
+      if (existingView) {
+        alert('A view with this name already exists. Please choose a different name.');
+        return;
+      }
+
       const viewData = {
         company_id: currentCompany.id,
         user_id: user.id,
-        name: formData.name.trim(),
+        name: trimmedName,
         description: formData.description.trim() || null,
         is_default: formData.is_default,
         is_shared: formData.is_shared,
@@ -105,9 +117,16 @@ export function SavedViewsManager({
       setShowSaveForm(false);
       setEditingView(null);
       setFormData({ name: '', description: '', is_default: false, is_shared: false });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving view:', error);
-      alert('Failed to save view');
+
+      if (error?.code === '23505') {
+        alert('A view with this name already exists. Please choose a different name.');
+      } else if (error?.code === '23503') {
+        alert('You do not have permission to save views. Please contact your administrator.');
+      } else {
+        alert('Failed to save view. Please try again.');
+      }
     }
   };
 
