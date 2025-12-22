@@ -5,7 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types/database';
-import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X, ChevronDown, Users, Building2, Calendar, DollarSign, RefreshCw } from 'lucide-react';
+import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X, ChevronDown, Users, Building2, Calendar, DollarSign, RefreshCw, MoreVertical, Check, FileText, Mail, Phone, Briefcase, CheckSquare, Square, Settings, Grid, List, TrendingUp, AlertTriangle, Clock, MapPin, UserCheck, UserX, Archive, Copy, Send, FileSpreadsheet, FilePlus, Activity } from 'lucide-react';
 import { EmployeeForm } from '@/components/EmployeeForm';
 import { BulkUpload } from '@/components/BulkUpload';
 import { EmployeeDetail } from '@/components/EmployeeDetail';
@@ -24,6 +24,25 @@ interface EmployeeWithPayroll extends Employee {
   department?: { name_en: string; name_ar: string };
 }
 
+interface ColumnConfig {
+  key: string;
+  label: string;
+  visible: boolean;
+}
+
+interface SavedFilter {
+  id: string;
+  name: string;
+  filters: {
+    nationality?: string;
+    department?: string;
+    iqamaExpiry?: string;
+    salaryMin?: string;
+    salaryMax?: string;
+    status?: string;
+  };
+}
+
 export function Employees() {
   const { currentCompany } = useCompany();
   const { t, isRTL, language } = useLanguage();
@@ -40,15 +59,35 @@ export function Employees() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
 
-  // New filter states
   const [filterNationality, setFilterNationality] = useState('');
   const [filterDepartment, setFilterDepartment] = useState('');
   const [filterIqamaExpiry, setFilterIqamaExpiry] = useState('');
   const [filterSalaryMin, setFilterSalaryMin] = useState('');
   const [filterSalaryMax, setFilterSalaryMax] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filterPreset, setFilterPreset] = useState('');
   const [isFilterAnimating, setIsFilterAnimating] = useState(false);
+
+  const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
+  const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
+  const [showColumnSettings, setShowColumnSettings] = useState(false);
+  const [showStats, setShowStats] = useState(true);
+
+  const [columns, setColumns] = useState<ColumnConfig[]>([
+    { key: 'employee_number', label: 'Employee Number', visible: true },
+    { key: 'name', label: 'Name', visible: true },
+    { key: 'job_title', label: 'Job Title', visible: true },
+    { key: 'department', label: 'Department', visible: true },
+    { key: 'iqama_number', label: 'Iqama Number', visible: true },
+    { key: 'iqama_expiry', label: 'Iqama Expiry', visible: true },
+    { key: 'nationality', label: 'Nationality', visible: true },
+    { key: 'status', label: 'Status', visible: true },
+    { key: 'hire_date', label: 'Hire Date', visible: true },
+    { key: 'email', label: 'Email', visible: false },
+    { key: 'phone', label: 'Phone', visible: false },
+    { key: 'salary', label: 'Salary', visible: false },
+  ]);
 
   useEffect(() => {
     if (currentCompany) {
@@ -60,7 +99,7 @@ export function Employees() {
 
   useEffect(() => {
     filterEmployees();
-  }, [searchTerm, employees, searchParams, filterNationality, filterDepartment, filterIqamaExpiry, filterSalaryMin, filterSalaryMax]);
+  }, [searchTerm, employees, searchParams, filterNationality, filterDepartment, filterIqamaExpiry, filterSalaryMin, filterSalaryMax, filterStatus]);
 
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredEmployees);
 
@@ -69,16 +108,14 @@ export function Employees() {
 
     setLoading(true);
     try {
-      // Fetch employees
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
-        .select('*')
+        .select('*, department:departments(name_en, name_ar)')
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
 
       if (employeesError) throw employeesError;
 
-      // Fetch payroll data separately
       const { data: payrollData, error: payrollError } = await supabase
         .from('payroll')
         .select('employee_id, basic_salary')
@@ -86,7 +123,6 @@ export function Employees() {
 
       if (payrollError) console.error('Error fetching payroll:', payrollError);
 
-      // Merge payroll data with employees
       const enrichedEmployees = (employeesData || []).map(emp => {
         const payroll = payrollData?.filter(p => p.employee_id === emp.id) || [];
         return {
@@ -157,28 +193,24 @@ export function Employees() {
   const filterEmployees = () => {
     let filtered = [...employees];
 
-    const statusFilter = searchParams.get('status');
+    const statusFilter = searchParams.get('status') || filterStatus;
     const nationalityFilterParam = searchParams.get('nationality');
     const genderFilter = searchParams.get('gender');
 
-    // Status filter
     if (statusFilter) {
       filtered = filtered.filter(emp => emp.status === statusFilter);
     }
 
-    // URL nationality filter
     if (nationalityFilterParam === 'saudi') {
       filtered = filtered.filter(emp => emp.is_saudi === true);
     } else if (nationalityFilterParam === 'non-saudi') {
       filtered = filtered.filter(emp => emp.is_saudi === false);
     }
 
-    // Gender filter
     if (genderFilter) {
       filtered = filtered.filter(emp => emp.gender === genderFilter);
     }
 
-    // Nationality filter (new)
     if (filterNationality) {
       if (filterNationality === 'saudi') {
         filtered = filtered.filter(emp => emp.is_saudi === true);
@@ -189,12 +221,10 @@ export function Employees() {
       }
     }
 
-    // Department filter (new)
     if (filterDepartment && filterDepartment !== '') {
       filtered = filtered.filter(emp => emp.department_id === filterDepartment);
     }
 
-    // Iqama expiry filter (new)
     if (filterIqamaExpiry) {
       const today = new Date();
       filtered = filtered.filter(emp => {
@@ -215,22 +245,18 @@ export function Employees() {
       });
     }
 
-    // Salary range filter (new)
     if (filterSalaryMin || filterSalaryMax) {
       filtered = filtered.filter(emp => {
-        // Get the most recent salary or 0 if no payroll data
         const salary = emp.payroll && emp.payroll.length > 0 ? emp.payroll[0].basic_salary : 0;
         const min = filterSalaryMin ? parseFloat(filterSalaryMin) : 0;
         const max = filterSalaryMax ? parseFloat(filterSalaryMax) : Infinity;
 
-        // If no salary data and min is set, exclude this employee
         if (salary === 0 && filterSalaryMin) return false;
 
         return salary >= min && salary <= max;
       });
     }
 
-    // Search term
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -240,15 +266,11 @@ export function Employees() {
           emp.employee_number.toLowerCase().includes(term) ||
           emp.email?.toLowerCase().includes(term) ||
           emp.nationality.toLowerCase().includes(term) ||
-          emp.job_title_en.toLowerCase().includes(term)
+          emp.job_title_en.toLowerCase().includes(term) ||
+          emp.iqama_number?.toLowerCase().includes(term)
       );
     }
 
-    console.log('Filter results:', {
-      total: employees.length,
-      filtered: filtered.length,
-      filters: { filterNationality, filterDepartment, filterIqamaExpiry, filterSalaryMin, filterSalaryMax }
-    });
     setFilteredEmployees(filtered);
   };
 
@@ -261,6 +283,42 @@ export function Employees() {
     } catch (error) {
       console.error('Error deleting employee:', error);
       alert('Failed to delete employee');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedEmployees.size === 0) return;
+    if (!confirm(`Are you sure you want to delete ${selectedEmployees.size} employee(s)?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .delete()
+        .in('id', Array.from(selectedEmployees));
+
+      if (error) throw error;
+      setSelectedEmployees(new Set());
+    } catch (error) {
+      console.error('Error deleting employees:', error);
+      alert('Failed to delete employees');
+    }
+  };
+
+  const handleBulkStatusChange = async (status: 'active' | 'on_leave' | 'terminated') => {
+    if (selectedEmployees.size === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from('employees')
+        .update({ status })
+        .in('id', Array.from(selectedEmployees));
+
+      if (error) throw error;
+      setSelectedEmployees(new Set());
+      fetchEmployees();
+    } catch (error) {
+      console.error('Error updating employee status:', error);
+      alert('Failed to update employee status');
     }
   };
 
@@ -287,6 +345,7 @@ export function Employees() {
       setFilterIqamaExpiry('');
       setFilterSalaryMin('');
       setFilterSalaryMax('');
+      setFilterStatus('');
       setFilterPreset('');
       setIsFilterAnimating(false);
     }, 150);
@@ -304,6 +363,7 @@ export function Employees() {
           setFilterIqamaExpiry('30days');
           setFilterSalaryMin('');
           setFilterSalaryMax('');
+          setFilterStatus('');
           break;
         case 'saudi-only':
           setFilterNationality('saudi');
@@ -311,6 +371,7 @@ export function Employees() {
           setFilterIqamaExpiry('');
           setFilterSalaryMin('');
           setFilterSalaryMax('');
+          setFilterStatus('');
           break;
         case 'non-saudi':
           setFilterNationality('non-saudi');
@@ -318,6 +379,7 @@ export function Employees() {
           setFilterIqamaExpiry('');
           setFilterSalaryMin('');
           setFilterSalaryMax('');
+          setFilterStatus('');
           break;
         case 'high-salary':
           setFilterNationality('');
@@ -325,6 +387,15 @@ export function Employees() {
           setFilterIqamaExpiry('');
           setFilterSalaryMin('10000');
           setFilterSalaryMax('');
+          setFilterStatus('');
+          break;
+        case 'active':
+          setFilterNationality('');
+          setFilterDepartment('');
+          setFilterIqamaExpiry('');
+          setFilterSalaryMin('');
+          setFilterSalaryMax('');
+          setFilterStatus('active');
           break;
         default:
           handleClearFilters();
@@ -350,6 +421,9 @@ export function Employees() {
           setFilterSalaryMin('');
           setFilterSalaryMax('');
           break;
+        case 'status':
+          setFilterStatus('');
+          break;
       }
       setIsFilterAnimating(false);
     }, 100);
@@ -363,10 +437,10 @@ export function Employees() {
     return Array.from(nationalities).sort();
   };
 
-  const hasActiveFilters = filterNationality || filterDepartment || filterIqamaExpiry || filterSalaryMin || filterSalaryMax;
+  const hasActiveFilters = filterNationality || filterDepartment || filterIqamaExpiry || filterSalaryMin || filterSalaryMax || filterStatus;
 
   const handleExport = () => {
-    const exportData = employees.map((emp) => ({
+    const exportData = filteredEmployees.map((emp) => ({
       'Employee Number': emp.employee_number,
       'First Name (EN)': emp.first_name_en,
       'Last Name (EN)': emp.last_name_en,
@@ -387,6 +461,8 @@ export function Employees() {
       'Iqama Expiry': emp.iqama_expiry || '',
       'Passport Number': emp.passport_number || '',
       'Passport Expiry': emp.passport_expiry || '',
+      Department: emp.department?.name_en || '',
+      'Basic Salary': emp.payroll && emp.payroll.length > 0 ? emp.payroll[0].basic_salary : 0,
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -394,6 +470,56 @@ export function Employees() {
     XLSX.utils.book_append_sheet(wb, ws, 'Employees');
     XLSX.writeFile(wb, `employees_${currentCompany?.name_en}_${new Date().toISOString().split('T')[0]}.xlsx`);
   };
+
+  const toggleSelectAll = () => {
+    if (selectedEmployees.size === filteredEmployees.length) {
+      setSelectedEmployees(new Set());
+    } else {
+      setSelectedEmployees(new Set(filteredEmployees.map(emp => emp.id)));
+    }
+  };
+
+  const toggleSelectEmployee = (id: string) => {
+    const newSelected = new Set(selectedEmployees);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedEmployees(newSelected);
+  };
+
+  const toggleColumn = (key: string) => {
+    setColumns(columns.map(col =>
+      col.key === key ? { ...col, visible: !col.visible } : col
+    ));
+  };
+
+  const getStatistics = () => {
+    const total = employees.length;
+    const active = employees.filter(e => e.status === 'active').length;
+    const onLeave = employees.filter(e => e.status === 'on_leave').length;
+    const terminated = employees.filter(e => e.status === 'terminated').length;
+    const saudi = employees.filter(e => e.is_saudi).length;
+    const nonSaudi = employees.filter(e => !e.is_saudi).length;
+
+    const expiringSoon = employees.filter(emp => {
+      if (!emp.iqama_expiry) return false;
+      const today = new Date();
+      const expiryDate = new Date(emp.iqama_expiry);
+      const daysUntilExpiry = Math.ceil((expiryDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      return daysUntilExpiry >= 0 && daysUntilExpiry <= 90;
+    }).length;
+
+    const avgSalary = employees.reduce((sum, emp) => {
+      const salary = emp.payroll && emp.payroll.length > 0 ? emp.payroll[0].basic_salary : 0;
+      return sum + salary;
+    }, 0) / (employees.length || 1);
+
+    return { total, active, onLeave, terminated, saudi, nonSaudi, expiringSoon, avgSalary };
+  };
+
+  const stats = getStatistics();
 
   if (loading) {
     return (
@@ -420,9 +546,18 @@ export function Employees() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t.employees.title}</h1>
+      <div className="flex justify-between items-start">
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">{t.employees.title}</h1>
+            <button
+              onClick={() => setShowStats(!showStats)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Toggle Statistics"
+            >
+              <Activity className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
           <p className="text-gray-600 mt-1">{t.employees.subtitle}</p>
           {activeFilters.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
@@ -442,14 +577,14 @@ export function Employees() {
             <>
               <button
                 onClick={handleExport}
-                className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+                className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm hover:shadow ${isRTL ? 'flex-row-reverse' : ''}`}
               >
                 <Download className="h-4 w-4" />
                 <span>{t.employees.exportData}</span>
               </button>
               <button
                 onClick={() => setShowBulkUpload(true)}
-                className={`flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+                className={`flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all shadow-sm hover:shadow ${isRTL ? 'flex-row-reverse' : ''}`}
               >
                 <Upload className="h-4 w-4" />
                 <span>{t.employees.bulkUpload}</span>
@@ -458,7 +593,7 @@ export function Employees() {
           )}
           <button
             onClick={() => setShowForm(true)}
-            className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-sm hover:shadow ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Plus className="h-4 w-4" />
             <span>{t.employees.addEmployee}</span>
@@ -466,7 +601,139 @@ export function Employees() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow">
+      {showStats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-blue-600">Total</p>
+                <p className="text-2xl font-bold text-blue-900">{stats.total}</p>
+              </div>
+              <Users className="h-8 w-8 text-blue-500 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-lg p-4 border border-green-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-green-600">Active</p>
+                <p className="text-2xl font-bold text-green-900">{stats.active}</p>
+              </div>
+              <UserCheck className="h-8 w-8 text-green-500 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-lg p-4 border border-yellow-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-yellow-600">On Leave</p>
+                <p className="text-2xl font-bold text-yellow-900">{stats.onLeave}</p>
+              </div>
+              <Clock className="h-8 w-8 text-yellow-500 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-lg p-4 border border-red-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-red-600">Terminated</p>
+                <p className="text-2xl font-bold text-red-900">{stats.terminated}</p>
+              </div>
+              <UserX className="h-8 w-8 text-red-500 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-lg p-4 border border-emerald-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-emerald-600">Saudi</p>
+                <p className="text-2xl font-bold text-emerald-900">{stats.saudi}</p>
+              </div>
+              <MapPin className="h-8 w-8 text-emerald-500 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-cyan-50 to-cyan-100 rounded-lg p-4 border border-cyan-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-cyan-600">Non-Saudi</p>
+                <p className="text-2xl font-bold text-cyan-900">{stats.nonSaudi}</p>
+              </div>
+              <Building2 className="h-8 w-8 text-cyan-500 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg p-4 border border-orange-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-orange-600">Expiring</p>
+                <p className="text-2xl font-bold text-orange-900">{stats.expiringSoon}</p>
+              </div>
+              <AlertTriangle className="h-8 w-8 text-orange-500 opacity-80" />
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-violet-50 to-violet-100 rounded-lg p-4 border border-violet-200 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-violet-600">Avg Salary</p>
+                <p className="text-2xl font-bold text-violet-900">{Math.round(stats.avgSalary).toLocaleString()}</p>
+              </div>
+              <DollarSign className="h-8 w-8 text-violet-500 opacity-80" />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedEmployees.size > 0 && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <CheckSquare className="h-5 w-5 text-blue-600" />
+            <span className="font-medium text-blue-900">
+              {selectedEmployees.size} employee{selectedEmployees.size !== 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleBulkStatusChange('active')}
+              className="px-3 py-1.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+            >
+              <UserCheck className="h-4 w-4" />
+              Set Active
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange('on_leave')}
+              className="px-3 py-1.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+            >
+              <Clock className="h-4 w-4" />
+              Set On Leave
+            </button>
+            <button
+              onClick={() => handleBulkStatusChange('terminated')}
+              className="px-3 py-1.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+            >
+              <Archive className="h-4 w-4" />
+              Terminate
+            </button>
+            <button
+              onClick={handleBulkDelete}
+              className="px-3 py-1.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete
+            </button>
+            <button
+              onClick={() => setSelectedEmployees(new Set())}
+              className="px-3 py-1.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-sm font-medium flex items-center gap-1.5"
+            >
+              <X className="h-4 w-4" />
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white rounded-lg shadow-lg">
         <div className="p-4 border-b border-gray-200 space-y-4">
           <div className="flex gap-3">
             <div className="flex-1 relative">
@@ -476,7 +743,7 @@ export function Employees() {
                 placeholder={t.employees.searchEmployees}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500`}
+                className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all`}
               />
             </div>
             <button
@@ -487,15 +754,57 @@ export function Employees() {
               <span>{t.common.filters}</span>
               {hasActiveFilters && (
                 <span className={`ml-1 px-2 py-0.5 text-xs font-semibold rounded-full animate-pulse ${showFilters ? 'bg-white text-primary-600' : 'bg-primary-600 text-white'}`}>
-                  {[filterNationality, filterDepartment, filterIqamaExpiry, filterSalaryMin || filterSalaryMax].filter(Boolean).length}
+                  {[filterNationality, filterDepartment, filterIqamaExpiry, filterSalaryMin || filterSalaryMax, filterStatus].filter(Boolean).length}
                 </span>
               )}
             </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowColumnSettings(!showColumnSettings)}
+                className="flex items-center gap-2 px-4 py-2.5 border-2 border-gray-300 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all font-medium text-gray-700"
+              >
+                <Settings className="h-4 w-4" />
+                <span>Columns</span>
+              </button>
+              {showColumnSettings && (
+                <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-xl z-50 max-h-96 overflow-y-auto">
+                  <div className="p-3 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-900">Column Visibility</h3>
+                  </div>
+                  <div className="p-2">
+                    {columns.map(col => (
+                      <label key={col.key} className="flex items-center gap-2 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={col.visible}
+                          onChange={() => toggleColumn(col.key)}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                        <span className="text-sm text-gray-700">{col.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center border-2 border-gray-300 rounded-lg overflow-hidden">
+              <button
+                onClick={() => setViewMode('table')}
+                className={`px-3 py-2.5 transition-colors ${viewMode === 'table' ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                <List className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`px-3 py-2.5 transition-colors border-l-2 border-gray-300 ${viewMode === 'cards' ? 'bg-primary-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-50'}`}
+              >
+                <Grid className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {showFilters && (
             <div className={`bg-gradient-to-br from-gray-50 to-white rounded-xl p-6 space-y-6 border border-gray-200 shadow-sm transition-all duration-300 ${isFilterAnimating ? 'opacity-50' : 'opacity-100'}`}>
-              {/* Quick Filter Presets */}
               <div className="space-y-2">
                 <p className={`text-xs font-semibold text-gray-500 uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>
                   {t.employees.quickFilters}
@@ -523,11 +832,11 @@ export function Employees() {
                     <span>{t.employees.nonSaudiOnly}</span>
                   </button>
                   <button
-                    onClick={() => applyFilterPreset('high-salary')}
-                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${filterPreset === 'high-salary' ? 'bg-purple-500 text-white shadow-md scale-105' : 'bg-white text-gray-700 border border-gray-300 hover:border-purple-500 hover:text-purple-600 hover:shadow'}`}
+                    onClick={() => applyFilterPreset('active')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${filterPreset === 'active' ? 'bg-emerald-500 text-white shadow-md scale-105' : 'bg-white text-gray-700 border border-gray-300 hover:border-emerald-500 hover:text-emerald-600 hover:shadow'}`}
                   >
-                    <DollarSign className="h-4 w-4" />
-                    <span>{t.employees.highSalary}</span>
+                    <UserCheck className="h-4 w-4" />
+                    <span>Active Only</span>
                   </button>
                   {hasActiveFilters && (
                     <button
@@ -541,114 +850,127 @@ export function Employees() {
                 </div>
               </div>
 
-              {/* Divider */}
               <div className="border-t border-gray-200"></div>
 
-              {/* Advanced Filters */}
               <div className="space-y-2">
                 <p className={`text-xs font-semibold text-gray-500 uppercase tracking-wide ${isRTL ? 'text-right' : 'text-left'}`}>
                   {t.employees.advancedFilters}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Nationality Filter */}
-                <div className="group">
-                  <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
-                    <Users className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
-                    {t.employees.nationality}
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={filterNationality}
-                      onChange={(e) => setFilterNationality(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
-                    >
-                      <option value="">{t.common.all}</option>
-                      <option value="saudi">{t.employees.saudi}</option>
-                      <option value="non-saudi">{t.employees.nonSaudi}</option>
-                      <optgroup label={t.employees.specificCountries}>
-                        {getUniqueNationalities().map(nat => (
-                          <option key={nat} value={nat}>{nat}</option>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                  <div className="group">
+                    <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                      <Users className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                      {t.employees.nationality}
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={filterNationality}
+                        onChange={(e) => setFilterNationality(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
+                      >
+                        <option value="">{t.common.all}</option>
+                        <option value="saudi">{t.employees.saudi}</option>
+                        <option value="non-saudi">{t.employees.nonSaudi}</option>
+                        <optgroup label={t.employees.specificCountries}>
+                          {getUniqueNationalities().map(nat => (
+                            <option key={nat} value={nat}>{nat}</option>
+                          ))}
+                        </optgroup>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
+                  </div>
+
+                  <div className="group">
+                    <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                      <Building2 className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                      {t.common.department}
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={filterDepartment}
+                        onChange={(e) => setFilterDepartment(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
+                      >
+                        <option value="">{t.common.all}</option>
+                        {departments.map(dept => (
+                          <option key={dept.id} value={dept.id}>
+                            {language === 'ar' && dept.name_ar ? dept.name_ar : dept.name_en}
+                          </option>
                         ))}
-                      </optgroup>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
                   </div>
-                </div>
 
-                {/* Department Filter */}
-                <div className="group">
-                  <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
-                    <Building2 className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
-                    {t.common.department}
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={filterDepartment}
-                      onChange={(e) => setFilterDepartment(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
-                    >
-                      <option value="">{t.common.all}</option>
-                      {departments.map(dept => (
-                        <option key={dept.id} value={dept.id}>
-                          {language === 'ar' && dept.name_ar ? dept.name_ar : dept.name_en}
-                        </option>
-                      ))}
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <div className="group">
+                    <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                      <Calendar className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                      {t.employees.iqamaExpiry}
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={filterIqamaExpiry}
+                        onChange={(e) => setFilterIqamaExpiry(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
+                      >
+                        <option value="">{t.common.all}</option>
+                        <option value="expired">{t.employees.expired}</option>
+                        <option value="30days">{t.employees.expiring30Days}</option>
+                        <option value="60days">{t.employees.expiring60Days}</option>
+                        <option value="90days">{t.employees.expiring90Days}</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
                   </div>
-                </div>
 
-                {/* Iqama Expiry Filter */}
-                <div className="group">
-                  <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
-                    <Calendar className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
-                    {t.employees.iqamaExpiry}
-                  </label>
-                  <div className="relative">
-                    <select
-                      value={filterIqamaExpiry}
-                      onChange={(e) => setFilterIqamaExpiry(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
-                    >
-                      <option value="">{t.common.all}</option>
-                      <option value="expired">{t.employees.expired}</option>
-                      <option value="30days">{t.employees.expiring30Days}</option>
-                      <option value="60days">{t.employees.expiring60Days}</option>
-                      <option value="90days">{t.employees.expiring90Days}</option>
-                    </select>
-                    <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                  <div className="group">
+                    <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                      <Activity className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                      Status
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={filterStatus}
+                        onChange={(e) => setFilterStatus(e.target.value)}
+                        className="w-full px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 appearance-none cursor-pointer hover:border-gray-300"
+                      >
+                        <option value="">{t.common.all}</option>
+                        <option value="active">Active</option>
+                        <option value="on_leave">On Leave</option>
+                        <option value="terminated">Terminated</option>
+                      </select>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
+                    </div>
                   </div>
-                </div>
 
-                {/* Salary Range */}
-                <div className="group">
-                  <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
-                    <DollarSign className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
-                    {t.employees.salaryRange}
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      type="number"
-                      placeholder={t.employees.min}
-                      value={filterSalaryMin}
-                      onChange={(e) => setFilterSalaryMin(e.target.value)}
-                      className="w-1/2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 hover:border-gray-300"
-                    />
-                    <input
-                      type="number"
-                      placeholder={t.employees.max}
-                      value={filterSalaryMax}
-                      onChange={(e) => setFilterSalaryMax(e.target.value)}
-                      className="w-1/2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 hover:border-gray-300"
-                    />
+                  <div className="group">
+                    <label className={`flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right flex-row-reverse' : 'text-left'}`}>
+                      <DollarSign className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors" />
+                      {t.employees.salaryRange}
+                    </label>
+                    <div className="flex gap-2">
+                      <input
+                        type="number"
+                        placeholder={t.employees.min}
+                        value={filterSalaryMin}
+                        onChange={(e) => setFilterSalaryMin(e.target.value)}
+                        className="w-1/2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 hover:border-gray-300"
+                      />
+                      <input
+                        type="number"
+                        placeholder={t.employees.max}
+                        value={filterSalaryMax}
+                        onChange={(e) => setFilterSalaryMax(e.target.value)}
+                        className="w-1/2 px-4 py-2.5 bg-white border-2 border-gray-200 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-100 transition-all duration-200 hover:border-gray-300"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
-            </div>
           )}
 
-          {/* Active Filter Chips - Outside filter panel, always visible */}
           {hasActiveFilters && !showFilters && (
             <div className="mt-4 animate-in fade-in slide-in-from-top-2 duration-300">
               <div className={`flex flex-wrap gap-2 ${isRTL ? 'justify-end' : 'justify-start'}`}>
@@ -685,10 +1007,20 @@ export function Employees() {
                     <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
                   </button>
                 )}
+                {filterStatus && (
+                  <button
+                    onClick={() => removeFilter('status')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white text-xs font-medium rounded-full hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200 shadow-sm hover:shadow group"
+                  >
+                    <Activity className="h-3 w-3" />
+                    <span>{filterStatus}</span>
+                    <X className="h-3 w-3 opacity-70 group-hover:opacity-100" />
+                  </button>
+                )}
                 {(filterSalaryMin || filterSalaryMax) && (
                   <button
                     onClick={() => removeFilter('salary')}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs font-medium rounded-full hover:from-purple-600 hover:to-purple-700 transition-all duration-200 shadow-sm hover:shadow group"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-violet-500 to-violet-600 text-white text-xs font-medium rounded-full hover:from-violet-600 hover:to-violet-700 transition-all duration-200 shadow-sm hover:shadow group"
                   >
                     <DollarSign className="h-3 w-3" />
                     <span>{filterSalaryMin || '0'} - {filterSalaryMax || '∞'}</span>
@@ -707,7 +1039,6 @@ export function Employees() {
           )}
         </div>
 
-        {/* Results Count */}
         <div className="px-6 py-3 bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200">
           <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className="flex items-center gap-2">
@@ -737,111 +1068,329 @@ export function Employees() {
           </div>
         </div>
 
-        <ScrollableTable maxHeight="calc(100vh - 350px)">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <SortableTableHeader
-                  label={t.employees.employeeNumber}
-                  sortKey="employee_number"
-                  currentSort={sortConfig}
-                  onSort={requestSort}
-                />
-                <SortableTableHeader
-                  label={t.common.name}
-                  sortKey="first_name_en"
-                  currentSort={sortConfig}
-                  onSort={requestSort}
-                />
-                <SortableTableHeader
-                  label={t.employees.jobTitle}
-                  sortKey="job_title_en"
-                  currentSort={sortConfig}
-                  onSort={requestSort}
-                />
-                <SortableTableHeader
-                  label={t.employees.iqamaNumber}
-                  sortKey="iqama_number"
-                  currentSort={sortConfig}
-                  onSort={requestSort}
-                />
-                <SortableTableHeader
-                  label={t.employees.iqamaExpiry}
-                  sortKey="iqama_expiry"
-                  currentSort={sortConfig}
-                  onSort={requestSort}
-                />
-                <SortableTableHeader
-                  label={t.employees.nationality}
-                  sortKey="nationality"
-                  currentSort={sortConfig}
-                  onSort={requestSort}
-                />
-                <SortableTableHeader
-                  label={t.common.status}
-                  sortKey="status"
-                  currentSort={sortConfig}
-                  onSort={requestSort}
-                />
-                <SortableTableHeader
-                  label={t.employees.hireDate}
-                  sortKey="hire_date"
-                  currentSort={sortConfig}
-                  onSort={requestSort}
-                />
-                <th className={`px-6 py-3 ${isRTL ? 'text-left' : 'text-right'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
-                  {t.common.actions}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {sortedData.length === 0 ? (
+        {viewMode === 'table' ? (
+          <ScrollableTable maxHeight="calc(100vh - 450px)">
+            <table className="w-full">
+              <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
-                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
-                    No employees found. Click "Add Employee" or "Bulk Upload" to get started.
-                  </td>
+                  <th className="px-6 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedEmployees.size === filteredEmployees.length && filteredEmployees.length > 0}
+                      onChange={toggleSelectAll}
+                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </th>
+                  {columns.find(c => c.key === 'employee_number')?.visible && (
+                    <SortableTableHeader
+                      label={t.employees.employeeNumber}
+                      sortKey="employee_number"
+                      currentSort={sortConfig}
+                      onSort={requestSort}
+                    />
+                  )}
+                  {columns.find(c => c.key === 'name')?.visible && (
+                    <SortableTableHeader
+                      label={t.common.name}
+                      sortKey="first_name_en"
+                      currentSort={sortConfig}
+                      onSort={requestSort}
+                    />
+                  )}
+                  {columns.find(c => c.key === 'job_title')?.visible && (
+                    <SortableTableHeader
+                      label={t.employees.jobTitle}
+                      sortKey="job_title_en"
+                      currentSort={sortConfig}
+                      onSort={requestSort}
+                    />
+                  )}
+                  {columns.find(c => c.key === 'department')?.visible && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Department
+                    </th>
+                  )}
+                  {columns.find(c => c.key === 'iqama_number')?.visible && (
+                    <SortableTableHeader
+                      label={t.employees.iqamaNumber}
+                      sortKey="iqama_number"
+                      currentSort={sortConfig}
+                      onSort={requestSort}
+                    />
+                  )}
+                  {columns.find(c => c.key === 'iqama_expiry')?.visible && (
+                    <SortableTableHeader
+                      label={t.employees.iqamaExpiry}
+                      sortKey="iqama_expiry"
+                      currentSort={sortConfig}
+                      onSort={requestSort}
+                    />
+                  )}
+                  {columns.find(c => c.key === 'nationality')?.visible && (
+                    <SortableTableHeader
+                      label={t.employees.nationality}
+                      sortKey="nationality"
+                      currentSort={sortConfig}
+                      onSort={requestSort}
+                    />
+                  )}
+                  {columns.find(c => c.key === 'status')?.visible && (
+                    <SortableTableHeader
+                      label={t.common.status}
+                      sortKey="status"
+                      currentSort={sortConfig}
+                      onSort={requestSort}
+                    />
+                  )}
+                  {columns.find(c => c.key === 'hire_date')?.visible && (
+                    <SortableTableHeader
+                      label={t.employees.hireDate}
+                      sortKey="hire_date"
+                      currentSort={sortConfig}
+                      onSort={requestSort}
+                    />
+                  )}
+                  {columns.find(c => c.key === 'email')?.visible && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                  )}
+                  {columns.find(c => c.key === 'phone')?.visible && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Phone
+                    </th>
+                  )}
+                  {columns.find(c => c.key === 'salary')?.visible && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Salary
+                    </th>
+                  )}
+                  <th className={`px-6 py-3 ${isRTL ? 'text-left' : 'text-right'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
+                    {t.common.actions}
+                  </th>
                 </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedData.length === 0 ? (
+                  <tr>
+                    <td colSpan={15} className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <Users className="h-12 w-12 text-gray-300" />
+                        <p className="text-gray-500 font-medium">No employees found</p>
+                        <p className="text-sm text-gray-400">Click "Add Employee" or "Bulk Upload" to get started</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  sortedData.map((employee) => (
+                    <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={selectedEmployees.has(employee.id)}
+                          onChange={() => toggleSelectEmployee(employee.id)}
+                          className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        />
+                      </td>
+                      {columns.find(c => c.key === 'employee_number')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {employee.employee_number}
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'name')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-3">
+                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold">
+                              {employee.first_name_en.charAt(0)}{employee.last_name_en.charAt(0)}
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">
+                                {employee.first_name_en} {employee.last_name_en}
+                              </div>
+                              {columns.find(c => c.key === 'email')?.visible === false && employee.email && (
+                                <div className="text-sm text-gray-500">{employee.email}</div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'job_title')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <div className="flex items-center gap-2">
+                            <Briefcase className="h-4 w-4 text-gray-400" />
+                            {employee.job_title_en}
+                          </div>
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'department')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {employee.department?.name_en || '-'}
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'iqama_number')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {employee.iqama_number || '-'}
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'iqama_expiry')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {employee.iqama_expiry ? (
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              new Date(employee.iqama_expiry) < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
+                                ? 'bg-red-100 text-red-800'
+                                : 'bg-gray-100 text-gray-800'
+                            }`}>
+                              {new Date(employee.iqama_expiry).toLocaleDateString()}
+                            </span>
+                          ) : (
+                            '-'
+                          )}
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'nationality')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            employee.is_saudi
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-blue-100 text-blue-800'
+                          }`}>
+                            {employee.nationality}
+                          </span>
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'status')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            employee.status === 'active'
+                              ? 'bg-green-100 text-green-800'
+                              : employee.status === 'on_leave'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {employee.status}
+                          </span>
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'hire_date')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(employee.hire_date).toLocaleDateString()}
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'email')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {employee.email || '-'}
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'phone')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {employee.phone || '-'}
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'salary')?.visible && (
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {employee.payroll && employee.payroll.length > 0
+                            ? `${employee.payroll[0].basic_salary.toLocaleString()} SAR`
+                            : '-'
+                          }
+                        </td>
+                      )}
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleView(employee.id)}
+                            className="text-blue-600 hover:text-blue-900 p-1 hover:bg-blue-50 rounded transition-colors"
+                            title="View Details"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleEdit(employee)}
+                            className="text-primary-600 hover:text-primary-900 p-1 hover:bg-primary-50 rounded transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(employee.id)}
+                            className="text-red-600 hover:text-red-900 p-1 hover:bg-red-50 rounded transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </ScrollableTable>
+        ) : (
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {sortedData.length === 0 ? (
+                <div className="col-span-full flex flex-col items-center justify-center py-12 space-y-3">
+                  <Users className="h-12 w-12 text-gray-300" />
+                  <p className="text-gray-500 font-medium">No employees found</p>
+                  <p className="text-sm text-gray-400">Click "Add Employee" or "Bulk Upload" to get started</p>
+                </div>
               ) : (
                 sortedData.map((employee) => (
-                  <tr key={employee.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {employee.employee_number}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {employee.first_name_en} {employee.last_name_en}
+                  <div
+                    key={employee.id}
+                    className="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-primary-300 hover:shadow-lg transition-all duration-200 cursor-pointer group"
+                    onClick={() => handleView(employee.id)}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
+                          {employee.first_name_en.charAt(0)}{employee.last_name_en.charAt(0)}
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">
+                            {employee.first_name_en} {employee.last_name_en}
+                          </h3>
+                          <p className="text-xs text-gray-500">{employee.employee_number}</p>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-500">{employee.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {employee.job_title_en}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {employee.iqama_number || '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {employee.iqama_expiry ? (
-                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          new Date(employee.iqama_expiry) < new Date(Date.now() + 90 * 24 * 60 * 60 * 1000)
-                            ? 'bg-red-100 text-red-800'
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {new Date(employee.iqama_expiry).toLocaleDateString()}
-                        </span>
-                      ) : (
-                        '-'
+                      <input
+                        type="checkbox"
+                        checked={selectedEmployees.has(employee.id)}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          toggleSelectEmployee(employee.id);
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                    </div>
+
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <Briefcase className="h-4 w-4 text-gray-400" />
+                        <span>{employee.job_title_en}</span>
+                      </div>
+                      {employee.department && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Building2 className="h-4 w-4 text-gray-400" />
+                          <span>{employee.department.name_en}</span>
+                        </div>
                       )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        employee.is_saudi
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {employee.nationality}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
+                      {employee.email && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Mail className="h-4 w-4 text-gray-400" />
+                          <span className="truncate">{employee.email}</span>
+                        </div>
+                      )}
+                      {employee.phone && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <Phone className="h-4 w-4 text-gray-400" />
+                          <span>{employee.phone}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-gray-200">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
                         employee.status === 'active'
                           ? 'bg-green-100 text-green-800'
@@ -851,39 +1400,41 @@ export function Employees() {
                       }`}>
                         {employee.status}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(employee.hire_date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        employee.is_saudi
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {employee.nationality}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 mt-3">
                       <button
-                        onClick={() => handleView(employee.id)}
-                        className="text-blue-600 hover:text-blue-900 mr-3"
-                        title="View Details"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(employee);
+                        }}
+                        className="flex-1 px-3 py-1.5 bg-primary-50 text-primary-700 rounded hover:bg-primary-100 transition-colors text-xs font-medium"
                       >
-                        <Eye className="h-4 w-4" />
+                        Edit
                       </button>
                       <button
-                        onClick={() => handleEdit(employee)}
-                        className="text-primary-600 hover:text-primary-900 mr-3"
-                        title="Edit"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(employee.id);
+                        }}
+                        className="px-3 py-1.5 bg-red-50 text-red-700 rounded hover:bg-red-100 transition-colors text-xs font-medium"
                       >
-                        <Pencil className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
-                      <button
-                        onClick={() => handleDelete(employee.id)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
+                    </div>
+                  </div>
                 ))
               )}
-            </tbody>
-          </table>
-        </ScrollableTable>
+            </div>
+          </div>
+        )}
 
         <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
           <div className="text-sm text-gray-700">
