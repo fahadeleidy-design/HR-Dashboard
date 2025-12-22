@@ -6,6 +6,8 @@ import {
   Calendar, Users, Plus, Eye, Edit, Star, Clock, CheckCircle, XCircle, X, Save
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
+import { InterviewScheduleForm } from './InterviewScheduleForm';
+import { PanelCreationForm } from './PanelCreationForm';
 
 interface Interview {
   id: string;
@@ -451,6 +453,114 @@ export function EnhancedInterviewManagement() {
       {activeTab === 'interviews' && renderInterviews()}
       {activeTab === 'panels' && renderPanels()}
       {activeTab === 'scorecards' && renderScorecards()}
+
+      {showModal && activeTab === 'interviews' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-4xl w-full my-8">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+              <h2 className="text-2xl font-bold text-gray-900">Schedule Interview</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+              <InterviewScheduleForm
+                companyId={currentCompany?.id || ''}
+                onSuccess={() => {
+                  setShowModal(false);
+                  fetchInterviews();
+                }}
+                onCancel={() => setShowModal(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showModal && activeTab === 'panels' && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full my-8">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white z-10">
+              <h2 className="text-2xl font-bold text-gray-900">Create Interview Panel</h2>
+              <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="max-h-[calc(100vh-200px)] overflow-y-auto">
+              <PanelCreationForm
+                companyId={currentCompany?.id || ''}
+                onSuccess={() => {
+                  setShowModal(false);
+                  fetchPanels();
+                }}
+                onCancel={() => setShowModal(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedInterview && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 sticky top-0 bg-white">
+              <h2 className="text-2xl font-bold text-gray-900">Interview Details</h2>
+              <button onClick={() => setSelectedInterview(null)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Candidate</label>
+                  <p className="text-gray-900 font-semibold">
+                    {selectedInterview.candidate?.first_name} {selectedInterview.candidate?.last_name}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Position</label>
+                  <p className="text-gray-900">{selectedInterview.job_posting?.job_title}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                  <p className="text-gray-900">{selectedInterview.interview_type}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Round</label>
+                  <p className="text-gray-900">Round {selectedInterview.interview_round}</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Date & Time</label>
+                  <p className="text-gray-900">{formatDate(selectedInterview.scheduled_date, 'en')}</p>
+                  <p className="text-sm text-gray-600">
+                    {new Date(selectedInterview.scheduled_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Duration</label>
+                  <p className="text-gray-900">{selectedInterview.duration_minutes} minutes</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <p className="text-gray-900">{selectedInterview.location || 'Not specified'}</p>
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  {getStatusBadge(selectedInterview.status)}
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => setSelectedInterview(null)}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
