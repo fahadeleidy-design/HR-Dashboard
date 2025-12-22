@@ -120,12 +120,17 @@ export function SavedViewsManager({
     } catch (error: any) {
       console.error('Error saving view:', error);
 
-      if (error?.code === '23505') {
+      const errorCode = error?.code || error?.error?.code;
+      const errorMessage = error?.message || error?.error?.message || 'Unknown error';
+
+      if (errorCode === '23505' || errorMessage.includes('duplicate') || errorMessage.includes('unique')) {
         alert('A view with this name already exists. Please choose a different name.');
-      } else if (error?.code === '23503') {
+      } else if (errorCode === '23503' || errorMessage.includes('foreign key')) {
+        alert('You do not have permission to save views. Please contact your administrator.');
+      } else if (errorMessage.includes('policy')) {
         alert('You do not have permission to save views. Please contact your administrator.');
       } else {
-        alert('Failed to save view. Please try again.');
+        alert(`Failed to save view: ${errorMessage}`);
       }
     }
   };
