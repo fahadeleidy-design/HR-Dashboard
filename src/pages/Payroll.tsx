@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
@@ -104,10 +105,13 @@ type View = 'batches' | 'items' | 'create' | 'analytics';
 export function Payroll() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const [searchParams] = useSearchParams();
+  const employeeIdParam = searchParams.get('employee_id');
   const [view, setView] = useState<View>('batches');
   const [batches, setBatches] = useState<PayrollBatch[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<PayrollBatch | null>(null);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
+  const [filteredPayrollItems, setFilteredPayrollItems] = useState<PayrollItem[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [advances, setAdvances] = useState<Advance[]>([]);
@@ -130,6 +134,23 @@ export function Payroll() {
       fetchPayrollItems(selectedBatch.id);
     }
   }, [selectedBatch]);
+
+  useEffect(() => {
+    if (employeeIdParam && batches.length > 0) {
+      setView('items');
+      const latestBatch = batches[0];
+      setSelectedBatch(latestBatch);
+    }
+  }, [employeeIdParam, batches]);
+
+  useEffect(() => {
+    if (employeeIdParam && payrollItems.length > 0) {
+      const filtered = payrollItems.filter(item => item.employee_id === employeeIdParam);
+      setFilteredPayrollItems(filtered);
+    } else {
+      setFilteredPayrollItems(payrollItems);
+    }
+  }, [employeeIdParam, payrollItems]);
 
   const fetchBatches = async () => {
     if (!currentCompany) return;
@@ -768,6 +789,21 @@ export function Payroll() {
               <p className="text-gray-600">
                 {selectedBatch.total_employees} employees | Status: {getStatusLabel(selectedBatch.status)}
               </p>
+              {employeeIdParam && (
+                <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm text-blue-800">
+                      Showing payroll records for employee ID: {employeeIdParam}
+                      {filteredPayrollItems.length > 0 && filteredPayrollItems[0].employee && (
+                        <span className="font-medium ml-1">
+                          ({filteredPayrollItems[0].employee.first_name_en} {filteredPayrollItems[0].employee.last_name_en})
+                        </span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -828,14 +864,14 @@ export function Payroll() {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {payrollItems.length === 0 ? (
+                  {filteredPayrollItems.length === 0 ? (
                     <tr>
                       <td colSpan={10} className="px-6 py-12 text-center text-gray-500">
-                        No payroll items found.
+                        {employeeIdParam ? 'No payroll records found for this employee.' : 'No payroll items found.'}
                       </td>
                     </tr>
                   ) : (
-                    payrollItems.map((item) => (
+                    filteredPayrollItems.map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50">
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">

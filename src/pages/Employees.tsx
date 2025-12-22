@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,6 +40,7 @@ export function Employees() {
   const { t, isRTL, language } = useLanguage();
   const { userRole } = useAuth();
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [employees, setEmployees] = useState<EmployeeWithPayroll[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<EmployeeWithPayroll[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -396,6 +397,26 @@ export function Employees() {
   const handleView = (employeeId: string) => {
     setSelectedEmployeeId(employeeId);
     setShowDetail(true);
+  };
+
+  const handleViewPayroll = (employeeId: string) => {
+    navigate(`/payroll?employee_id=${employeeId}`);
+  };
+
+  const handleViewDocuments = (employeeId: string) => {
+    navigate(`/documents?employee_id=${employeeId}`);
+  };
+
+  const handleViewHistory = (employeeId: string) => {
+    navigate(`/audit-log?employee_id=${employeeId}`);
+  };
+
+  const handleSendEmail = (email: string) => {
+    window.location.href = `mailto:${email}`;
+  };
+
+  const handleAddNote = (employeeId: string) => {
+    alert('Note functionality coming soon!');
   };
 
   const handleFormClose = () => {
@@ -1442,6 +1463,11 @@ export function Employees() {
                             onEdit={() => handleEdit(employee)}
                             onDelete={() => handleDelete(employee.id)}
                             onStatusChange={(status) => handleBulkStatusChange(status)}
+                            onViewPayroll={() => handleViewPayroll(employee.id)}
+                            onViewDocuments={() => handleViewDocuments(employee.id)}
+                            onViewHistory={() => handleViewHistory(employee.id)}
+                            onSendEmail={() => handleSendEmail(employee.email || '')}
+                            onAddNote={() => handleAddNote(employee.id)}
                           />
                         </div>
                       </td>
