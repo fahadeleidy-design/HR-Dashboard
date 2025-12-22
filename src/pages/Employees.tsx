@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Employee } from '@/types/database';
 import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X, ChevronDown, Users, Building2, Calendar, DollarSign, RefreshCw } from 'lucide-react';
@@ -26,6 +27,7 @@ interface EmployeeWithPayroll extends Employee {
 export function Employees() {
   const { currentCompany } = useCompany();
   const { t, isRTL, language } = useLanguage();
+  const { userRole } = useAuth();
   const [searchParams] = useSearchParams();
   const [employees, setEmployees] = useState<EmployeeWithPayroll[]>([]);
   const [filteredEmployees, setFilteredEmployees] = useState<EmployeeWithPayroll[]>([]);
@@ -436,20 +438,24 @@ export function Employees() {
           )}
         </div>
         <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
-          <button
-            onClick={handleExport}
-            className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
-          >
-            <Download className="h-4 w-4" />
-            <span>{t.employees.exportData}</span>
-          </button>
-          <button
-            onClick={() => setShowBulkUpload(true)}
-            className={`flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
-          >
-            <Upload className="h-4 w-4" />
-            <span>{t.employees.bulkUpload}</span>
-          </button>
+          {userRole?.role === 'super_admin' && (
+            <>
+              <button
+                onClick={handleExport}
+                className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+              >
+                <Download className="h-4 w-4" />
+                <span>{t.employees.exportData}</span>
+              </button>
+              <button
+                onClick={() => setShowBulkUpload(true)}
+                className={`flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+              >
+                <Upload className="h-4 w-4" />
+                <span>{t.employees.bulkUpload}</span>
+              </button>
+            </>
+          )}
           <button
             onClick={() => setShowForm(true)}
             className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
