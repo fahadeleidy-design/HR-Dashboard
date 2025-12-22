@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Edit, Trash2, Eye, Mail, Phone, FileText, Calendar, Award, AlertTriangle, UserCheck, UserX, Clock, Archive, Copy, Send, Download, MessageSquare, History, Briefcase, DollarSign, Building2 } from 'lucide-react';
 import { Employee } from '@/types/database';
 
@@ -28,6 +28,34 @@ export function EmployeeQuickActions({
   onAddNote
 }: EmployeeQuickActionsProps) {
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (showMenu && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      const menuWidth = 224;
+      const menuHeight = 400;
+      const padding = 8;
+
+      let left = rect.right - menuWidth;
+      let top = rect.bottom + padding;
+
+      if (left < padding) {
+        left = rect.left;
+      }
+
+      if (top + menuHeight > window.innerHeight) {
+        top = rect.top - menuHeight - padding;
+      }
+
+      if (top < 0) {
+        top = padding;
+      }
+
+      setMenuPosition({ top, left });
+    }
+  }, [showMenu]);
 
   const actions = [
     {
@@ -180,8 +208,9 @@ export function EmployeeQuickActions({
   ];
 
   return (
-    <div className="relative">
+    <>
       <button
+        ref={buttonRef}
         onClick={(e) => {
           e.stopPropagation();
           setShowMenu(!showMenu);
@@ -194,10 +223,16 @@ export function EmployeeQuickActions({
       {showMenu && (
         <>
           <div
-            className="fixed inset-0 z-10"
+            className="fixed inset-0 z-40"
             onClick={() => setShowMenu(false)}
           />
-          <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-20 py-1 max-h-96 overflow-y-auto">
+          <div
+            className="fixed w-56 bg-white border border-gray-200 rounded-lg shadow-xl z-50 py-1 max-h-96 overflow-y-auto"
+            style={{
+              top: `${menuPosition.top}px`,
+              left: `${menuPosition.left}px`
+            }}
+          >
             {actions.map((action, index) => {
               if (action.divider) {
                 return <div key={`divider-${index}`} className="border-t border-gray-200 my-1" />;
@@ -226,6 +261,6 @@ export function EmployeeQuickActions({
           </div>
         </>
       )}
-    </div>
+    </>
   );
 }
