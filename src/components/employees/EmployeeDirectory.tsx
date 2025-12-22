@@ -102,7 +102,7 @@ export function EmployeeDirectory({ companyId, onEmployeeSelect }: EmployeeDirec
     }
 
     if (departmentFilter) {
-      filtered = filtered.filter(emp => emp.department?.name_en === departmentFilter);
+      filtered = filtered.filter(emp => emp.departments?.name_en === departmentFilter);
     }
 
     if (statusFilter) {
@@ -330,7 +330,7 @@ export function EmployeeDirectory({ companyId, onEmployeeSelect }: EmployeeDirec
                     {employee.position}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.department?.name_en || '-'}
+                    {employee.departments?.name_en || '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{employee.email}</div>

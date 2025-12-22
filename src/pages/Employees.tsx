@@ -170,7 +170,7 @@ export function Employees() {
     try {
       const { data: employeesData, error: employeesError } = await supabase
         .from('employees')
-        .select('*, department:departments(name_en, name_ar)')
+        .select('*, departments!employees_department_id_fkey(name_en, name_ar)')
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
 
@@ -1350,7 +1350,7 @@ export function Employees() {
                       )}
                       {columns.find(c => c.key === 'department')?.visible && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {employee.department?.name_en || '-'}
+                          {employee.departments?.name_en || '-'}
                         </td>
                       )}
                       {columns.find(c => c.key === 'iqama_number')?.visible && (
@@ -1523,10 +1523,10 @@ export function Employees() {
                         <Briefcase className="h-4 w-4 text-gray-400" />
                         <span>{employee.job_title_en}</span>
                       </div>
-                      {employee.department && (
+                      {employee.departments && (
                         <div className="flex items-center gap-2 text-gray-600">
                           <Building2 className="h-4 w-4 text-gray-400" />
-                          <span>{employee.department.name_en}</span>
+                          <span>{employee.departments.name_en}</span>
                         </div>
                       )}
                       {employee.email && (

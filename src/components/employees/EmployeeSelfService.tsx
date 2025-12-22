@@ -180,7 +180,7 @@ export function EmployeeSelfService({ employeeId, companyId }: EmployeeSelfServi
                 <div className="flex items-center gap-4 text-sm opacity-80">
                   <span>{employee.employee_number}</span>
                   <span>•</span>
-                  <span>{employee.department?.name_en}</span>
+                  <span>{employee.departments?.name_en}</span>
                   <span>•</span>
                   <span>{getTenure(employee.hire_date)} tenure</span>
                 </div>
