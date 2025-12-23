@@ -1,29 +1,50 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 import {
-  FileText, DollarSign, Plus, Eye, Send, CheckCircle, XCircle, Clock, TrendingUp
+  FileText, DollarSign, Plus, Eye, Send, CheckCircle, XCircle, Clock, TrendingUp, Edit2, Trash2, X
 } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/formatters';
+import { OfferManagementForm } from './OfferManagementForm';
 
 interface JobOffer {
   id: string;
+  application_id: string;
   candidate_id: string;
+  job_posting_id: string;
   offered_salary: number;
   offered_benefits: string;
   start_date: string;
+  contract_type: string;
+  probation_period: number;
   status: string;
-  offer_date: string;
+  sent_date?: string;
   response_deadline: string;
   accepted_date?: string;
-  declined_date?: string;
+  rejected_date?: string;
+  rejection_reason?: string;
+  counter_offer_amount?: number;
+  notes?: string;
+  created_at?: string;
   candidate?: {
-    first_name: string;
-    last_name: string;
+    full_name: string;
     email: string;
   };
   job_posting?: {
+    job_title: string;
+  };
+}
+
+interface Application {
+  id: string;
+  candidate: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
+  job_posting: {
+    id: string;
     job_title: string;
   };
 }
@@ -47,6 +68,21 @@ export function EnhancedOfferManagement() {
   const [filter, setFilter] = useState('all');
   const [activeTab, setActiveTab] = useState<'offers' | 'negotiations'>('offers');
   const [selectedOffer, setSelectedOffer] = useState<JobOffer | null>(null);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<JobOffer | null>(null);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [showNegotiationModal, setShowNegotiationModal] = useState(false);
+  const [negotiatingOffer, setNegotiatingOffer] = useState<JobOffer | null>(null);
+  const [formData, setFormData] = useState({
+    application_id: '',
+    offered_salary: '',
+    offered_benefits: '',
+    start_date: '',
+    contract_type: 'full_time',
+    probation_period: '90',
+    response_deadline: '',
+    notes: ''
+  });
 
   useEffect(() => {
     if (currentCompany) {
@@ -91,7 +127,7 @@ export function EnhancedOfferManagement() {
         .select(`
           *,
           job_offer:job_offers(
-            candidate:candidates(first_name, last_name),
+            candidate:candidates(full_name),
             job_posting:job_postings(job_title)
           )
         `)
@@ -103,6 +139,63 @@ export function EnhancedOfferManagement() {
       console.error('Error fetching negotiations:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendOffer = async (offerId: string) => {
+    if (!confirm('Are you sure you want to send this offer to the candidate?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('job_offers')
+        .update({
+          status: 'sent',
+          sent_date: new Date().toISOString().split('T')[0]
+        })
+        .eq('id', offerId);
+
+      if (error) throw error;
+      showToast('Offer sent successfully', 'success');
+      fetchOffers();
+    } catch (error: any) {
+      console.error('Error sending offer:', error);
+      showToast(error.message || 'Failed to send offer', 'error');
+    }
+  };
+
+  const handleDeleteOffer = async (offerId: string) => {
+    if (!confirm('Are you sure you want to delete this offer? This action cannot be undone.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('job_offers')
+        .delete()
+        .eq('id', offerId);
+
+      if (error) throw error;
+      showToast('Offer deleted successfully', 'success');
+      fetchOffers();
+    } catch (error: any) {
+      console.error('Error deleting offer:', error);
+      showToast(error.message || 'Failed to delete offer', 'error');
+    }
+  };
+
+  const handleWithdrawOffer = async (offerId: string) => {
+    if (!confirm('Are you sure you want to withdraw this offer?')) return;
+
+    try {
+      const { error } = await supabase
+        .from('job_offers')
+        .update({ status: 'withdrawn' })
+        .eq('id', offerId);
+
+      if (error) throw error;
+      showToast('Offer withdrawn successfully', 'success');
+      fetchOffers();
+    } catch (error: any) {
+      console.error('Error withdrawing offer:', error);
+      showToast(error.message || 'Failed to withdraw offer', 'error');
     }
   };
 
@@ -145,7 +238,7 @@ export function EnhancedOfferManagement() {
           </select>
         </div>
         <button
-          onClick={() => {}}
+          onClick={() => setShowOfferModal(true)}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
         >
           <Plus className="h-5 w-5" />
@@ -181,7 +274,7 @@ export function EnhancedOfferManagement() {
                     <td className="px-6 py-4">
                       <div className="flex flex-col">
                         <span className="font-medium text-gray-900">
-                          {offer.candidate?.first_name} {offer.candidate?.last_name}
+                          {offer.candidate?.full_name}
                         </span>
                         <span className="text-xs text-gray-500">{offer.candidate?.email}</span>
                       </div>
@@ -198,7 +291,7 @@ export function EnhancedOfferManagement() {
                       <span className="text-sm text-gray-700">{formatDate(offer.start_date, 'en')}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{formatDate(offer.offer_date, 'en')}</span>
+                      <span className="text-sm text-gray-700">{offer.sent_date ? formatDate(offer.sent_date, 'en') : '-'}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-700">{formatDate(offer.response_deadline, 'en')}</span>
@@ -207,13 +300,54 @@ export function EnhancedOfferManagement() {
                       {getStatusBadge(offer.status)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => setSelectedOffer(offer)}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="View Details"
-                      >
-                        <Eye className="h-4 w-4" />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setSelectedOffer(offer)}
+                          className="p-1 text-blue-600 hover:text-blue-900"
+                          title="View Details"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        {(offer.status === 'draft' || offer.status === 'sent') && (
+                          <button
+                            onClick={() => {
+                              setEditingOffer(offer);
+                              setShowOfferModal(true);
+                            }}
+                            className="p-1 text-green-600 hover:text-green-900"
+                            title="Edit Offer"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </button>
+                        )}
+                        {offer.status === 'draft' && (
+                          <button
+                            onClick={() => handleSendOffer(offer.id)}
+                            className="p-1 text-purple-600 hover:text-purple-900"
+                            title="Send Offer"
+                          >
+                            <Send className="h-4 w-4" />
+                          </button>
+                        )}
+                        {offer.status === 'sent' && (
+                          <button
+                            onClick={() => handleWithdrawOffer(offer.id)}
+                            className="p-1 text-orange-600 hover:text-orange-900"
+                            title="Withdraw Offer"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </button>
+                        )}
+                        {offer.status === 'draft' && (
+                          <button
+                            onClick={() => handleDeleteOffer(offer.id)}
+                            className="p-1 text-red-600 hover:text-red-900"
+                            title="Delete Offer"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -253,7 +387,7 @@ export function EnhancedOfferManagement() {
                   <tr key={neg.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <span className="font-medium text-gray-900">
-                        {neg.job_offer?.candidate?.first_name} {neg.job_offer?.candidate?.last_name}
+                        {neg.job_offer?.candidate?.full_name}
                       </span>
                     </td>
                     <td className="px-6 py-4">
@@ -382,6 +516,123 @@ export function EnhancedOfferManagement() {
 
       {activeTab === 'offers' && renderOffers()}
       {activeTab === 'negotiations' && renderNegotiations()}
+
+      {showOfferModal && (
+        <OfferManagementForm
+          offer={editingOffer}
+          onClose={() => {
+            setShowOfferModal(false);
+            setEditingOffer(null);
+          }}
+          onSuccess={() => {
+            fetchOffers();
+            setEditingOffer(null);
+          }}
+        />
+      )}
+
+      {selectedOffer && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Offer Details</h2>
+              <button
+                onClick={() => setSelectedOffer(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-600">Candidate</p>
+                  <p className="text-lg font-semibold text-gray-900">{selectedOffer.candidate?.full_name}</p>
+                  <p className="text-sm text-gray-600">{selectedOffer.candidate?.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Position</p>
+                  <p className="text-lg font-semibold text-gray-900">{selectedOffer.job_posting?.job_title}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-600">Offered Salary</p>
+                  <p className="text-lg font-semibold text-green-600">{formatNumber(selectedOffer.offered_salary, 'en')} SAR</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Contract Type</p>
+                  <p className="text-lg font-semibold text-gray-900 capitalize">{selectedOffer.contract_type?.replace('_', ' ')}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-600">Start Date</p>
+                  <p className="text-lg font-semibold text-gray-900">{formatDate(selectedOffer.start_date, 'en')}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Response Deadline</p>
+                  <p className="text-lg font-semibold text-gray-900">{formatDate(selectedOffer.response_deadline, 'en')}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <p className="text-sm text-gray-600">Probation Period</p>
+                  <p className="text-lg font-semibold text-gray-900">{selectedOffer.probation_period || 0} days</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Status</p>
+                  <div className="mt-1">{getStatusBadge(selectedOffer.status)}</div>
+                </div>
+              </div>
+
+              {selectedOffer.offered_benefits && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">Benefits Package</p>
+                  <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-4 rounded-lg">{selectedOffer.offered_benefits}</p>
+                </div>
+              )}
+
+              {selectedOffer.notes && (
+                <div>
+                  <p className="text-sm text-gray-600 mb-2">Internal Notes</p>
+                  <p className="text-gray-900 whitespace-pre-wrap bg-gray-50 p-4 rounded-lg">{selectedOffer.notes}</p>
+                </div>
+              )}
+
+              {selectedOffer.sent_date && (
+                <div className="border-t border-gray-200 pt-4">
+                  <p className="text-sm text-gray-600">Sent Date: {formatDate(selectedOffer.sent_date, 'en')}</p>
+                  {selectedOffer.accepted_date && (
+                    <p className="text-sm text-green-600 mt-1">Accepted Date: {formatDate(selectedOffer.accepted_date, 'en')}</p>
+                  )}
+                  {selectedOffer.rejected_date && (
+                    <>
+                      <p className="text-sm text-red-600 mt-1">Rejected Date: {formatDate(selectedOffer.rejected_date, 'en')}</p>
+                      {selectedOffer.rejection_reason && (
+                        <p className="text-sm text-gray-600 mt-1">Reason: {selectedOffer.rejection_reason}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 px-6 py-4 flex justify-end">
+              <button
+                onClick={() => setSelectedOffer(null)}
+                className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

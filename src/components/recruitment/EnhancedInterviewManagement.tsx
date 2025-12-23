@@ -8,6 +8,7 @@ import {
 import { formatDate } from '@/lib/formatters';
 import { InterviewScheduleForm } from './InterviewScheduleForm';
 import { PanelCreationForm } from './PanelCreationForm';
+import { InterviewScorecardForm } from './InterviewScorecardForm';
 
 interface Interview {
   id: string;
@@ -266,7 +267,10 @@ export function EnhancedInterviewManagement() {
                         <Eye className="h-4 w-4" />
                       </button>
                       <button
-                        onClick={() => setShowScorecardModal(true)}
+                        onClick={() => {
+                          setSelectedInterview(interview);
+                          setShowScorecardModal(true);
+                        }}
                         className="text-green-600 hover:text-green-900"
                         title="Add Scorecard"
                       >
@@ -560,6 +564,20 @@ export function EnhancedInterviewManagement() {
             </div>
           </div>
         </div>
+      )}
+
+      {showScorecardModal && selectedInterview && (
+        <InterviewScorecardForm
+          interview={selectedInterview}
+          onClose={() => {
+            setShowScorecardModal(false);
+            setSelectedInterview(null);
+          }}
+          onSuccess={() => {
+            fetchInterviews();
+            fetchScorecards();
+          }}
+        />
       )}
     </div>
   );

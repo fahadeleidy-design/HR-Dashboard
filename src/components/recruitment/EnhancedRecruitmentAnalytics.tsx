@@ -59,14 +59,16 @@ export function EnhancedRecruitmentAnalytics() {
         applicationsData,
         interviewsData,
         offersData,
-        sourcesData
+        sourcesData,
+        timeTrackingData
       ] = await Promise.all([
         supabase.from('job_requisitions').select('id, status').eq('company_id', currentCompany.id),
         supabase.from('candidates').select('id, status').eq('company_id', currentCompany.id),
-        supabase.from('applications').select('id, status, source').eq('company_id', currentCompany.id),
+        supabase.from('candidate_applications').select('id, application_status, source').eq('company_id', currentCompany.id),
         supabase.from('interviews').select('id, status').eq('company_id', currentCompany.id),
         supabase.from('job_offers').select('id, status').eq('company_id', currentCompany.id),
-        supabase.from('recruitment_sources').select('*').eq('company_id', currentCompany.id)
+        supabase.from('recruitment_sources').select('*').eq('company_id', currentCompany.id),
+        supabase.from('time_to_hire_tracking').select('total_days_to_hire').not('total_days_to_hire', 'is', null)
       ]);
 
       const requisitions = requisitionsData.data || [];
@@ -75,10 +77,17 @@ export function EnhancedRecruitmentAnalytics() {
       const interviews = interviewsData.data || [];
       const offers = offersData.data || [];
       const sources = sourcesData.data || [];
+      const timeTracking = timeTrackingData.data || [];
 
       const offersAccepted = offers.filter(o => o.status === 'accepted').length;
       const offersExtended = offers.length;
       const acceptanceRate = offersExtended > 0 ? (offersAccepted / offersExtended) * 100 : 0;
+
+      const avgDaysToHire = timeTracking.length > 0
+        ? Math.round(timeTracking.reduce((sum, t) => sum + (t.total_days_to_hire || 0), 0) / timeTracking.length)
+        : 0;
+
+      const estimatedCostPerHire = offersAccepted > 0 ? Math.round(offersExtended * 5000 / offersAccepted) : 0;
 
       setMetrics({
         totalRequisitions: requisitions.length,
@@ -89,8 +98,8 @@ export function EnhancedRecruitmentAnalytics() {
         offersExtended: offersExtended,
         offersAccepted: offersAccepted,
         newHires: candidates.filter(c => c.status === 'hired').length,
-        avgTimeToHire: 28,
-        avgCostPerHire: 15000,
+        avgTimeToHire: avgDaysToHire,
+        avgCostPerHire: estimatedCostPerHire,
         offerAcceptanceRate: Math.round(acceptanceRate),
         sourceEffectiveness: sources.slice(0, 5),
         monthlyHiring: []
@@ -262,9 +271,9 @@ export function EnhancedRecruitmentAnalytics() {
               <p className="text-2xl font-bold text-gray-900">{metrics.avgTimeToHire} days</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-green-600">
-            <TrendingUp className="h-4 w-4" />
-            <span>15% faster than last quarter</span>
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <Clock className="h-4 w-4" />
+            <span>Calculated from historical data</span>
           </div>
         </div>
 
@@ -278,9 +287,9 @@ export function EnhancedRecruitmentAnalytics() {
               <p className="text-2xl font-bold text-gray-900">{formatNumber(metrics.avgCostPerHire, 'en')} SAR</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 text-xs text-green-600">
-            <TrendingUp className="h-4 w-4" />
-            <span>8% reduction from last quarter</span>
+          <div className="flex items-center gap-2 text-xs text-gray-600">
+            <DollarSign className="h-4 w-4" />
+            <span>Estimated based on offer metrics</span>
           </div>
         </div>
 
