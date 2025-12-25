@@ -7,7 +7,8 @@ import { X, Save } from 'lucide-react';
 
 interface Department {
   id: string;
-  name: string;
+  name_en: string;
+  name_ar: string;
 }
 
 interface Employee {
@@ -80,9 +81,9 @@ export function JobRequisitionForm({ onClose, onSuccess, editingRequisition }: J
   const fetchDepartments = async () => {
     const { data } = await supabase
       .from('departments')
-      .select('id, name')
+      .select('id, name_en, name_ar')
       .eq('company_id', currentCompany?.id)
-      .order('name');
+      .order('name_en');
     if (data) setDepartments(data);
   };
 
@@ -180,16 +181,21 @@ export function JobRequisitionForm({ onClose, onSuccess, editingRequisition }: J
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Department <span className="text-red-500">*</span>
+              </label>
               <select
                 name="department_id"
                 value={formData.department_id}
                 onChange={handleChange}
+                required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
                 <option value="">Select Department</option>
                 {departments.map(dept => (
-                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  <option key={dept.id} value={dept.id}>
+                    {dept.name_en} {dept.name_ar ? `(${dept.name_ar})` : ''}
+                  </option>
                 ))}
               </select>
             </div>
