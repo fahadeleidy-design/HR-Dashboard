@@ -37,7 +37,7 @@ export function SearchableSelect({
   });
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
         setSearchTerm('');
@@ -45,12 +45,19 @@ export function SearchableSelect({
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, []);
 
   useEffect(() => {
     if (isOpen && searchInputRef.current) {
-      searchInputRef.current.focus();
+      const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (!isTouchDevice) {
+        searchInputRef.current.focus();
+      }
     }
   }, [isOpen]);
 
@@ -60,15 +67,23 @@ export function SearchableSelect({
     setSearchTerm('');
   };
 
+  const handleToggle = (e: React.MouseEvent | React.TouchEvent) => {
+    if (!disabled) {
+      e.preventDefault();
+      setIsOpen(!isOpen);
+    }
+  };
+
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       <button
         type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
+        onClick={handleToggle}
         disabled={disabled}
         className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 text-left flex items-center justify-between ${
-          disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white cursor-pointer hover:border-gray-400'
+          disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white cursor-pointer hover:border-gray-400 active:border-primary-500'
         }`}
+        style={{ touchAction: 'manipulation' }}
       >
         <span className={selectedOption ? 'text-gray-900' : 'text-gray-500'}>
           {selectedOption ? selectedOption.label : placeholder}
@@ -77,10 +92,10 @@ export function SearchableSelect({
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-80 overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-80 overflow-hidden" style={{ touchAction: 'manipulation' }}>
           <div className="p-2 border-b border-gray-200">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
               <input
                 ref={searchInputRef}
                 type="text"
@@ -92,7 +107,7 @@ export function SearchableSelect({
             </div>
           </div>
 
-          <div className="max-h-60 overflow-y-auto">
+          <div className="max-h-60 overflow-y-auto" style={{ WebkitOverflowScrolling: 'touch' }}>
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-2 text-sm text-gray-500 text-center">
                 No results found
@@ -102,10 +117,14 @@ export function SearchableSelect({
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => handleSelect(option.value)}
-                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 ${
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleSelect(option.value);
+                  }}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-gray-100 active:bg-gray-200 transition-colors ${
                     option.value === value ? 'bg-primary-50 text-primary-700' : 'text-gray-900'
                   }`}
+                  style={{ touchAction: 'manipulation' }}
                 >
                   {option.label}
                 </button>
