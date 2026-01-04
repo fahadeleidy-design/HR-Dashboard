@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { Plus, DollarSign, TrendingDown, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
@@ -35,6 +36,7 @@ interface Employee {
 export function Loans() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const { userRole } = useAuth();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,6 +85,11 @@ export function Loans() {
 
   const fetchEmployees = async () => {
     if (!currentCompany) return;
+
+    console.log('Fetching employees...');
+    console.log('Current user role:', userRole);
+    console.log('Company ID:', currentCompany.id);
+
     try {
       const { data, error } = await supabase
         .from('employees')
@@ -91,10 +98,31 @@ export function Loans() {
         .eq('status', 'active')
         .order('employee_number');
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching employees:', error);
+        console.error('Error details:', JSON.stringify(error, null, 2));
+        console.error('User role details:', userRole);
+
+        if (!userRole) {
+          alert('No user role found. Please contact your administrator to assign you a role (HR, Finance, or Admin) to access this feature.');
+        } else if (userRole.role === 'employee') {
+          alert('You have an employee role which restricts access. Please contact your administrator if you need HR, Finance, or Admin access to manage loans.');
+        } else {
+          alert('Unable to load employees. Error: ' + (error.message || 'Unknown error'));
+        }
+        return;
+      }
+
+      console.log('Employees loaded successfully:', data?.length || 0);
       setEmployees(data || []);
-    } catch (error) {
-      console.error('Error fetching employees:', error);
+
+      if (!data || data.length === 0) {
+        console.warn('No employees found for company:', currentCompany.id);
+        console.warn('This could mean: 1) No active employees exist, or 2) RLS is blocking access');
+      }
+    } catch (error: any) {
+      console.error('Exception fetching employees:', error);
+      alert('Failed to load employees: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -431,19 +459,25 @@ export function Loans() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Employee *
                 </label>
-                <SearchableSelect
-                  options={[
-                    { value: '', label: 'Select Employee' },
-                    ...employees.map(emp => ({
-                      value: emp.id,
-                      label: `${emp.employee_number} - ${emp.first_name_en} ${emp.last_name_en}`,
-                      searchText: `${emp.employee_number} ${emp.first_name_en} ${emp.last_name_en}`
-                    }))
-                  ]}
-                  value={formData.employee_id}
-                  onChange={(value) => setFormData({ ...formData, employee_id: value })}
-                  placeholder={t.employees.selectEmployee}
-                />
+                {employees.length === 0 ? (
+                  <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 rounded-md text-sm text-yellow-800">
+                    No employees available. Please ensure you have the appropriate permissions (HR, Finance, or Admin role).
+                  </div>
+                ) : (
+                  <SearchableSelect
+                    options={[
+                      { value: '', label: 'Select Employee' },
+                      ...employees.map(emp => ({
+                        value: emp.id,
+                        label: `${emp.employee_number} - ${emp.first_name_en} ${emp.last_name_en}`,
+                        searchText: `${emp.employee_number} ${emp.first_name_en} ${emp.last_name_en}`
+                      }))
+                    ]}
+                    value={formData.employee_id}
+                    onChange={(value) => setFormData({ ...formData, employee_id: value })}
+                    placeholder={t.employees.selectEmployee}
+                  />
+                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -545,7 +579,12 @@ export function Loans() {
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                  disabled={employees.length === 0 || !formData.employee_id}
+                  className={`px-4 py-2 bg-primary-600 text-white rounded-md transition-colors ${
+                    employees.length === 0 || !formData.employee_id
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'hover:bg-primary-700'
+                  }`}
                 >
                   {editingLoan ? 'Update Loan' : 'Create Loan'}
                 </button>
