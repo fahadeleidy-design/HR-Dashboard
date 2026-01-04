@@ -183,8 +183,8 @@ function App() {
             <Route path="/end-of-service" element={<ProtectedRoute><Layout><EndOfService /></Layout></ProtectedRoute>} />
             <Route path="/audit-log" element={<ProtectedRoute><Layout><AuditLog /></Layout></ProtectedRoute>} />
             <Route path="/compliance" element={<ProtectedRoute><Layout><ComplianceDashboard /></Layout></ProtectedRoute>} />
-            <Route path="/salary-scale" element={<ProtectedRoute><Layout><SalaryScale /></Layout></ProtectedRoute>} />
-            <Route path="/recruitment" element={<ProtectedRoute><Layout><Recruitment /></Layout></ProtectedRoute>} />
+            <Route path="/salary-scale" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><SalaryScale /></Layout></ProtectedRoute>} />
+            <Route path="/recruitment" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Recruitment /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
