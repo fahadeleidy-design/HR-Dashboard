@@ -86,9 +86,19 @@ export function Loans() {
   const fetchEmployees = async () => {
     if (!currentCompany) return;
 
-    console.log('Fetching employees...');
-    console.log('Current user role:', userRole);
-    console.log('Company ID:', currentCompany.id);
+    if (userRole?.role === 'employee' && userRole.employee_id) {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, employee_number, first_name_en, last_name_en')
+        .eq('id', userRole.employee_id)
+        .single();
+
+      if (!error && data) {
+        setEmployees([data]);
+        setFormData(prev => ({ ...prev, employee_id: data.id }));
+      }
+      return;
+    }
 
     try {
       const { data, error } = await supabase
@@ -100,29 +110,12 @@ export function Loans() {
 
       if (error) {
         console.error('Error fetching employees:', error);
-        console.error('Error details:', JSON.stringify(error, null, 2));
-        console.error('User role details:', userRole);
-
-        if (!userRole) {
-          alert('No user role found. Please contact your administrator to assign you a role (HR, Finance, or Admin) to access this feature.');
-        } else if (userRole.role === 'employee') {
-          alert('You have an employee role which restricts access. Please contact your administrator if you need HR, Finance, or Admin access to manage loans.');
-        } else {
-          alert('Unable to load employees. Error: ' + (error.message || 'Unknown error'));
-        }
         return;
       }
 
-      console.log('Employees loaded successfully:', data?.length || 0);
       setEmployees(data || []);
-
-      if (!data || data.length === 0) {
-        console.warn('No employees found for company:', currentCompany.id);
-        console.warn('This could mean: 1) No active employees exist, or 2) RLS is blocking access');
-      }
     } catch (error: any) {
       console.error('Exception fetching employees:', error);
-      alert('Failed to load employees: ' + (error.message || 'Unknown error'));
     }
   };
 
@@ -402,38 +395,47 @@ export function Loans() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEdit(loan)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          {loan.status === 'active' && (
-                            <button
-                              onClick={() => handleStatusChange(loan.id, 'completed')}
-                              className="text-green-600 hover:text-green-800"
-                              title="Mark as Completed"
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </button>
+                          {userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) && (
+                            <>
+                              <button
+                                onClick={() => handleEdit(loan)}
+                                className="text-blue-600 hover:text-blue-800"
+                                title="Edit"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              {loan.status === 'active' && (
+                                <button
+                                  onClick={() => handleStatusChange(loan.id, 'completed')}
+                                  className="text-green-600 hover:text-green-800"
+                                  title="Mark as Completed"
+                                >
+                                  <CheckCircle className="h-4 w-4" />
+                                </button>
+                              )}
+                              {loan.status === 'pending' && (
+                                <button
+                                  onClick={() => handleStatusChange(loan.id, 'cancelled')}
+                                  className="text-red-600 hover:text-red-800"
+                                  title="Cancel"
+                                >
+                                  <XCircle className="h-4 w-4" />
+                                </button>
+                              )}
+                            </>
                           )}
-                          {loan.status === 'pending' && (
+                          {userRole?.role === 'super_admin' && (
                             <button
-                              onClick={() => handleStatusChange(loan.id, 'cancelled')}
+                              onClick={() => handleDelete(loan.id)}
                               className="text-red-600 hover:text-red-800"
-                              title="Cancel"
+                              title="Delete"
                             >
-                              <XCircle className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             </button>
                           )}
-                          <button
-                            onClick={() => handleDelete(loan.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {!userRole?.role || userRole.role === 'employee' ? (
+                            <span className="text-xs text-gray-400 italic">View only</span>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -461,7 +463,14 @@ export function Loans() {
                 </label>
                 {employees.length === 0 ? (
                   <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 rounded-md text-sm text-yellow-800">
-                    No employees available. Please ensure you have the appropriate permissions (HR, Finance, or Admin role).
+                    Loading employees...
+                  </div>
+                ) : userRole?.role === 'employee' ? (
+                  <div>
+                    <div className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-md text-sm text-gray-700">
+                      {employees[0] && `${employees[0].employee_number} - ${employees[0].first_name_en} ${employees[0].last_name_en}`}
+                    </div>
+                    <p className="mt-1 text-xs text-gray-500">You can only create loan requests for yourself</p>
                   </div>
                 ) : (
                   <SearchableSelect
