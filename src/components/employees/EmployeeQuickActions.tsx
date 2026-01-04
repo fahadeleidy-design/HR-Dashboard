@@ -5,8 +5,8 @@ import { Employee } from '@/types/database';
 interface EmployeeQuickActionsProps {
   employee: Employee;
   onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
   onStatusChange?: (status: 'active' | 'on_leave' | 'terminated') => void;
   onSendEmail?: () => void;
   onViewPayroll?: () => void;
@@ -72,11 +72,12 @@ export function EmployeeQuickActions({
       icon: Edit,
       label: 'Edit Employee',
       action: () => {
-        onEdit();
+        if (onEdit) onEdit();
         setShowMenu(false);
       },
       color: 'text-gray-700',
-      bgHover: 'hover:bg-gray-50'
+      bgHover: 'hover:bg-gray-50',
+      hidden: !onEdit
     },
     {
       icon: Mail,
@@ -151,7 +152,7 @@ export function EmployeeQuickActions({
       },
       color: 'text-green-600',
       bgHover: 'hover:bg-green-50',
-      hidden: employee.status === 'active'
+      hidden: !onStatusChange || employee.status === 'active'
     },
     {
       icon: Clock,
@@ -162,7 +163,7 @@ export function EmployeeQuickActions({
       },
       color: 'text-yellow-600',
       bgHover: 'hover:bg-yellow-50',
-      hidden: employee.status === 'on_leave'
+      hidden: !onStatusChange || employee.status === 'on_leave'
     },
     {
       icon: UserX,
@@ -173,7 +174,7 @@ export function EmployeeQuickActions({
       },
       color: 'text-orange-600',
       bgHover: 'hover:bg-orange-50',
-      hidden: employee.status === 'terminated'
+      hidden: !onStatusChange || employee.status === 'terminated'
     },
     { divider: true },
     {
@@ -199,9 +200,10 @@ export function EmployeeQuickActions({
       icon: Trash2,
       label: 'Delete',
       action: () => {
-        onDelete();
+        if (onDelete) onDelete();
         setShowMenu(false);
       },
+      hidden: !onDelete,
       color: 'text-red-600',
       bgHover: 'hover:bg-red-50'
     }

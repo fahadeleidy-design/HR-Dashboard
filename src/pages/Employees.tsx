@@ -684,7 +684,7 @@ export function Employees() {
             <Bookmark className="h-4 w-4" />
             <span>Views</span>
           </button>
-          {userRole?.role === 'super_admin' && (
+          {userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) && (
             <>
               <button
                 onClick={handleExport}
@@ -704,14 +704,16 @@ export function Employees() {
               </button>
             </>
           )}
-          <button
-            onClick={() => setShowForm(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-sm hover:shadow"
-            title="Ctrl + N"
-          >
-            <Plus className="h-4 w-4" />
-            <span>{t.employees.addEmployee}</span>
-          </button>
+          {userRole?.role && ['hr', 'super_admin'].includes(userRole.role) && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-sm hover:shadow"
+              title="Ctrl + N"
+            >
+              <Plus className="h-4 w-4" />
+              <span>{t.employees.addEmployee}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -1450,19 +1452,21 @@ export function Employees() {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          <button
-                            onClick={() => handleEdit(employee)}
-                            className="text-primary-600 hover:text-primary-900 p-1 hover:bg-primary-50 rounded transition-colors"
-                            title="Edit"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
+                          {userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) && (
+                            <button
+                              onClick={() => handleEdit(employee)}
+                              className="text-primary-600 hover:text-primary-900 p-1 hover:bg-primary-50 rounded transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                          )}
                           <EmployeeQuickActions
                             employee={employee}
                             onView={() => handleView(employee.id)}
-                            onEdit={() => handleEdit(employee)}
-                            onDelete={() => handleDelete(employee.id)}
-                            onStatusChange={(status) => handleBulkStatusChange(status)}
+                            onEdit={userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) ? () => handleEdit(employee) : undefined}
+                            onDelete={userRole?.role && ['hr', 'super_admin'].includes(userRole.role) ? () => handleDelete(employee.id) : undefined}
+                            onStatusChange={userRole?.role && ['hr', 'super_admin'].includes(userRole.role) ? (status) => handleBulkStatusChange(status) : undefined}
                             onViewPayroll={() => handleViewPayroll(employee.id)}
                             onViewDocuments={() => handleViewDocuments(employee.id)}
                             onViewHistory={() => handleViewHistory(employee.id)}
