@@ -123,6 +123,11 @@ export function Loans() {
     e.preventDefault();
     if (!currentCompany) return;
 
+    if (!formData.employee_id) {
+      alert('Please select an employee');
+      return;
+    }
+
     try {
       const numberOfMonths = Math.ceil(formData.loan_amount / formData.monthly_installment);
       const endDate = new Date(formData.start_date);
@@ -141,6 +146,12 @@ export function Loans() {
         notes: formData.notes
       };
 
+      console.log('Submitting loan data:', {
+        ...loanData,
+        userRole: userRole?.role,
+        userEmployeeId: userRole?.employee_id
+      });
+
       if (editingLoan) {
         const { error } = await supabase
           .from('loans')
@@ -150,11 +161,15 @@ export function Loans() {
         if (error) throw error;
         alert('Loan updated successfully!');
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('loans')
-          .insert([loanData]);
+          .insert([loanData])
+          .select();
 
-        if (error) throw error;
+        if (error) {
+          console.error('Insert error details:', error);
+          throw error;
+        }
         alert('Loan created successfully!');
       }
 
