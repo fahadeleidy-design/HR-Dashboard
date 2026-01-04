@@ -151,7 +151,7 @@ function App() {
             <Route
               path="/nitaqat"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['hr', 'super_admin']}>
                   <Layout>
                     <Nitaqat />
                   </Layout>
@@ -161,31 +161,31 @@ function App() {
             <Route
               path="/gosi"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}>
                   <Layout>
                     <GOSI />
                   </Layout>
                 </ProtectedRoute>
               }
             />
-            <Route path="/vehicles" element={<ProtectedRoute><Layout><Vehicles /></Layout></ProtectedRoute>} />
-            <Route path="/gov-docs" element={<ProtectedRoute><Layout><GovernmentalDocs /></Layout></ProtectedRoute>} />
-            <Route path="/real-estate" element={<ProtectedRoute><Layout><RealEstate /></Layout></ProtectedRoute>} />
-            <Route path="/contracts" element={<ProtectedRoute><Layout><Contracts /></Layout></ProtectedRoute>} />
-            <Route path="/employee-contracts" element={<ProtectedRoute><Layout><EmployeeContracts /></Layout></ProtectedRoute>} />
-            <Route path="/insurance" element={<ProtectedRoute><Layout><Insurance /></Layout></ProtectedRoute>} />
+            <Route path="/vehicles" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Vehicles /></Layout></ProtectedRoute>} />
+            <Route path="/gov-docs" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><GovernmentalDocs /></Layout></ProtectedRoute>} />
+            <Route path="/real-estate" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><RealEstate /></Layout></ProtectedRoute>} />
+            <Route path="/contracts" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Contracts /></Layout></ProtectedRoute>} />
+            <Route path="/employee-contracts" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><EmployeeContracts /></Layout></ProtectedRoute>} />
+            <Route path="/insurance" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Insurance /></Layout></ProtectedRoute>} />
             <Route path="/travel" element={<ProtectedRoute><Layout><Travel /></Layout></ProtectedRoute>} />
             <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
-            <Route path="/visas" element={<ProtectedRoute><Layout><Visas /></Layout></ProtectedRoute>} />
+            <Route path="/visas" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><Visas /></Layout></ProtectedRoute>} />
             <Route path="/loans" element={<ProtectedRoute><Layout><Loans /></Layout></ProtectedRoute>} />
             <Route path="/advances" element={<ProtectedRoute><Layout><Advances /></Layout></ProtectedRoute>} />
-            <Route path="/gov-subscriptions" element={<ProtectedRoute><Layout><GovSubscriptions /></Layout></ProtectedRoute>} />
+            <Route path="/gov-subscriptions" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><GovSubscriptions /></Layout></ProtectedRoute>} />
             <Route path="/end-of-service" element={<ProtectedRoute><Layout><EndOfService /></Layout></ProtectedRoute>} />
-            <Route path="/audit-log" element={<ProtectedRoute><Layout><AuditLog /></Layout></ProtectedRoute>} />
-            <Route path="/compliance" element={<ProtectedRoute><Layout><ComplianceDashboard /></Layout></ProtectedRoute>} />
+            <Route path="/audit-log" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><AuditLog /></Layout></ProtectedRoute>} />
+            <Route path="/compliance" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><ComplianceDashboard /></Layout></ProtectedRoute>} />
             <Route path="/salary-scale" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><SalaryScale /></Layout></ProtectedRoute>} />
             <Route path="/recruitment" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Recruitment /></Layout></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
             </ToastProvider>
