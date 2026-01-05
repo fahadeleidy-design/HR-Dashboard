@@ -79,7 +79,9 @@ export function Layout({ children }: LayoutProps) {
         { path: '/loans', icon: CreditCard, label: t.nav.loans },
         { path: '/advances', icon: Receipt, label: t.nav.advances },
         { path: '/expenses', icon: Receipt, label: t.nav.expenses },
-        { path: '/end-of-service', icon: Calculator, label: t.nav.endOfService },
+        ...(!isEmployee ? [
+          { path: '/end-of-service', icon: Calculator, label: t.nav.endOfService },
+        ] : []),
       ]
     },
     {
@@ -90,33 +92,35 @@ export function Layout({ children }: LayoutProps) {
         { path: '/documents', icon: FileText, label: t.nav.documents },
       ]
     },
-    {
-      title: t.nav.complianceGov,
-      items: [
-        { path: '/nitaqat', icon: BarChart3, label: t.nav.nitaqat },
-        { path: '/gosi', icon: DollarSign, label: t.nav.gosi },
-        { path: '/visas', icon: CreditCard, label: t.nav.visas },
-        { path: '/gov-subscriptions', icon: Globe, label: t.nav.govSubscriptions },
-        { path: '/gov-docs', icon: Briefcase, label: t.nav.govDocs },
-      ]
-    },
-    {
-      title: t.nav.operations,
-      items: [
-        { path: '/travel', icon: Plane, label: t.nav.travel },
-        { path: '/vehicles', icon: Car, label: t.nav.vehicles },
-        { path: '/real-estate', icon: Home, label: t.nav.realEstate },
-        { path: '/contracts', icon: Briefcase, label: t.nav.contracts },
-        { path: '/insurance', icon: Shield, label: t.nav.insurance },
-      ]
-    },
-    {
-      title: t.nav.system,
-      items: [
-        { path: '/audit-log', icon: ScrollText, label: t.nav.auditLog },
-        { path: '/settings', icon: Settings, label: t.nav.settings },
-      ]
-    }
+    ...(!isEmployee ? [
+      {
+        title: t.nav.complianceGov,
+        items: [
+          { path: '/nitaqat', icon: BarChart3, label: t.nav.nitaqat },
+          { path: '/gosi', icon: DollarSign, label: t.nav.gosi },
+          { path: '/visas', icon: CreditCard, label: t.nav.visas },
+          { path: '/gov-subscriptions', icon: Globe, label: t.nav.govSubscriptions },
+          { path: '/gov-docs', icon: Briefcase, label: t.nav.govDocs },
+        ]
+      },
+      {
+        title: t.nav.operations,
+        items: [
+          { path: '/travel', icon: Plane, label: t.nav.travel },
+          { path: '/vehicles', icon: Car, label: t.nav.vehicles },
+          { path: '/real-estate', icon: Home, label: t.nav.realEstate },
+          { path: '/contracts', icon: Briefcase, label: t.nav.contracts },
+          { path: '/insurance', icon: Shield, label: t.nav.insurance },
+        ]
+      },
+      {
+        title: t.nav.system,
+        items: [
+          { path: '/audit-log', icon: ScrollText, label: t.nav.auditLog },
+          { path: '/settings', icon: Settings, label: t.nav.settings },
+        ]
+      }
+    ] : [])
   ];
 
   const isActive = (path: string) => location.pathname === path;
