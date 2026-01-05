@@ -136,7 +136,7 @@ export function Loans() {
       const loanData = {
         company_id: currentCompany.id,
         employee_id: formData.employee_id,
-        loan_type: formData.loan_type,
+        loan_type: formData.loan_type.toLowerCase(), // Ensure lowercase
         loan_amount: formData.loan_amount,
         remaining_amount: formData.loan_amount,
         monthly_installment: formData.monthly_installment,
@@ -149,7 +149,8 @@ export function Loans() {
       console.log('Submitting loan data:', {
         ...loanData,
         userRole: userRole?.role,
-        userEmployeeId: userRole?.employee_id
+        userEmployeeId: userRole?.employee_id,
+        currentUserId: (await supabase.auth.getUser()).data.user?.id
       });
 
       if (editingLoan) {
@@ -167,9 +168,16 @@ export function Loans() {
           .select();
 
         if (error) {
-          console.error('Insert error details:', error);
+          console.error('Insert error details:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code,
+            fullError: error
+          });
           throw error;
         }
+        console.log('Loan created successfully:', data);
         alert('Loan created successfully!');
       }
 
@@ -177,7 +185,10 @@ export function Loans() {
       fetchLoans();
     } catch (error: any) {
       console.error('Error saving loan:', error);
-      alert('Failed to save loan: ' + error.message);
+      const errorMessage = error.message +
+        (error.details ? `\nDetails: ${error.details}` : '') +
+        (error.hint ? `\nHint: ${error.hint}` : '');
+      alert('Failed to save loan: ' + errorMessage);
     }
   };
 
