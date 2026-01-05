@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatInteger, formatDate } from '@/lib/formatters';
 import {
@@ -105,9 +106,11 @@ type View = 'batches' | 'items' | 'create' | 'analytics';
 export function Payroll() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const { userRole } = useAuth();
   const [searchParams] = useSearchParams();
   const employeeIdParam = searchParams.get('employee_id');
-  const [view, setView] = useState<View>('batches');
+  const isEmployee = userRole?.role === 'employee';
+  const [view, setView] = useState<View>(isEmployee ? 'items' : 'batches');
   const [batches, setBatches] = useState<PayrollBatch[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<PayrollBatch | null>(null);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
@@ -122,12 +125,18 @@ export function Payroll() {
 
   useEffect(() => {
     if (currentCompany) {
-      fetchBatches();
-      fetchEmployees();
-      fetchLoans();
-      fetchAdvances();
+      if (isEmployee) {
+        fetchBatches();
+        fetchLoans();
+        fetchAdvances();
+      } else {
+        fetchBatches();
+        fetchEmployees();
+        fetchLoans();
+        fetchAdvances();
+      }
     }
-  }, [currentCompany]);
+  }, [currentCompany, isEmployee]);
 
   useEffect(() => {
     if (selectedBatch) {
@@ -140,17 +149,24 @@ export function Payroll() {
       setView('items');
       const latestBatch = batches[0];
       setSelectedBatch(latestBatch);
+    } else if (isEmployee && batches.length > 0 && userRole?.employee_id) {
+      const latestBatch = batches[0];
+      setSelectedBatch(latestBatch);
+      setView('items');
     }
-  }, [employeeIdParam, batches]);
+  }, [employeeIdParam, batches, isEmployee, userRole]);
 
   useEffect(() => {
     if (employeeIdParam && payrollItems.length > 0) {
       const filtered = payrollItems.filter(item => item.employee_id === employeeIdParam);
       setFilteredPayrollItems(filtered);
+    } else if (isEmployee && userRole?.employee_id && payrollItems.length > 0) {
+      const filtered = payrollItems.filter(item => item.employee_id === userRole.employee_id);
+      setFilteredPayrollItems(filtered);
     } else {
       setFilteredPayrollItems(payrollItems);
     }
-  }, [employeeIdParam, payrollItems]);
+  }, [employeeIdParam, payrollItems, isEmployee, userRole]);
 
   const fetchBatches = async () => {
     if (!currentCompany) return;
@@ -534,41 +550,48 @@ export function Payroll() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Comprehensive Payroll Management</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {isEmployee ? 'My Payslips' : 'Comprehensive Payroll Management'}
+          </h1>
           <p className="text-gray-600 mt-1">
-            Batch processing, approvals, payslips, loans, advances & analytics
+            {isEmployee
+              ? 'View your salary details and payslips'
+              : 'Batch processing, approvals, payslips, loans, advances & analytics'
+            }
           </p>
         </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => setView('batches')}
-            className={`px-4 py-2 rounded-md transition-colors ${
-              view === 'batches' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <FileText className="h-4 w-4 inline mr-2" />
-            Batches
-          </button>
-          <button
-            onClick={() => setView('analytics')}
-            className={`px-4 py-2 rounded-md transition-colors ${
-              view === 'analytics' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            <TrendingUp className="h-4 w-4 inline mr-2" />
-            Analytics
-          </button>
-          <button
-            onClick={() => setView('create')}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
-          >
-            <Plus className="h-4 w-4 inline mr-2" />
-            New Batch
-          </button>
-        </div>
+        {!isEmployee && (
+          <div className="flex space-x-3">
+            <button
+              onClick={() => setView('batches')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                view === 'batches' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <FileText className="h-4 w-4 inline mr-2" />
+              Batches
+            </button>
+            <button
+              onClick={() => setView('analytics')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                view === 'analytics' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <TrendingUp className="h-4 w-4 inline mr-2" />
+              Analytics
+            </button>
+            <button
+              onClick={() => setView('create')}
+              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+            >
+              <Plus className="h-4 w-4 inline mr-2" />
+              New Batch
+            </button>
+          </div>
+        )}
       </div>
 
-      {view === 'batches' && (
+      {!isEmployee && view === 'batches' && (
         <div className="space-y-6">
           {batches.length > 0 && (
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -774,21 +797,25 @@ export function Payroll() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <button
-                onClick={() => {
-                  setView('batches');
-                  setSelectedBatch(null);
-                }}
-                className="text-primary-600 hover:text-primary-800 mb-2"
-              >
-                ← Back to Batches
-              </button>
+              {!isEmployee && (
+                <button
+                  onClick={() => {
+                    setView('batches');
+                    setSelectedBatch(null);
+                  }}
+                  className="text-primary-600 hover:text-primary-800 mb-2"
+                >
+                  ← Back to Batches
+                </button>
+              )}
               <h2 className="text-2xl font-bold text-gray-900">
-                Payroll Items - {selectedBatch.month}
+                {isEmployee ? `My Payslip - ${selectedBatch.month}` : `Payroll Items - ${selectedBatch.month}`}
               </h2>
-              <p className="text-gray-600">
-                {selectedBatch.total_employees} employees | Status: {getStatusLabel(selectedBatch.status)}
-              </p>
+              {!isEmployee && (
+                <p className="text-gray-600">
+                  {selectedBatch.total_employees} employees | Status: {getStatusLabel(selectedBatch.status)}
+                </p>
+              )}
               {employeeIdParam && (
                 <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <div className="flex items-center gap-2">
@@ -807,43 +834,45 @@ export function Payroll() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Gross</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">
-                    SAR {Number(selectedBatch.total_gross || 0).toLocaleString()}
-                  </p>
+          {!isEmployee && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Gross</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      SAR {Number(selectedBatch.total_gross || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <DollarSign className="h-12 w-12 text-green-600" />
                 </div>
-                <DollarSign className="h-12 w-12 text-green-600" />
               </div>
-            </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Deductions</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">
-                    SAR {Number(selectedBatch.total_deductions || 0).toLocaleString()}
-                  </p>
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Deductions</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      SAR {Number(selectedBatch.total_deductions || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <Calculator className="h-12 w-12 text-red-600" />
                 </div>
-                <Calculator className="h-12 w-12 text-red-600" />
               </div>
-            </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Net</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-1">
-                    SAR {Number(selectedBatch.total_net || 0).toLocaleString()}
-                  </p>
+              <div className="bg-white rounded-lg shadow p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">Total Net</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      SAR {Number(selectedBatch.total_net || 0).toLocaleString()}
+                    </p>
+                  </div>
+                  <DollarSign className="h-12 w-12 text-blue-600" />
                 </div>
-                <DollarSign className="h-12 w-12 text-blue-600" />
               </div>
             </div>
-          </div>
+          )}
 
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="overflow-x-auto">
@@ -932,7 +961,7 @@ export function Payroll() {
         </div>
       )}
 
-      {view === 'create' && (
+      {!isEmployee && view === 'create' && (
         <div className="bg-white rounded-lg shadow p-6">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Payroll Batch</h2>
 
@@ -981,7 +1010,7 @@ export function Payroll() {
         </div>
       )}
 
-      {view === 'analytics' && (
+      {!isEmployee && view === 'analytics' && (
         <div className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-lg shadow p-6">
