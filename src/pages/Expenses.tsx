@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import {
   Receipt, Plus, Download, FileText, BarChart3, Settings,
@@ -39,11 +40,28 @@ interface ExpenseClaim {
 type TabType = 'dashboard' | 'claims' | 'reports' | 'analytics' | 'settings';
 type FilterType = 'all' | 'pending' | 'approved' | 'rejected';
 
+const EXPENSE_CATEGORIES = {
+  'Travel': ['Flight', 'Train', 'Bus', 'Taxi', 'Parking', 'Toll Fees', 'Other'],
+  'Meals': ['Breakfast', 'Lunch', 'Dinner', 'Team Meal', 'Client Entertainment', 'Other'],
+  'Fuel': ['Petrol', 'Diesel', 'Vehicle Maintenance', 'Car Wash', 'Other'],
+  'Accommodation': ['Hotel', 'Serviced Apartment', 'Guest House', 'Other'],
+  'Office Supplies': ['Stationery', 'Printing', 'Equipment', 'Furniture', 'Other'],
+  'Communication': ['Mobile', 'Internet', 'Postage', 'Courier', 'Other'],
+  'IT & Software': ['Software License', 'Cloud Services', 'Hardware', 'Other'],
+  'Other': ['Miscellaneous']
+};
+
+const CURRENCIES = ['SAR', 'USD', 'EUR', 'GBP', 'AED'];
+const VAT_RATE = 15;
+
 export function Expenses() {
   const { currentCompany } = useCompany();
   const { t } = useLanguage();
+  const { userRole } = useAuth();
   const [claims, setClaims] = useState<ExpenseClaim[]>([]);
+  const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
   const [filter, setFilter] = useState<FilterType>('all');
   const [dateFilter, setDateFilter] = useState({
@@ -51,14 +69,32 @@ export function Expenses() {
     end: new Date().toISOString().split('T')[0],
   });
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showNewClaimModal, setShowNewClaimModal] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState<ExpenseClaim | null>(null);
+  const [formData, setFormData] = useState({
+    employee_id: userRole?.employee_id || '',
+    expense_category: '',
+    subcategory: '',
+    description: '',
+    amount: '',
+    expense_date: new Date().toISOString().split('T')[0],
+    currency: 'SAR',
+    payment_method: 'personal_card',
+  });
 
   useEffect(() => {
     if (currentCompany) {
       fetchClaims();
+      fetchEmployees();
       subscribeToChanges();
     }
   }, [currentCompany, dateFilter]);
+
+  useEffect(() => {
+    if (userRole?.employee_id) {
+      setFormData(prev => ({ ...prev, employee_id: userRole.employee_id || '' }));
+    }
+  }, [userRole]);
 
   const fetchClaims = async () => {
     if (!currentCompany) return;
@@ -82,6 +118,24 @@ export function Expenses() {
       console.error('Error fetching claims:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    if (!currentCompany) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('employees')
+        .select('id, employee_number, first_name_en, last_name_en')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'active')
+        .order('first_name_en', { ascending: true });
+
+      if (error) throw error;
+      setEmployees(data || []);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
     }
   };
 
@@ -141,6 +195,63 @@ export function Expenses() {
       fetchClaims();
     } catch (error) {
       console.error('Error rejecting claim:', error);
+    }
+  };
+
+  const handleSubmitClaim = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCompany) return;
+
+    setSubmitting(true);
+    try {
+      const amount = parseFloat(formData.amount);
+      const vatAmount = amount * (VAT_RATE / 100);
+      const totalAmount = amount + vatAmount;
+      const claimNumber = `EXP-${Date.now().toString().slice(-8)}`;
+
+      const { error } = await supabase.from('expense_claims').insert({
+        company_id: currentCompany.id,
+        claim_number: claimNumber,
+        employee_id: formData.employee_id,
+        expense_category: formData.expense_category,
+        subcategory: formData.subcategory || null,
+        description: formData.description,
+        expense_date: formData.expense_date,
+        claim_date: new Date().toISOString().split('T')[0],
+        amount: totalAmount,
+        amount_excluding_vat: amount,
+        vat_amount: vatAmount,
+        vat_rate: VAT_RATE,
+        currency: formData.currency,
+        exchange_rate: formData.currency === 'SAR' ? 1 : 1,
+        amount_in_sar: totalAmount,
+        payment_method: formData.payment_method,
+        approval_status: 'pending',
+        policy_compliant: true,
+        receipt_attached: false,
+        net_reimbursement: totalAmount,
+      });
+
+      if (error) throw error;
+
+      setShowNewClaimModal(false);
+      setFormData({
+        employee_id: userRole?.employee_id || '',
+        expense_category: '',
+        subcategory: '',
+        description: '',
+        amount: '',
+        expense_date: new Date().toISOString().split('T')[0],
+        currency: 'SAR',
+        payment_method: 'personal_card',
+      });
+
+      fetchClaims();
+    } catch (error) {
+      console.error('Error creating expense claim:', error);
+      alert('Failed to create expense claim. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -231,7 +342,7 @@ export function Expenses() {
             <span>Export</span>
           </button>
           <button
-            onClick={() => window.location.href = '#/expenses'}
+            onClick={() => setShowNewClaimModal(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
           >
             <Plus className="h-4 w-4" />
@@ -525,6 +636,198 @@ export function Expenses() {
           )}
         </div>
       </div>
+
+      {showNewClaimModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full my-8">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">New Expense Claim</h2>
+                  <p className="text-gray-600 mt-1">Submit a new expense for reimbursement</p>
+                </div>
+                <button
+                  onClick={() => setShowNewClaimModal(false)}
+                  className="text-gray-400 hover:text-gray-600 text-2xl"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmitClaim}>
+              <div className="p-6 max-h-[calc(100vh-240px)] overflow-y-auto space-y-4">
+                {userRole?.role !== 'employee' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Employee <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.employee_id}
+                      onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Employee</option>
+                      {employees.map((emp) => (
+                        <option key={emp.id} value={emp.id}>
+                          {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Expense Category <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.expense_category}
+                      onChange={(e) => setFormData({ ...formData, expense_category: e.target.value, subcategory: '' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select Category</option>
+                      {Object.keys(EXPENSE_CATEGORIES).map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {formData.expense_category && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Subcategory <span className="text-red-500">*</span>
+                      </label>
+                      <select
+                        required
+                        value={formData.subcategory}
+                        onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select Subcategory</option>
+                        {EXPENSE_CATEGORIES[formData.expense_category as keyof typeof EXPENSE_CATEGORIES]?.map((sub) => (
+                          <option key={sub} value={sub}>
+                            {sub}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    required
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Provide details about the expense..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Amount (excl. VAT) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      step="0.01"
+                      min="0"
+                      value={formData.amount}
+                      onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    {formData.amount && (
+                      <p className="text-xs text-gray-500 mt-1">
+                        VAT (15%): {(parseFloat(formData.amount) * 0.15).toFixed(2)} |
+                        Total: {(parseFloat(formData.amount) * 1.15).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Currency <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      required
+                      value={formData.currency}
+                      onChange={(e) => setFormData({ ...formData, currency: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {CURRENCIES.map((curr) => (
+                        <option key={curr} value={curr}>
+                          {curr}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.expense_date}
+                      onChange={(e) => setFormData({ ...formData, expense_date: e.target.value })}
+                      max={new Date().toISOString().split('T')[0]}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Payment Method <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    required
+                    value={formData.payment_method}
+                    onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="personal_card">Personal Credit Card</option>
+                    <option value="company_card">Company Credit Card</option>
+                    <option value="cash">Cash</option>
+                    <option value="bank_transfer">Bank Transfer</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowNewClaimModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                  disabled={submitting}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                  disabled={submitting}
+                >
+                  {submitting ? 'Submitting...' : 'Submit Claim'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
