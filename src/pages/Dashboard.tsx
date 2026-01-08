@@ -154,11 +154,10 @@ export function Dashboard() {
           .eq('status', 'active')
           .gte('expiry_date', new Date().toISOString()),
         supabase
-          .from('payroll')
-          .select('gross_salary, employee_id, effective_from')
+          .from('employees')
+          .select('id, basic_salary, housing_allowance, transportation_allowance, other_allowances')
           .eq('company_id', currentCompany.id)
-          .gte('effective_from', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0])
-          .lt('effective_from', new Date(new Date().getFullYear(), new Date().getMonth() + 1, 1).toISOString().split('T')[0]),
+          .eq('status', 'active'),
         supabase
           .from('vehicles')
           .select('id, status')
@@ -188,7 +187,7 @@ export function Dashboard() {
       const employees = employeesResult.data || [];
       const leaveRequests = leaveRequestsResult.data || [];
       const documents = documentsResult.data || [];
-      const payrollRecords = payrollResult.data || [];
+      const salaryData = payrollResult.data || [];
       const vehicles = vehiclesResult.data || [];
       const properties = propertiesResult.data || [];
       const contracts = contractsResult.data || [];
@@ -236,9 +235,14 @@ export function Dashboard() {
         e.passport_expiry && e.passport_expiry >= today && e.passport_expiry <= in90Days && e.status === 'active'
       ).length;
 
-      const uniqueEmployeeIds = new Set(payrollRecords.map(p => p.employee_id));
-      const totalPayroll = payrollRecords.reduce((sum, p) => sum + (parseFloat(p.gross_salary) || 0), 0);
-      const averageSalary = uniqueEmployeeIds.size > 0 ? Math.round(totalPayroll / uniqueEmployeeIds.size) : 0;
+      const totalPayroll = salaryData.reduce((sum, emp: any) => {
+        const basicSalary = parseFloat(emp.basic_salary) || 0;
+        const housingAllowance = parseFloat(emp.housing_allowance) || 0;
+        const transportationAllowance = parseFloat(emp.transportation_allowance) || 0;
+        const otherAllowances = parseFloat(emp.other_allowances) || 0;
+        return sum + basicSalary + housingAllowance + transportationAllowance + otherAllowances;
+      }, 0);
+      const averageSalary = salaryData.length > 0 ? Math.round(totalPayroll / salaryData.length) : 0;
 
       const totalVehicles = vehicles.length;
       const totalProperties = properties.length;
@@ -250,7 +254,7 @@ export function Dashboard() {
       const pendingTravelRequests = travel.filter(t => t.approval_status === 'pending').length;
 
       const totalDepartments = departments.length;
-      const avgEmployeesPerDept = totalDepartments > 0 ? Math.round(activeEmployees / totalDepartments) : 0;
+      const avgEmployeesPerDept = totalDepartments > 0 ? parseFloat((activeEmployees / totalDepartments).toFixed(1)) : 0;
 
       setStats({
         totalEmployees,
@@ -551,7 +555,7 @@ export function Dashboard() {
               <div className={isRTL ? 'text-right' : 'text-left'}>
                 <p className="text-sm font-medium text-gray-600">{t.dashboard.totalDepartments}</p>
                 <p className="text-3xl font-bold text-purple-600 mt-1">{formatInteger(stats.totalDepartments, language)}</p>
-                <p className="text-xs text-gray-500 mt-1">{t.dashboard.avgEmployeesPerDept}: {formatInteger(stats.avgEmployeesPerDept, language)}</p>
+                <p className="text-xs text-gray-500 mt-1">{t.dashboard.avgEmployeesPerDept}: {formatNumber(stats.avgEmployeesPerDept, language, 1)}</p>
               </div>
               <div className="p-3 bg-purple-50 rounded-full">
                 <UserCog className="h-8 w-8 text-purple-600" />

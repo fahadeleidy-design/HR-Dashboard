@@ -3,7 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { BookOpen, Users, Award } from 'lucide-react';
-import { formatNumber } from '@/lib/formatters';
+import { formatInteger } from '@/lib/formatters';
 
 interface TrainingProgram {
   id: string;
@@ -80,7 +80,7 @@ export function Training() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.training.trainingPrograms}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(programs.length, language)}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatInteger(programs.length, language)}</p>
             </div>
             <BookOpen className="h-12 w-12 text-blue-600" />
           </div>
@@ -90,7 +90,7 @@ export function Training() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.training.inProgress}</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(ongoingCount, language)}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatInteger(ongoingCount, language)}</p>
             </div>
             <BookOpen className="h-12 w-12 text-green-600" />
           </div>
@@ -100,7 +100,7 @@ export function Training() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.training.completed}</p>
-              <p className="text-2xl font-bold text-purple-600 mt-1">{formatNumber(completedCount, language)}</p>
+              <p className="text-2xl font-bold text-purple-600 mt-1">{formatInteger(completedCount, language)}</p>
             </div>
             <Award className="h-12 w-12 text-purple-600" />
           </div>
@@ -110,7 +110,7 @@ export function Training() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.common.totalParticipants}</p>
-              <p className="text-2xl font-bold text-orange-600 mt-1">{formatNumber(totalParticipants, language)}</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{formatInteger(totalParticipants, language)}</p>
             </div>
             <Users className="h-12 w-12 text-orange-600" />
           </div>
@@ -159,7 +159,7 @@ export function Training() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatNumber(program.duration_hours, language)} {t.common.hours}
+                      {formatInteger(program.duration_hours, language)} {t.common.hours}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(program.start_date).toLocaleDateString()}
@@ -168,8 +168,8 @@ export function Training() {
                       {new Date(program.end_date).toLocaleDateString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatNumber(program.enrollments[0]?.count || 0, language)}
-                      {program.max_participants && ` / ${formatNumber(program.max_participants, language)}`}
+                      {formatInteger(program.enrollments[0]?.count || 0, language)}
+                      {program.max_participants && ` / ${formatInteger(program.max_participants, language)}`}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${

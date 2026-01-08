@@ -757,6 +757,16 @@ export const enTranslations = {
     perDiem: 'Per Diem',
     travelAdvance: 'Travel Advance',
     expenseReport: 'Expense Report',
+    newRequest: 'New Travel Request',
+    newRequestTitle: 'Create New Travel Request',
+    newRequestDescription: 'Fill in the details for your travel request',
+    pendingApproval: 'Pending Approval',
+    approvedTrips: 'Approved Trips',
+    totalBudget: 'Total Budget',
+    draft: 'Draft',
+    submitted: 'Submitted',
+    cancelled: 'Cancelled',
+    searchPlaceholder: 'Search by request number, employee, or destination',
   },
 
   expenses: {

@@ -8,7 +8,7 @@ import { ScrollableTable } from '@/components/ScrollableTable';
 import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers, Brain, Eye, FileQuestion, Users, Printer, Download, FileSpreadsheet, Filter } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
-import { formatNumber } from '@/lib/formatters';
+import { formatInteger } from '@/lib/formatters';
 
 interface Document {
   id: string;
@@ -463,7 +463,7 @@ export function Documents() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.common.total} {t.documents.title}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(documents.length, language)}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{formatInteger(documents.length, language)}</p>
             </div>
             <FileText className="h-12 w-12 text-gray-600" />
           </div>
@@ -473,7 +473,7 @@ export function Documents() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.common.active}</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(activeCount, language)}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatInteger(activeCount, language)}</p>
             </div>
             <CheckCircle className="h-12 w-12 text-green-600" />
           </div>
@@ -483,7 +483,7 @@ export function Documents() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.common.expiringSoon}</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">{formatNumber(expiringSoonCount, language)}</p>
+              <p className="text-2xl font-bold text-yellow-600 mt-1">{formatInteger(expiringSoonCount, language)}</p>
             </div>
             <AlertTriangle className="h-12 w-12 text-yellow-600" />
           </div>
@@ -493,7 +493,7 @@ export function Documents() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.common.expired}</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{formatNumber(expiredCount, language)}</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{formatInteger(expiredCount, language)}</p>
             </div>
             <AlertTriangle className="h-12 w-12 text-red-600" />
           </div>
@@ -513,7 +513,7 @@ export function Documents() {
                 Missing Contracts
               </p>
               <p className={`text-2xl font-bold mt-1 ${employeesWithoutContracts.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                {formatNumber(employeesWithoutContracts.length, language)}
+                {formatInteger(employeesWithoutContracts.length, language)}
               </p>
               <p className={`text-xs mt-1 ${employeesWithoutContracts.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
                 {employeesWithoutContracts.length === 0 ? 'all have contracts' : 'employees'}

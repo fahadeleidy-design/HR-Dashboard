@@ -839,6 +839,16 @@ export const arTranslations = {
     perDiem: 'بدل اليومية',
     travelAdvance: 'سلفة السفر',
     expenseReport: 'تقرير المصروفات',
+    newRequest: 'طلب سفر جديد',
+    newRequestTitle: 'إنشاء طلب سفر جديد',
+    newRequestDescription: 'أدخل تفاصيل طلب السفر',
+    pendingApproval: 'بانتظار الموافقة',
+    approvedTrips: 'الرحلات الموافق عليها',
+    totalBudget: 'إجمالي الميزانية',
+    draft: 'مسودة',
+    submitted: 'مقدمة',
+    cancelled: 'ملغاة',
+    searchPlaceholder: 'البحث برقم الطلب أو الموظف أو الوجهة',
   },
 
   expenses: {
