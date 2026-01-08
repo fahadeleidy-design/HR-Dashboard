@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase';
 import {
   Receipt, Plus, Download, FileText, BarChart3, Settings,
   Clock, CheckCircle, XCircle, AlertTriangle, DollarSign,
-  Eye, Edit, Trash2, Filter
+  Eye, Edit, Trash2, Filter, Upload, Paperclip
 } from 'lucide-react';
 import { ScrollableTable } from '@/components/ScrollableTable';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
@@ -71,6 +71,7 @@ export function Expenses() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showNewClaimModal, setShowNewClaimModal] = useState(false);
   const [selectedClaim, setSelectedClaim] = useState<ExpenseClaim | null>(null);
+  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     employee_id: userRole?.employee_id || '',
     expense_category: '',
@@ -198,9 +199,29 @@ export function Expenses() {
     }
   };
 
+  const handleCloseModal = () => {
+    setShowNewClaimModal(false);
+    setInvoiceFile(null);
+    setFormData({
+      employee_id: userRole?.employee_id || '',
+      expense_category: '',
+      subcategory: '',
+      description: '',
+      amount: '',
+      expense_date: new Date().toISOString().split('T')[0],
+      currency: 'SAR',
+      payment_method: 'personal_card',
+    });
+  };
+
   const handleSubmitClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCompany) return;
+
+    if (!invoiceFile) {
+      alert('Please upload an invoice/receipt');
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -209,7 +230,7 @@ export function Expenses() {
       const totalAmount = amount + vatAmount;
       const claimNumber = `EXP-${Date.now().toString().slice(-8)}`;
 
-      const { error } = await supabase.from('expense_claims').insert({
+      const { data: claimData, error: claimError } = await supabase.from('expense_claims').insert({
         company_id: currentCompany.id,
         claim_number: claimNumber,
         employee_id: formData.employee_id,
@@ -228,24 +249,37 @@ export function Expenses() {
         payment_method: formData.payment_method,
         approval_status: 'pending',
         policy_compliant: true,
-        receipt_attached: false,
+        receipt_attached: true,
         net_reimbursement: totalAmount,
+      }).select().single();
+
+      if (claimError) throw claimError;
+
+      const fileExt = invoiceFile.name.split('.').pop();
+      const fileName = `${currentCompany.id}/${claimData.id}/${Date.now()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, invoiceFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
+      const { error: receiptError } = await supabase.from('expense_receipts').insert({
+        company_id: currentCompany.id,
+        expense_claim_id: claimData.id,
+        file_name: invoiceFile.name,
+        file_url: publicUrl,
+        file_type: invoiceFile.type,
+        file_size: invoiceFile.size,
       });
 
-      if (error) throw error;
+      if (receiptError) throw receiptError;
 
-      setShowNewClaimModal(false);
-      setFormData({
-        employee_id: userRole?.employee_id || '',
-        expense_category: '',
-        subcategory: '',
-        description: '',
-        amount: '',
-        expense_date: new Date().toISOString().split('T')[0],
-        currency: 'SAR',
-        payment_method: 'personal_card',
-      });
-
+      handleCloseModal();
       fetchClaims();
     } catch (error) {
       console.error('Error creating expense claim:', error);
@@ -647,7 +681,7 @@ export function Expenses() {
                   <p className="text-gray-600 mt-1">Submit a new expense for reimbursement</p>
                 </div>
                 <button
-                  onClick={() => setShowNewClaimModal(false)}
+                  onClick={handleCloseModal}
                   className="text-gray-400 hover:text-gray-600 text-2xl"
                 >
                   ×
@@ -805,12 +839,73 @@ export function Expenses() {
                     <option value="bank_transfer">Bank Transfer</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Invoice/Receipt <span className="text-red-500">*</span>
+                  </label>
+                  <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-blue-400 transition-colors">
+                    <div className="space-y-1 text-center">
+                      {invoiceFile ? (
+                        <div className="flex items-center justify-center space-x-2">
+                          <Paperclip className="h-8 w-8 text-green-500" />
+                          <div className="text-sm text-gray-600">
+                            <p className="font-medium">{invoiceFile.name}</p>
+                            <p className="text-xs text-gray-500">
+                              {(invoiceFile.size / 1024).toFixed(2)} KB
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setInvoiceFile(null)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <XCircle className="h-5 w-5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                          <div className="flex text-sm text-gray-600">
+                            <label
+                              htmlFor="invoice-upload"
+                              className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
+                            >
+                              <span>Upload a file</span>
+                              <input
+                                id="invoice-upload"
+                                name="invoice-upload"
+                                type="file"
+                                required
+                                className="sr-only"
+                                accept=".pdf,.jpg,.jpeg,.png"
+                                onChange={(e) => {
+                                  const file = e.target.files?.[0];
+                                  if (file) {
+                                    if (file.size > 10485760) {
+                                      alert('File size must be less than 10MB');
+                                      e.target.value = '';
+                                      return;
+                                    }
+                                    setInvoiceFile(file);
+                                  }
+                                }}
+                              />
+                            </label>
+                            <p className="pl-1">or drag and drop</p>
+                          </div>
+                          <p className="text-xs text-gray-500">PDF, PNG, JPG up to 10MB</p>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
                 <button
                   type="button"
-                  onClick={() => setShowNewClaimModal(false)}
+                  onClick={handleCloseModal}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   disabled={submitting}
                 >
