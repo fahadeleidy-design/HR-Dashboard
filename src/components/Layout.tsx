@@ -150,39 +150,9 @@ export function Layout({ children }: LayoutProps) {
                 <div className={isRTL ? 'text-right' : 'text-left'}>
                   <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">{t.common.appTitle}</h1>
                   {currentCompany && (
-                    <div className="relative">
-                      <button
-                        onClick={() => setShowCompanyMenu(!showCompanyMenu)}
-                        className={`text-xs sm:text-sm text-gray-600 hover:text-primary-600 flex items-center gap-1 transition-all duration-200 hover:scale-105 ${isRTL ? 'flex-row-reverse' : ''}`}
-                      >
-                        <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="max-w-[200px] truncate font-medium">{language === 'ar' && currentCompany.name_ar ? currentCompany.name_ar : currentCompany.name_en}</span>
-                        <ChevronDown className={`h-3 w-3 flex-shrink-0 transition-transform ${showCompanyMenu ? 'rotate-180' : ''}`} />
-                      </button>
-                      {showCompanyMenu && companies.length > 1 && (
-                        <div className={`absolute top-full ${isRTL ? 'right-0' : 'left-0'} mt-2 w-64 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden`}>
-                          <div className="p-2 bg-gray-50 border-b border-gray-200">
-                            <p className={`text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 ${isRTL ? 'text-right' : 'text-left'}`}>{t.common.switchCompany}</p>
-                          </div>
-                          {companies.map((company) => (
-                            <button
-                              key={company.id}
-                              onClick={() => {
-                                setCurrentCompany(company);
-                                setShowCompanyMenu(false);
-                              }}
-                              className={`w-full ${isRTL ? 'text-right' : 'text-left'} px-4 py-3 hover:bg-gray-50 transition-colors ${
-                                company.id === currentCompany.id
-                                  ? `bg-primary-50 text-primary-700 font-medium ${isRTL ? 'border-r-4' : 'border-l-4'} border-primary-600`
-                                  : `${isRTL ? 'border-r-4' : 'border-l-4'} border-transparent`
-                              }`}
-                            >
-                              <p className="font-medium">{language === 'ar' && company.name_ar ? company.name_ar : company.name_en}</p>
-                              <p className="text-xs text-gray-500 mt-0.5">{language === 'ar' ? company.name_en : company.name_ar}</p>
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                    <div className={`text-xs sm:text-sm text-gray-600 flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                      <span className="max-w-[200px] truncate font-medium">{language === 'ar' && currentCompany.name_ar ? currentCompany.name_ar : currentCompany.name_en}</span>
                     </div>
                   )}
                 </div>

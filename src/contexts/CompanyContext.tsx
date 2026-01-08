@@ -28,24 +28,31 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('*')
-        .order('name_en');
+      const { data: userRoles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('company_id, companies(*)')
+        .eq('user_id', user.id);
 
-      if (error) {
-        console.error('Error fetching companies:', error);
+      if (rolesError) {
+        console.error('Error fetching user roles:', rolesError);
         setCompanies([]);
-      } else {
-        setCompanies(data || []);
+        setLoading(false);
+        return;
+      }
 
-        if (data && data.length > 0 && !currentCompany) {
-          const savedCompanyId = localStorage.getItem('currentCompanyId');
-          const company = savedCompanyId
-            ? data.find(c => c.id === savedCompanyId) || data[0]
-            : data[0];
-          setCurrentCompanyState(company);
-        }
+      const userCompanies = userRoles?.map(ur => ur.companies).filter(Boolean) || [];
+
+      setCompanies(userCompanies);
+
+      if (userCompanies.length > 0 && !currentCompany) {
+        const savedCompanyId = localStorage.getItem('currentCompanyId');
+        const company = savedCompanyId
+          ? userCompanies.find(c => c.id === savedCompanyId) || userCompanies[0]
+          : userCompanies[0];
+        setCurrentCompanyState(company);
+      } else if (userCompanies.length === 0) {
+        console.warn('User has no company assignments');
+        setCurrentCompanyState(null);
       }
     } catch (error) {
       console.error('Error fetching companies:', error);
