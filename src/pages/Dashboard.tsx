@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { formatCurrency, formatInteger } from '@/lib/formatters';
+import { formatCurrency, formatInteger, formatNumber } from '@/lib/formatters';
 import {
   Users, UserCheck, UserX, TrendingUp, Calendar, AlertCircle,
   DollarSign, Clock, FileText, Car, Home, Shield, Plane,
@@ -155,7 +155,7 @@ export function Dashboard() {
           .gte('expiry_date', new Date().toISOString()),
         supabase
           .from('employees')
-          .select('id, basic_salary, housing_allowance, transportation_allowance, other_allowances')
+          .select('id, basic_salary, housing_allowance, transport_allowance, other_allowances')
           .eq('company_id', currentCompany.id)
           .eq('status', 'active'),
         supabase
@@ -238,7 +238,7 @@ export function Dashboard() {
       const totalPayroll = salaryData.reduce((sum, emp: any) => {
         const basicSalary = parseFloat(emp.basic_salary) || 0;
         const housingAllowance = parseFloat(emp.housing_allowance) || 0;
-        const transportationAllowance = parseFloat(emp.transportation_allowance) || 0;
+        const transportationAllowance = parseFloat(emp.transport_allowance) || 0;
         const otherAllowances = parseFloat(emp.other_allowances) || 0;
         return sum + basicSalary + housingAllowance + transportationAllowance + otherAllowances;
       }, 0);
