@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { formatCurrency, formatInteger } from '@/lib/formatters';
 import {
   Plane, Plus, Eye, Edit, AlertTriangle, CheckCircle, Clock,
   XCircle, Search, Filter, Download, RefreshCw, MapPin, Calendar,
@@ -362,7 +362,7 @@ export function Travel() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.travel.pendingApproval}</p>
-              <p className="text-2xl font-bold text-yellow-600 mt-1">{formatNumber(pendingRequests, language)}</p>
+              <p className="text-2xl font-bold text-yellow-600 mt-1">{formatInteger(pendingRequests, language)}</p>
             </div>
             <Clock className="h-12 w-12 text-yellow-600 opacity-20" />
           </div>
@@ -372,7 +372,7 @@ export function Travel() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.travel.approvedTrips}</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(approvedRequests, language)}</p>
+              <p className="text-2xl font-bold text-green-600 mt-1">{formatInteger(approvedRequests, language)}</p>
             </div>
             <CheckCircle className="h-12 w-12 text-green-600 opacity-20" />
           </div>
@@ -382,7 +382,7 @@ export function Travel() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">{t.common.completed}</p>
-              <p className="text-2xl font-bold text-gray-600 mt-1">{formatNumber(completedRequests, language)}</p>
+              <p className="text-2xl font-bold text-gray-600 mt-1">{formatInteger(completedRequests, language)}</p>
             </div>
             <CheckSquare className="h-12 w-12 text-gray-600 opacity-20" />
           </div>

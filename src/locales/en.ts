@@ -61,6 +61,7 @@ export const enTranslations = {
     pendingFines: 'Pending Fines',
     clickToAdd: 'Click to add',
     pending: 'Pending',
+    approved: 'Approved',
     completed: 'Completed',
     switchCompany: 'Switch Company',
     employee: 'Employee',

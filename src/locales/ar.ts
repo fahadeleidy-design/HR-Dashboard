@@ -61,6 +61,7 @@ export const arTranslations = {
     pendingFines: 'الغرامات المعلقة',
     clickToAdd: 'انقر لإضافة',
     pending: 'معلق',
+    approved: 'موافق عليه',
     completed: 'مكتمل',
     create: 'إنشاء',
     update: 'تحديث',
