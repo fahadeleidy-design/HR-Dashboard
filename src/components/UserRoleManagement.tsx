@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
-import { Shield, Plus, Trash2, AlertCircle, CheckCircle, X } from 'lucide-react';
+import { Shield, Plus, Trash2, AlertCircle, CheckCircle, X, Users } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -67,6 +67,8 @@ export function UserRoleManagement() {
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [bulkCreating, setBulkCreating] = useState(false);
+  const [bulkResults, setBulkResults] = useState<any>(null);
 
   useEffect(() => {
     if (currentCompany) {
@@ -196,6 +198,58 @@ export function UserRoleManagement() {
     }
   };
 
+  const handleBulkCreateEmployeeAccounts = async () => {
+    if (!currentCompany) return;
+
+    if (!confirm('This will create user accounts for all active employees without existing accounts. Continue?')) {
+      return;
+    }
+
+    setBulkCreating(true);
+    setMessage(null);
+    setBulkResults(null);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/user-management`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'bulk_create_employee_accounts',
+            companyId: currentCompany.id,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to create employee accounts');
+      }
+
+      setBulkResults(result);
+      setMessage({
+        type: 'success',
+        text: `Successfully created ${result.summary.created} employee accounts!`
+      });
+      loadUserRoles();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to create employee accounts' });
+    } finally {
+      setBulkCreating(false);
+    }
+  };
+
   const getRoleBadge = (role: string) => {
     const roleInfo = ROLES.find(r => r.value === role);
     if (!roleInfo) return null;
@@ -225,13 +279,23 @@ export function UserRoleManagement() {
             </h2>
             <p className="text-sm text-gray-600 mt-1">Manage user access and permissions</p>
           </div>
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
-          >
-            {showAddForm ? <X className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
-            {showAddForm ? 'Cancel' : 'Add User Role'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleBulkCreateEmployeeAccounts}
+              disabled={bulkCreating}
+              className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Users className="h-5 w-5" />
+              {bulkCreating ? 'Creating...' : 'Create Employee Accounts'}
+            </button>
+            <button
+              onClick={() => setShowAddForm(!showAddForm)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+            >
+              {showAddForm ? <X className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+              {showAddForm ? 'Cancel' : 'Add User Role'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -247,6 +311,48 @@ export function UserRoleManagement() {
               {message.text}
             </p>
           </div>
+        </div>
+      )}
+
+      {bulkResults && (
+        <div className="mx-6 mt-6 p-6 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="font-semibold text-blue-900 mb-4">Bulk Creation Results</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-white p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Total Employees</p>
+              <p className="text-2xl font-bold text-gray-900">{bulkResults.summary.total}</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Accounts Created</p>
+              <p className="text-2xl font-bold text-green-600">{bulkResults.summary.created}</p>
+            </div>
+            <div className="bg-white p-4 rounded-lg">
+              <p className="text-sm text-gray-600">Skipped/Failed</p>
+              <p className="text-2xl font-bold text-orange-600">{bulkResults.summary.skipped + bulkResults.summary.failed}</p>
+            </div>
+          </div>
+          {bulkResults.data.created.length > 0 && (
+            <div className="mb-4">
+              <h4 className="font-medium text-blue-900 mb-2">Created Accounts (Username: Employee Number, Password: Test123):</h4>
+              <div className="bg-white p-4 rounded-lg max-h-60 overflow-y-auto">
+                <ul className="space-y-2 text-sm">
+                  {bulkResults.data.created.map((account: any, index: number) => (
+                    <li key={index} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                      <span className="text-gray-900">{account.name}</span>
+                      <span className="text-gray-600">Employee #: {account.employee_number}</span>
+                      <span className="text-gray-500 text-xs">{account.email}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => setBulkResults(null)}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+          >
+            Close Results
+          </button>
         </div>
       )}
 

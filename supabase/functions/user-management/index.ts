@@ -7,7 +7,7 @@ const corsHeaders = {
 };
 
 interface RequestBody {
-  action: 'list_users' | 'create_user' | 'get_user_email';
+  action: 'list_users' | 'create_user' | 'get_user_email' | 'bulk_create_employee_accounts';
   email?: string;
   companyId?: string;
   userIds?: string[];
@@ -193,6 +193,147 @@ Deno.serve(async (req: Request) => {
 
         return new Response(
           JSON.stringify({ success: true, data: userEmails }),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      }
+
+      case 'bulk_create_employee_accounts': {
+        if (!body.companyId) {
+          throw new Error('Company ID is required');
+        }
+
+        // Get all active employees for the company
+        const { data: employees, error: employeesError } = await supabaseAdmin
+          .from('employees')
+          .select('id, employee_number, first_name_en, last_name_en, company_id')
+          .eq('company_id', body.companyId)
+          .eq('status', 'active')
+          .not('employee_number', 'is', null);
+
+        if (employeesError) throw employeesError;
+        if (!employees || employees.length === 0) {
+          throw new Error('No active employees found');
+        }
+
+        // Get existing user roles for this company to avoid duplicates
+        const { data: existingRoles } = await supabaseAdmin
+          .from('user_roles')
+          .select('employee_id')
+          .eq('company_id', body.companyId)
+          .not('employee_id', 'is', null);
+
+        const existingEmployeeIds = new Set(existingRoles?.map(r => r.employee_id) || []);
+
+        // Get all existing users to check for duplicates
+        const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+        if (listError) throw listError;
+
+        const results = {
+          created: [] as any[],
+          skipped: [] as any[],
+          failed: [] as any[],
+        };
+
+        // Create accounts for employees without existing user roles
+        for (const employee of employees) {
+          // Skip if employee already has a user role
+          if (existingEmployeeIds.has(employee.id)) {
+            results.skipped.push({
+              employee_number: employee.employee_number,
+              reason: 'Already has user account'
+            });
+            continue;
+          }
+
+          try {
+            // Create email using employee_number
+            const email = `${employee.employee_number}@temp.local`;
+
+            // Check if user with this email already exists
+            const existingUser = users.find(u => u.email === email);
+            let userId: string;
+
+            if (existingUser) {
+              userId = existingUser.id;
+              // Update password to ensure consistency
+              await supabaseAdmin.auth.admin.updateUserById(
+                userId,
+                { password: 'Test123' }
+              );
+            } else {
+              // Create new user
+              const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+                email: email,
+                password: 'Test123',
+                email_confirm: true,
+              });
+
+              if (createError) {
+                results.failed.push({
+                  employee_number: employee.employee_number,
+                  error: createError.message
+                });
+                continue;
+              }
+
+              if (!newUser.user) {
+                results.failed.push({
+                  employee_number: employee.employee_number,
+                  error: 'Failed to create user'
+                });
+                continue;
+              }
+
+              userId = newUser.user.id;
+            }
+
+            // Create user role
+            const { error: roleError } = await supabaseAdmin
+              .from('user_roles')
+              .insert({
+                user_id: userId,
+                company_id: employee.company_id,
+                employee_id: employee.id,
+                role: 'employee'
+              });
+
+            if (roleError) {
+              results.failed.push({
+                employee_number: employee.employee_number,
+                error: roleError.message
+              });
+              continue;
+            }
+
+            results.created.push({
+              employee_number: employee.employee_number,
+              email: email,
+              name: `${employee.first_name_en} ${employee.last_name_en}`
+            });
+          } catch (err: any) {
+            results.failed.push({
+              employee_number: employee.employee_number,
+              error: err.message
+            });
+          }
+        }
+
+        return new Response(
+          JSON.stringify({
+            success: true,
+            data: results,
+            summary: {
+              total: employees.length,
+              created: results.created.length,
+              skipped: results.skipped.length,
+              failed: results.failed.length
+            }
+          }),
           {
             headers: {
               ...corsHeaders,
