@@ -149,10 +149,46 @@ export function Layout({ children }: LayoutProps) {
                 </div>
                 <div className={isRTL ? 'text-right' : 'text-left'}>
                   <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">{t.common.appTitle}</h1>
-                  {currentCompany && (
-                    <div className={`text-xs sm:text-sm text-gray-600 flex items-center gap-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                      <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
-                      <span className="max-w-[200px] truncate font-medium">{language === 'ar' && currentCompany.name_ar ? currentCompany.name_ar : currentCompany.name_en}</span>
+                  {currentCompany && companies.length > 0 && (
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowCompanyMenu(!showCompanyMenu)}
+                        className={`text-xs sm:text-sm text-gray-600 flex items-center gap-1 hover:text-primary-600 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+                      >
+                        <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
+                        <span className="max-w-[200px] truncate font-medium">{language === 'ar' && currentCompany.name_ar ? currentCompany.name_ar : currentCompany.name_en}</span>
+                        {companies.length > 1 && <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />}
+                      </button>
+                      {showCompanyMenu && companies.length > 1 && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-30"
+                            onClick={() => setShowCompanyMenu(false)}
+                          />
+                          <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-40 max-h-80 overflow-y-auto`}>
+                            {companies.map((company) => (
+                              <button
+                                key={company.id}
+                                onClick={() => {
+                                  setCurrentCompany(company);
+                                  setShowCompanyMenu(false);
+                                }}
+                                className={`w-full px-4 py-2 text-sm hover:bg-primary-50 transition-colors ${isRTL ? 'text-right' : 'text-left'} ${
+                                  currentCompany.id === company.id ? 'bg-primary-50 text-primary-700 font-semibold' : 'text-gray-700'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="h-4 w-4 flex-shrink-0" />
+                                  <div>
+                                    <div className="font-medium">{language === 'ar' && company.name_ar ? company.name_ar : company.name_en}</div>
+                                    <div className="text-xs text-gray-500">{company.commercial_registration}</div>
+                                  </div>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
