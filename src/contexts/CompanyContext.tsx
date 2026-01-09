@@ -30,7 +30,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     try {
       const { data: userRoles, error: rolesError } = await supabase
         .from('user_roles')
-        .select('company_id, companies(*)')
+        .select('role, company_id')
         .eq('user_id', user.id);
 
       if (rolesError) {
@@ -40,7 +40,46 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      const userCompanies = userRoles?.map(ur => ur.companies).filter(Boolean) || [];
+      if (!userRoles || userRoles.length === 0) {
+        console.warn('User has no role assignments');
+        setCompanies([]);
+        setCurrentCompanyState(null);
+        setLoading(false);
+        return;
+      }
+
+      const hasPrivilegedRole = userRoles.some(
+        role => ['super_admin', 'hr', 'finance'].includes(role.role)
+      );
+
+      let userCompanies: Company[] = [];
+
+      if (hasPrivilegedRole) {
+        const { data: allCompanies, error: companiesError } = await supabase
+          .from('companies')
+          .select('*')
+          .order('name');
+
+        if (companiesError) {
+          console.error('Error fetching companies:', companiesError);
+        } else {
+          userCompanies = allCompanies || [];
+        }
+      } else {
+        const companyIds = [...new Set(userRoles.map(ur => ur.company_id))];
+
+        const { data: assignedCompanies, error: companiesError } = await supabase
+          .from('companies')
+          .select('*')
+          .in('id', companyIds)
+          .order('name');
+
+        if (companiesError) {
+          console.error('Error fetching companies:', companiesError);
+        } else {
+          userCompanies = assignedCompanies || [];
+        }
+      }
 
       setCompanies(userCompanies);
 
@@ -51,7 +90,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           : userCompanies[0];
         setCurrentCompanyState(company);
       } else if (userCompanies.length === 0) {
-        console.warn('User has no company assignments');
+        console.warn('No companies available for user');
         setCurrentCompanyState(null);
       }
     } catch (error) {
