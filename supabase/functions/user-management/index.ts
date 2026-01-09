@@ -220,13 +220,20 @@ Deno.serve(async (req: Request) => {
           throw new Error('No active employees found');
         }
 
+        console.log(`Found ${employees.length} active employees for company ${body.companyId}`);
+
         // Get existing user roles for this company to avoid duplicates
-        const { data: existingRoles } = await supabaseAdmin
+        const { data: existingRoles, error: rolesError } = await supabaseAdmin
           .from('user_roles')
           .select('employee_id')
           .eq('company_id', body.companyId)
           .not('employee_id', 'is', null);
 
+        if (rolesError) {
+          console.error('Error fetching existing roles:', rolesError);
+        }
+
+        console.log(`Found ${existingRoles?.length || 0} existing user roles`);
         const existingEmployeeIds = new Set(existingRoles?.map(r => r.employee_id) || []);
 
         // Get all existing users to check for duplicates
@@ -243,12 +250,16 @@ Deno.serve(async (req: Request) => {
         for (const employee of employees) {
           // Skip if employee already has a user role
           if (existingEmployeeIds.has(employee.id)) {
+            console.log(`Skipping ${employee.employee_number} - already has account`);
             results.skipped.push({
               employee_number: employee.employee_number,
+              name: `${employee.first_name_en} ${employee.last_name_en}`,
               reason: 'Already has user account'
             });
             continue;
           }
+
+          console.log(`Creating account for ${employee.employee_number}`);
 
           try {
             // Create email using employee_number

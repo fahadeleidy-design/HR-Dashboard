@@ -347,6 +347,36 @@ export function UserRoleManagement() {
               </div>
             </div>
           )}
+          {bulkResults.data.skipped.length > 0 && (
+            <div className="mb-4">
+              <h4 className="font-medium text-orange-900 mb-2">Skipped Employees:</h4>
+              <div className="bg-white p-4 rounded-lg max-h-60 overflow-y-auto">
+                <ul className="space-y-2 text-sm">
+                  {bulkResults.data.skipped.map((account: any, index: number) => (
+                    <li key={index} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                      <span className="text-gray-900">{account.name || account.employee_number}</span>
+                      <span className="text-orange-600 text-xs">{account.reason}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+          {bulkResults.data.failed.length > 0 && (
+            <div className="mb-4">
+              <h4 className="font-medium text-red-900 mb-2">Failed to Create:</h4>
+              <div className="bg-white p-4 rounded-lg max-h-60 overflow-y-auto">
+                <ul className="space-y-2 text-sm">
+                  {bulkResults.data.failed.map((account: any, index: number) => (
+                    <li key={index} className="flex justify-between items-center py-1 border-b border-gray-100 last:border-0">
+                      <span className="text-gray-900">{account.employee_number}</span>
+                      <span className="text-red-600 text-xs">{account.error}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
           <button
             onClick={() => setBulkResults(null)}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
