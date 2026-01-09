@@ -47,14 +47,14 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unauthorized');
     }
 
-    // Check if user has admin/super_admin role
+    // Check if user has admin/super_admin/hr role
     const { data: userRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role, company_id')
       .eq('user_id', user.id)
       .single();
 
-    if (roleError || !userRole || !['super_admin', 'admin'].includes(userRole.role)) {
+    if (roleError || !userRole || !['super_admin', 'hr'].includes(userRole.role)) {
       throw new Error('User does not have permission to manage users');
     }
 
