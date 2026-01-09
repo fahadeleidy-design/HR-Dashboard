@@ -295,32 +295,75 @@ Deno.serve(async (req: Request) => {
               // User exists but doesn't have a role for this company, so add one
               console.log(`User ${email} exists but has no role for this company, adding role`);
             } else {
-              // Create new user
+              // Try to create new user
               const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 email: email,
                 password: 'Test123',
                 email_confirm: true,
               });
 
-              if (createError) {
+              // If user already exists (not in our paginated list), fetch them
+              if (createError && createError.message.includes('already been registered')) {
+                console.log(`User ${email} exists but wasn't in paginated list, fetching by email`);
+
+                // Get all users with pagination to find this specific user
+                let page = 1;
+                let foundUser = null;
+                while (!foundUser && page < 100) {
+                  const { data: { users: pageUsers } } = await supabaseAdmin.auth.admin.listUsers({ page, perPage: 1000 });
+                  foundUser = pageUsers.find(u => u.email === email);
+                  if (!foundUser) page++;
+                  else break;
+                }
+
+                if (!foundUser) {
+                  results.failed.push({
+                    employee_number: employee.employee_number,
+                    name: `${employee.first_name_en} ${employee.last_name_en}`,
+                    error: 'User exists but could not be found'
+                  });
+                  continue;
+                }
+
+                userId = foundUser.id;
+
+                // Check if this user already has a role for this company
+                const { data: existingCompanyRole } = await supabaseAdmin
+                  .from('user_roles')
+                  .select('id')
+                  .eq('user_id', userId)
+                  .eq('company_id', employee.company_id)
+                  .eq('employee_id', employee.id)
+                  .maybeSingle();
+
+                if (existingCompanyRole) {
+                  console.log(`User ${email} already has a role for this company, skipping`);
+                  results.skipped.push({
+                    employee_number: employee.employee_number,
+                    name: `${employee.first_name_en} ${employee.last_name_en}`,
+                    reason: 'User already has role for this company'
+                  });
+                  continue;
+                }
+              } else if (createError) {
                 results.failed.push({
                   employee_number: employee.employee_number,
                   name: `${employee.first_name_en} ${employee.last_name_en}`,
                   error: createError.message
                 });
                 continue;
-              }
+              } else {
+                if (!newUser?.user) {
+                  results.failed.push({
+                    employee_number: employee.employee_number,
+                    name: `${employee.first_name_en} ${employee.last_name_en}`,
+                    error: 'Failed to create user'
+                  });
+                  continue;
+                }
 
-              if (!newUser.user) {
-                results.failed.push({
-                  employee_number: employee.employee_number,
-                  name: `${employee.first_name_en} ${employee.last_name_en}`,
-                  error: 'Failed to create user'
-                });
-                continue;
+                userId = newUser.user.id;
               }
-
-              userId = newUser.user.id;
             }
 
             // Create user role
