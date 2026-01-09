@@ -248,13 +248,13 @@ Deno.serve(async (req: Request) => {
 
         // Create accounts for employees without existing user roles
         for (const employee of employees) {
-          // Skip if employee already has a user role
+          // Skip if employee already has a user role for THIS company
           if (existingEmployeeIds.has(employee.id)) {
-            console.log(`Skipping ${employee.employee_number} - already has account`);
+            console.log(`Skipping ${employee.employee_number} - already has account for this company`);
             results.skipped.push({
               employee_number: employee.employee_number,
               name: `${employee.first_name_en} ${employee.last_name_en}`,
-              reason: 'Already has user account'
+              reason: 'Already has user account for this company'
             });
             continue;
           }
@@ -271,11 +271,29 @@ Deno.serve(async (req: Request) => {
 
             if (existingUser) {
               userId = existingUser.id;
-              // Update password to ensure consistency
-              await supabaseAdmin.auth.admin.updateUserById(
-                userId,
-                { password: 'Test123' }
-              );
+              console.log(`User with email ${email} already exists, checking for existing role in this company`);
+
+              // Double-check if this user already has a role for this company
+              const { data: existingCompanyRole } = await supabaseAdmin
+                .from('user_roles')
+                .select('id')
+                .eq('user_id', userId)
+                .eq('company_id', employee.company_id)
+                .eq('employee_id', employee.id)
+                .maybeSingle();
+
+              if (existingCompanyRole) {
+                console.log(`User ${email} already has a role for this company, skipping`);
+                results.skipped.push({
+                  employee_number: employee.employee_number,
+                  name: `${employee.first_name_en} ${employee.last_name_en}`,
+                  reason: 'User already has role for this company'
+                });
+                continue;
+              }
+
+              // User exists but doesn't have a role for this company, so add one
+              console.log(`User ${email} exists but has no role for this company, adding role`);
             } else {
               // Create new user
               const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
@@ -287,6 +305,7 @@ Deno.serve(async (req: Request) => {
               if (createError) {
                 results.failed.push({
                   employee_number: employee.employee_number,
+                  name: `${employee.first_name_en} ${employee.last_name_en}`,
                   error: createError.message
                 });
                 continue;
@@ -295,6 +314,7 @@ Deno.serve(async (req: Request) => {
               if (!newUser.user) {
                 results.failed.push({
                   employee_number: employee.employee_number,
+                  name: `${employee.first_name_en} ${employee.last_name_en}`,
                   error: 'Failed to create user'
                 });
                 continue;
@@ -316,6 +336,7 @@ Deno.serve(async (req: Request) => {
             if (roleError) {
               results.failed.push({
                 employee_number: employee.employee_number,
+                name: `${employee.first_name_en} ${employee.last_name_en}`,
                 error: roleError.message
               });
               continue;
@@ -329,6 +350,7 @@ Deno.serve(async (req: Request) => {
           } catch (err: any) {
             results.failed.push({
               employee_number: employee.employee_number,
+              name: `${employee.first_name_en} ${employee.last_name_en}`,
               error: err.message
             });
           }
