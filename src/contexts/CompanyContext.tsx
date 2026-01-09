@@ -58,7 +58,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
         const { data: allCompanies, error: companiesError } = await supabase
           .from('companies')
           .select('*')
-          .order('name');
+          .order('name_en');
 
         if (companiesError) {
           console.error('Error fetching companies:', companiesError);
@@ -72,7 +72,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           .from('companies')
           .select('*')
           .in('id', companyIds)
-          .order('name');
+          .order('name_en');
 
         if (companiesError) {
           console.error('Error fetching companies:', companiesError);
