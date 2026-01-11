@@ -12,5 +12,18 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true
+  },
+  global: {
+    headers: {
+      'x-client-info': 'saudi-hr-management'
+    }
+  },
+  db: {
+    schema: 'public'
+  },
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
   }
 });

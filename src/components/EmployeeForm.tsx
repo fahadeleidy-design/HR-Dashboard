@@ -157,6 +157,29 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     setLoading(true);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        alert('Your session has expired. Please log in again.');
+        setLoading(false);
+        return;
+      }
+
+      const { data: userRoles, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (roleError) {
+        console.error('Error checking user role:', roleError);
+      }
+
+      if (!userRoles || !['hr', 'super_admin'].includes(userRoles.role)) {
+        alert('You do not have permission to create employees. Only HR and Super Admin users can create employees.');
+        setLoading(false);
+        return;
+      }
+
       const employeeData = {
         ...formData,
         company_id: selectedCompanyId,
@@ -260,7 +283,25 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       onClose();
     } catch (error: any) {
       console.error('Error saving employee:', error);
-      alert(error.message || 'Failed to save employee');
+      let errorMessage = 'Failed to save employee';
+
+      if (error?.message) {
+        errorMessage = error.message;
+      }
+
+      if (error?.details) {
+        errorMessage += `\nDetails: ${error.details}`;
+      }
+
+      if (error?.hint) {
+        errorMessage += `\nHint: ${error.hint}`;
+      }
+
+      if (error?.code === 'PGRST301') {
+        errorMessage = 'Permission denied. You may not have the required role to create employees. Please contact your system administrator.';
+      }
+
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
