@@ -14,7 +14,7 @@ interface CompanyContextType {
 const CompanyContext = createContext<CompanyContextType | undefined>(undefined);
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [currentCompany, setCurrentCompanyState] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -112,13 +112,15 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    fetchCompanies();
-  }, [user]);
+    if (!authLoading) {
+      fetchCompanies();
+    }
+  }, [user, authLoading]);
 
   const value = {
     currentCompany,
     companies,
-    loading,
+    loading: authLoading || loading,
     setCurrentCompany,
     refreshCompanies,
   };
