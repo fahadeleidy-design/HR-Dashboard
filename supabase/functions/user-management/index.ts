@@ -34,7 +34,6 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    // Verify the user is authenticated
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       throw new Error('Missing authorization header');
@@ -47,7 +46,6 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unauthorized');
     }
 
-    // Check if user has admin/super_admin/hr role
     const { data: userRole, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role, company_id')
@@ -66,7 +64,6 @@ Deno.serve(async (req: Request) => {
           throw new Error('Company ID is required');
         }
 
-        // Get all user roles for the company
         const { data: userRoles, error: rolesError } = await supabaseAdmin
           .from('user_roles')
           .select(`
@@ -86,13 +83,11 @@ Deno.serve(async (req: Request) => {
 
         if (rolesError) throw rolesError;
 
-        // Get emails for all users
         const userIds = userRoles?.map(r => r.user_id) || [];
         const { data: { users }, error: usersError } = await supabaseAdmin.auth.admin.listUsers();
         
         if (usersError) throw usersError;
 
-        // Map emails to roles and flatten employee data
         const rolesWithEmails = userRoles?.map(role => {
           const user = users.find(u => u.id === role.user_id);
           const employees = role.employees as any;
@@ -125,7 +120,6 @@ Deno.serve(async (req: Request) => {
           throw new Error('Email, company ID, and role are required');
         }
 
-        // Check if user exists
         const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
         if (listError) throw listError;
 
@@ -135,14 +129,12 @@ Deno.serve(async (req: Request) => {
 
         if (existingUser) {
           userId = existingUser.id;
-          // Update password for existing user to ensure they can log in
           const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
             userId,
             { password: defaultPassword }
           );
           if (updateError) throw updateError;
         } else {
-          // Create new user with default password
           const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
             email: body.email,
             password: defaultPassword,
@@ -155,7 +147,6 @@ Deno.serve(async (req: Request) => {
           userId = newUser.user.id;
         }
 
-        // Insert user role using service role (bypasses RLS)
         const { error: roleError } = await supabaseAdmin
           .from('user_roles')
           .insert({
@@ -207,7 +198,6 @@ Deno.serve(async (req: Request) => {
           throw new Error('Company ID is required');
         }
 
-        // Get all active employees for the company
         const { data: employees, error: employeesError } = await supabaseAdmin
           .from('employees')
           .select('id, employee_number, first_name_en, last_name_en, company_id')
@@ -222,7 +212,6 @@ Deno.serve(async (req: Request) => {
 
         console.log(`Found ${employees.length} active employees for company ${body.companyId}`);
 
-        // Get existing user roles for this company to avoid duplicates
         const { data: existingRoles, error: rolesError } = await supabaseAdmin
           .from('user_roles')
           .select('employee_id')
@@ -236,7 +225,6 @@ Deno.serve(async (req: Request) => {
         console.log(`Found ${existingRoles?.length || 0} existing user roles`);
         const existingEmployeeIds = new Set(existingRoles?.map(r => r.employee_id) || []);
 
-        // Get all existing users to check for duplicates
         const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
         if (listError) throw listError;
 
@@ -246,9 +234,7 @@ Deno.serve(async (req: Request) => {
           failed: [] as any[],
         };
 
-        // Create accounts for employees without existing user roles
         for (const employee of employees) {
-          // Skip if employee already has a user role for THIS company
           if (existingEmployeeIds.has(employee.id)) {
             console.log(`Skipping ${employee.employee_number} - already has account for this company`);
             results.skipped.push({
@@ -262,10 +248,7 @@ Deno.serve(async (req: Request) => {
           console.log(`Creating account for ${employee.employee_number}`);
 
           try {
-            // Create email using employee_number
             const email = `${employee.employee_number}@temp.local`;
-
-            // Check if user with this email already exists
             const existingUser = users.find(u => u.email === email);
             let userId: string;
 
@@ -273,7 +256,6 @@ Deno.serve(async (req: Request) => {
               userId = existingUser.id;
               console.log(`User with email ${email} already exists, checking for existing role in this company`);
 
-              // Double-check if this user already has a role for this company
               const { data: existingCompanyRole } = await supabaseAdmin
                 .from('user_roles')
                 .select('id')
@@ -292,21 +274,17 @@ Deno.serve(async (req: Request) => {
                 continue;
               }
 
-              // User exists but doesn't have a role for this company, so add one
               console.log(`User ${email} exists but has no role for this company, adding role`);
             } else {
-              // Try to create new user
               const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
                 email: email,
                 password: 'Test123',
                 email_confirm: true,
               });
 
-              // If user already exists (not in our paginated list), fetch them
               if (createError && createError.message.includes('already been registered')) {
                 console.log(`User ${email} exists but wasn't in paginated list, fetching by email`);
 
-                // Get all users with pagination to find this specific user
                 let page = 1;
                 let foundUser = null;
                 while (!foundUser && page < 100) {
@@ -327,7 +305,6 @@ Deno.serve(async (req: Request) => {
 
                 userId = foundUser.id;
 
-                // Check if this user already has a role for this company
                 const { data: existingCompanyRole } = await supabaseAdmin
                   .from('user_roles')
                   .select('id')
@@ -366,7 +343,6 @@ Deno.serve(async (req: Request) => {
               }
             }
 
-            // Create user role
             const { error: roleError } = await supabaseAdmin
               .from('user_roles')
               .insert({
