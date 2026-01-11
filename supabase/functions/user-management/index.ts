@@ -149,23 +149,38 @@ Deno.serve(async (req: Request) => {
           if (createError) {
             if (createError.message.includes('already been registered')) {
               let foundUser = null;
-              let page = 1;
-              const perPage = 1000;
+              try {
+                let page = 1;
+                const perPage = 1000;
+                let totalSearched = 0;
+                const maxUsers = 100000;
 
-              while (!foundUser && page <= 100) {
-                const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
-                  page,
-                  perPage
-                });
-                if (listError) throw listError;
+                while (!foundUser && totalSearched < maxUsers) {
+                  const { data: listResult, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+                    page,
+                    perPage
+                  });
 
-                foundUser = users.find(u => u.email === body.email);
-                if (foundUser) break;
-                if (users.length < perPage) break;
-                page++;
+                  if (listError) {
+                    console.error('Error listing users:', listError);
+                    throw listError;
+                  }
+
+                  const users = listResult?.users || [];
+                  foundUser = users.find(u => u.email?.toLowerCase() === body.email?.toLowerCase());
+
+                  if (foundUser) break;
+                  if (users.length < perPage) break;
+
+                  totalSearched += users.length;
+                  page++;
+                }
+              } catch (searchError) {
+                console.error('Error searching for user:', searchError);
+                throw searchError;
               }
 
-              if (!foundUser) throw new Error('User exists but could not be found after searching all pages');
+              if (!foundUser) throw new Error('User email already exists but could not be found. The email may be used by another system user.');
               userId = foundUser.id;
             } else {
               throw createError;
@@ -178,19 +193,19 @@ Deno.serve(async (req: Request) => {
           throw new Error(`Failed to create/find user: ${err.message}`);
         }
 
-        const { error: roleError } = await supabaseAdmin
+        const { error: insertError } = await supabaseAdmin
           .from('user_roles')
           .insert({
             user_id: userId,
             company_id: body.companyId,
             employee_id: body.employeeId || null,
-            role: body.role
+            role: body.role,
           });
 
-        if (roleError) throw roleError;
+        if (insertError) throw insertError;
 
         return new Response(
-          JSON.stringify({ success: true, userId }),
+          JSON.stringify({ success: true, user_id: userId }),
           {
             headers: {
               ...corsHeaders,
@@ -205,19 +220,20 @@ Deno.serve(async (req: Request) => {
           throw new Error('User IDs are required');
         }
 
-        const userEmails = [];
-        for (const userId of body.userIds) {
-          try {
-            const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
-            userEmails.push({
-              userId,
-              email: (!userError && userData?.user?.email) ? userData.user.email : null
-            });
-          } catch (err) {
-            console.error(`Failed to fetch email for user ${userId}:`, err);
-            userEmails.push({ userId, email: null });
-          }
-        }
+        const userEmails: { [key: string]: string } = {};
+
+        await Promise.all(
+          body.userIds.map(async (userId) => {
+            try {
+              const { data: userData, error: userError } = await supabaseAdmin.auth.admin.getUserById(userId);
+              if (!userError && userData?.user?.email) {
+                userEmails[userId] = userData.user.email;
+              }
+            } catch (err) {
+              console.error(`Error fetching user ${userId}:`, err);
+            }
+          })
+        );
 
         return new Response(
           JSON.stringify({ success: true, data: userEmails }),
@@ -287,27 +303,58 @@ Deno.serve(async (req: Request) => {
 
             if (createError) {
               if (createError.message.includes('already been registered')) {
-                let foundUser = null;
-                let page = 1;
-                const perPage = 1000;
+                const { data: existingUserRole } = await supabaseAdmin
+                  .from('user_roles')
+                  .select('user_id')
+                  .eq('employee_id', employee.id)
+                  .eq('company_id', employee.company_id)
+                  .maybeSingle();
 
-                while (!foundUser && page <= 100) {
-                  const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({
-                    page,
-                    perPage
+                if (existingUserRole) {
+                  results.skipped.push({
+                    employee_number: employee.employee_number,
+                    name: `${employee.first_name_en} ${employee.last_name_en}`,
+                    reason: 'User account already exists for this employee and company'
                   });
+                  continue;
+                }
 
-                  foundUser = users.find(u => u.email === email);
-                  if (foundUser) break;
-                  if (users.length < perPage) break;
-                  page++;
+                let foundUser = null;
+                try {
+                  let page = 1;
+                  const perPage = 1000;
+                  let totalSearched = 0;
+                  const maxUsers = 100000;
+
+                  while (!foundUser && totalSearched < maxUsers) {
+                    const { data: listResult, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+                      page,
+                      perPage
+                    });
+
+                    if (listError) {
+                      console.error('Error listing users:', listError);
+                      break;
+                    }
+
+                    const users = listResult?.users || [];
+                    foundUser = users.find(u => u.email?.toLowerCase() === email.toLowerCase());
+
+                    if (foundUser) break;
+                    if (users.length < perPage) break;
+
+                    totalSearched += users.length;
+                    page++;
+                  }
+                } catch (searchError) {
+                  console.error('Error searching for user:', searchError);
                 }
 
                 if (!foundUser) {
-                  results.failed.push({
+                  results.skipped.push({
                     employee_number: employee.employee_number,
                     name: `${employee.first_name_en} ${employee.last_name_en}`,
-                    error: 'User exists but could not be found after searching all pages'
+                    reason: 'User email already exists but is used by another account'
                   });
                   continue;
                 }
@@ -388,7 +435,7 @@ Deno.serve(async (req: Request) => {
         throw new Error('Invalid action');
     }
   } catch (error: any) {
-    console.error('User management error:', error);
+    console.error('Error:', error);
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {
