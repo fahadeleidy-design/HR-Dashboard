@@ -83,7 +83,6 @@ Deno.serve(async (req: Request) => {
 
         if (rolesError) throw rolesError;
 
-        // Fetch emails in parallel to speed up response
         const userIds = userRoles?.map(r => r.user_id) || [];
         const userEmailMap = new Map<string, string>();
 
@@ -149,11 +148,25 @@ Deno.serve(async (req: Request) => {
 
           if (createError) {
             if (createError.message.includes('already been registered')) {
-              const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-              if (listError) throw listError;
-              const existingUser = users.find(u => u.email === body.email);
-              if (!existingUser) throw new Error('User exists but could not be found');
-              userId = existingUser.id;
+              let foundUser = null;
+              let page = 1;
+              const perPage = 1000;
+
+              while (!foundUser && page <= 100) {
+                const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+                  page,
+                  perPage
+                });
+                if (listError) throw listError;
+
+                foundUser = users.find(u => u.email === body.email);
+                if (foundUser) break;
+                if (users.length < perPage) break;
+                page++;
+              }
+
+              if (!foundUser) throw new Error('User exists but could not be found after searching all pages');
+              userId = foundUser.id;
             } else {
               throw createError;
             }
@@ -274,17 +287,31 @@ Deno.serve(async (req: Request) => {
 
             if (createError) {
               if (createError.message.includes('already been registered')) {
-                const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-                const existingUser = users.find(u => u.email === email);
-                if (!existingUser) {
+                let foundUser = null;
+                let page = 1;
+                const perPage = 1000;
+
+                while (!foundUser && page <= 100) {
+                  const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({
+                    page,
+                    perPage
+                  });
+
+                  foundUser = users.find(u => u.email === email);
+                  if (foundUser) break;
+                  if (users.length < perPage) break;
+                  page++;
+                }
+
+                if (!foundUser) {
                   results.failed.push({
                     employee_number: employee.employee_number,
                     name: `${employee.first_name_en} ${employee.last_name_en}`,
-                    error: 'User exists but could not be found'
+                    error: 'User exists but could not be found after searching all pages'
                   });
                   continue;
                 }
-                userId = existingUser.id;
+                userId = foundUser.id;
               } else {
                 results.failed.push({
                   employee_number: employee.employee_number,
