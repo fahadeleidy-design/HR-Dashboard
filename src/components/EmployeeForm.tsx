@@ -157,21 +157,38 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     setLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Starting employee creation process...');
+
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      console.log('Session check:', { hasSession: !!session, error: sessionError });
+
+      if (sessionError) {
+        console.error('Session error:', sessionError);
+        alert(`Session error: ${sessionError.message}`);
+        setLoading(false);
+        return;
+      }
+
       if (!session) {
         alert('Your session has expired. Please log in again.');
         setLoading(false);
         return;
       }
 
+      console.log('Checking user role...');
       const { data: userRoles, error: roleError } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', session.user.id)
         .maybeSingle();
 
+      console.log('User role check:', { role: userRoles?.role, error: roleError });
+
       if (roleError) {
         console.error('Error checking user role:', roleError);
+        alert(`Error checking permissions: ${roleError.message}`);
+        setLoading(false);
+        return;
       }
 
       if (!userRoles || !['hr', 'super_admin'].includes(userRoles.role)) {
@@ -203,21 +220,26 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       let employeeId = employee?.id;
 
       if (employee) {
+        console.log('Updating existing employee...');
         const { error } = await supabase
           .from('employees')
           .update(employeeData)
           .eq('id', employee.id);
 
+        console.log('Update result:', { error });
         if (error) throw error;
       } else {
+        console.log('Creating new employee with data:', employeeData);
         const { data, error } = await supabase
           .from('employees')
           .insert([employeeData])
           .select();
 
+        console.log('Insert result:', { data, error });
         if (error) throw error;
         if (data && data[0]) {
           employeeId = data[0].id;
+          console.log('New employee created with ID:', employeeId);
         }
       }
 
@@ -283,22 +305,32 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       onClose();
     } catch (error: any) {
       console.error('Error saving employee:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error name:', error?.name);
+      console.error('Error stack:', error?.stack);
+
       let errorMessage = 'Failed to save employee';
 
-      if (error?.message) {
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        errorMessage = 'Network error: Unable to connect to the server. Please check your internet connection and try again.';
+      } else if (error?.message) {
         errorMessage = error.message;
       }
 
       if (error?.details) {
-        errorMessage += `\nDetails: ${error.details}`;
+        errorMessage += `\n\nDetails: ${error.details}`;
       }
 
       if (error?.hint) {
-        errorMessage += `\nHint: ${error.hint}`;
+        errorMessage += `\n\nHint: ${error.hint}`;
       }
 
       if (error?.code === 'PGRST301') {
         errorMessage = 'Permission denied. You may not have the required role to create employees. Please contact your system administrator.';
+      }
+
+      if (error?.code) {
+        console.error('Error code:', error.code);
       }
 
       alert(errorMessage);
