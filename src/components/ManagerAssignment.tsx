@@ -65,7 +65,7 @@ export default function ManagerAssignment() {
       if (companiesError) throw companiesError;
       setCompanies(companiesData || []);
 
-      // Load employees with manager info
+      // Load employees without manager join
       let query = supabase
         .from('employees')
         .select(`
@@ -80,13 +80,6 @@ export default function ManagerAssignment() {
           job_title_en,
           company_id,
           manager_id,
-          manager:manager_id (
-            id,
-            first_name_en,
-            last_name_en,
-            first_name_ar,
-            last_name_ar
-          ),
           companies (
             name_en,
             name_ar
@@ -106,10 +99,26 @@ export default function ManagerAssignment() {
       const { data: employeesData, error: employeesError } = await query;
 
       if (employeesError) throw employeesError;
-      setEmployees(employeesData || []);
+
+      // Manually map manager information
+      const employeesWithManagers = (employeesData || []).map(emp => {
+        const manager = employeesData?.find(e => e.id === emp.manager_id);
+        return {
+          ...emp,
+          manager: manager ? {
+            id: manager.id,
+            first_name_en: manager.first_name_en,
+            last_name_en: manager.last_name_en,
+            first_name_ar: manager.first_name_ar,
+            last_name_ar: manager.last_name_ar,
+          } : undefined
+        };
+      });
+
+      setEmployees(employeesWithManagers);
 
       // Set potential managers (all active employees)
-      setManagers(employeesData || []);
+      setManagers(employeesWithManagers);
     } catch (error: any) {
       console.error('Error loading data:', error);
       showToast(error.message, 'error');
