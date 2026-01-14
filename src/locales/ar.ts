@@ -110,6 +110,7 @@ export const arTranslations = {
     dashboard: 'لوحة المعلومات',
     employees: 'الموظفون',
     recruitment: 'التوظيف والتعيين',
+    managers: 'إدارة المديرين',
     salaryScale: 'سلم الرواتب',
     orgChart: 'الهيكل التنظيمي',
     handbook: 'دليل الموظف',

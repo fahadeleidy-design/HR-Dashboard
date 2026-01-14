@@ -37,6 +37,7 @@ import { EmployeeContracts } from './pages/EmployeeContracts';
 import { ComplianceDashboard } from './pages/ComplianceDashboard';
 import { SalaryScale } from './pages/SalaryScale';
 import { Recruitment } from './pages/Recruitment';
+import ManagerAssignment from './components/ManagerAssignment';
 
 function App() {
   return (
@@ -185,6 +186,7 @@ function App() {
             <Route path="/compliance" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><ComplianceDashboard /></Layout></ProtectedRoute>} />
             <Route path="/salary-scale" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><SalaryScale /></Layout></ProtectedRoute>} />
             <Route path="/recruitment" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Recruitment /></Layout></ProtectedRoute>} />
+            <Route path="/managers" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><ManagerAssignment /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

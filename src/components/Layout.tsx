@@ -32,6 +32,7 @@ import {
   BookOpen,
   UserPlus,
   Languages,
+  UserCheck,
 } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationCenter } from './NotificationCenter';
@@ -64,6 +65,7 @@ export function Layout({ children }: LayoutProps) {
         { path: '/employees', icon: Users, label: t.nav.employees },
         ...(!isEmployee ? [
           { path: '/recruitment', icon: UserPlus, label: t.nav.recruitment || 'Recruitment' },
+          { path: '/managers', icon: UserCheck, label: t.nav.managers || 'Manager Assignment' },
           { path: '/salary-scale', icon: DollarSign, label: t.nav.salaryScale || 'Salary Scale' },
         ] : []),
         { path: '/org-chart', icon: TrendingUp, label: t.nav.orgChart },

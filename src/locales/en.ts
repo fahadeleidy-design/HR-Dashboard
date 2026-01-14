@@ -90,6 +90,7 @@ export const enTranslations = {
     dashboard: 'Dashboard',
     employees: 'Employees',
     recruitment: 'Recruitment',
+    managers: 'Manager Assignment',
     salaryScale: 'Salary Scale',
     orgChart: 'Org Chart',
     handbook: 'Employee Handbook',
