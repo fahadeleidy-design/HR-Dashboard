@@ -7,13 +7,13 @@ import { Users, Search, Building2, UserCheck, Save, X } from 'lucide-react';
 
 interface Employee {
   id: string;
-  employee_id: string;
+  employee_number: string;
   first_name_en: string;
   last_name_en: string;
   first_name_ar: string;
   last_name_ar: string;
   email: string;
-  department: string;
+  department_id: string | null;
   job_title_en: string;
   company_id: string;
   manager_id: string | null;
@@ -25,6 +25,10 @@ interface Employee {
     last_name_ar: string;
   };
   companies?: {
+    name_en: string;
+    name_ar: string;
+  };
+  departments?: {
     name_en: string;
     name_ar: string;
   };
@@ -66,13 +70,13 @@ export default function ManagerAssignment() {
         .from('employees')
         .select(`
           id,
-          employee_id,
+          employee_number,
           first_name_en,
           last_name_en,
           first_name_ar,
           last_name_ar,
           email,
-          department,
+          department_id,
           job_title_en,
           company_id,
           manager_id,
@@ -84,6 +88,10 @@ export default function ManagerAssignment() {
             last_name_ar
           ),
           companies (
+            name_en,
+            name_ar
+          ),
+          departments (
             name_en,
             name_ar
           )
@@ -173,9 +181,8 @@ export default function ManagerAssignment() {
       emp.last_name_en.toLowerCase().includes(searchLower) ||
       emp.first_name_ar.includes(searchTerm) ||
       emp.last_name_ar.includes(searchTerm) ||
-      emp.employee_id.toLowerCase().includes(searchLower) ||
-      emp.email.toLowerCase().includes(searchLower) ||
-      emp.department?.toLowerCase().includes(searchLower);
+      emp.employee_number.toLowerCase().includes(searchLower) ||
+      emp.email.toLowerCase().includes(searchLower);
 
     return matchesSearch;
   });
@@ -331,7 +338,7 @@ export default function ManagerAssignment() {
                         {getEmployeeDisplayName(employee)}
                       </div>
                       <div className="text-sm text-gray-500">
-                        {employee.employee_id} • {employee.email}
+                        {employee.employee_number} • {employee.email}
                       </div>
                     </div>
                   </td>
@@ -341,7 +348,9 @@ export default function ManagerAssignment() {
                       : employee.companies?.name_en}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {employee.department || '-'}
+                    {employee.departments
+                      ? (language === 'ar' ? employee.departments.name_ar : employee.departments.name_en)
+                      : '-'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {editingEmployee === employee.id ? (
@@ -355,7 +364,7 @@ export default function ManagerAssignment() {
                         </option>
                         {getManagersForEmployee(employee.id, employee.company_id).map((manager) => (
                           <option key={manager.id} value={manager.id}>
-                            {getEmployeeDisplayName(manager)} ({manager.employee_id})
+                            {getEmployeeDisplayName(manager)} ({manager.employee_number})
                           </option>
                         ))}
                       </select>
