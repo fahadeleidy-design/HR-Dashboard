@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import TrainingModules from '@/components/training/TrainingModules';
 import QuizBuilder from '@/components/training/QuizBuilder';
 import QuizTaker from '@/components/training/QuizTaker';
+import TrainingProgramManager from '@/components/training/TrainingProgramManager';
 
 interface TrainingProgram {
   id: string;
@@ -95,7 +96,7 @@ export function Training() {
     );
   }
 
-  if (programs.length === 0) {
+  if (programs.length === 0 && !isHROrAdmin) {
     return (
       <div className="space-y-6">
         <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -110,9 +111,27 @@ export function Training() {
             {language === 'ar' ? 'لا توجد برامج تدريبية' : 'No training programs'}
           </h3>
           <p className="mt-1 text-sm text-gray-500">
-            {language === 'ar' ? 'ابدأ بإنشاء برنامج تدريبي' : 'Start by creating a training program'}
+            {language === 'ar' ? 'لا توجد برامج تدريبية متاحة حالياً' : 'No training programs available at this time'}
           </p>
         </div>
+      </div>
+    );
+  }
+
+  if (programs.length === 0 && isHROrAdmin) {
+    return (
+      <div className="space-y-6">
+        <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <h1 className="text-3xl font-bold text-gray-900">{t.training.title}</h1>
+            <p className="text-gray-600 mt-1">{t.training.subtitle}</p>
+          </div>
+        </div>
+        <TrainingProgramManager
+          companyId={currentCompany!.id}
+          programs={programs}
+          onProgramsChange={fetchPrograms}
+        />
       </div>
     );
   }
@@ -125,27 +144,52 @@ export function Training() {
           <h1 className="text-3xl font-bold text-gray-900">{t.training.title}</h1>
           <p className="text-gray-600 mt-1">{t.training.subtitle}</p>
         </div>
+        {isHROrAdmin && activeTab !== 'programs' && (
+          <button
+            onClick={() => setActiveTab('programs')}
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <BookOpen className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+            {language === 'ar' ? 'إدارة البرامج' : 'Manage Programs'}
+          </button>
+        )}
       </div>
 
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {language === 'ar' ? 'اختر برنامج تدريبي' : 'Select Training Program'}
-        </label>
-        <select
-          value={selectedProgram?.id || ''}
-          onChange={(e) => {
-            const program = programs.find(p => p.id === e.target.value);
-            if (program) setSelectedProgram(program);
-          }}
-          className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-        >
-          {programs.map((program) => (
-            <option key={program.id} value={program.id}>
-              {language === 'ar' && program.program_name_ar ? program.program_name_ar : program.program_name_en}
-            </option>
-          ))}
-        </select>
-      </div>
+      {activeTab === 'programs' && isHROrAdmin ? (
+        <div>
+          <button
+            onClick={() => setActiveTab('overview')}
+            className="mb-4 text-sm text-blue-600 hover:text-blue-800"
+          >
+            ← {language === 'ar' ? 'عودة إلى البرامج' : 'Back to Programs'}
+          </button>
+          <TrainingProgramManager
+            companyId={currentCompany!.id}
+            programs={programs}
+            onProgramsChange={fetchPrograms}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {language === 'ar' ? 'اختر برنامج تدريبي' : 'Select Training Program'}
+            </label>
+            <select
+              value={selectedProgram?.id || ''}
+              onChange={(e) => {
+                const program = programs.find(p => p.id === e.target.value);
+                if (program) setSelectedProgram(program);
+              }}
+              className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            >
+              {programs.map((program) => (
+                <option key={program.id} value={program.id}>
+                  {language === 'ar' && program.program_name_ar ? program.program_name_ar : program.program_name_en}
+                </option>
+              ))}
+            </select>
+          </div>
 
       {selectedProgram && (
         <>
@@ -274,6 +318,8 @@ export function Training() {
               </div>
             </TabsContent>
           </Tabs>
+        </>
+      )}
         </>
       )}
     </div>
