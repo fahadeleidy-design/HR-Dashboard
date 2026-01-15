@@ -1,34 +1,66 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { BookOpen, Users, Award } from 'lucide-react';
+import { BookOpen, Users, Award, FileQuestion, Edit2 } from 'lucide-react';
 import { formatInteger } from '@/lib/formatters';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
+import TrainingModules from '@/components/training/TrainingModules';
+import QuizBuilder from '@/components/training/QuizBuilder';
+import QuizTaker from '@/components/training/QuizTaker';
 
 interface TrainingProgram {
   id: string;
-  name_en: string;
-  name_ar: string | null;
+  program_name_en: string;
+  program_name_ar: string | null;
   description: string | null;
   duration_hours: number;
   start_date: string;
   end_date: string;
   max_participants: number | null;
-  status: 'planned' | 'ongoing' | 'completed' | 'cancelled';
-  enrollments: { count: number }[];
+  status?: 'planned' | 'ongoing' | 'completed' | 'cancelled';
+  enrollments?: { count: number }[];
+}
+
+interface UserRole {
+  role: string;
+  employee_id: string | null;
 }
 
 export function Training() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const { user } = useAuth();
   const [programs, setPrograms] = useState<TrainingProgram[]>([]);
+  const [selectedProgram, setSelectedProgram] = useState<TrainingProgram | null>(null);
   const [loading, setLoading] = useState(true);
+  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
 
   useEffect(() => {
-    if (currentCompany) {
+    if (currentCompany && user) {
       fetchPrograms();
+      fetchUserRole();
     }
-  }, [currentCompany]);
+  }, [currentCompany, user]);
+
+  const fetchUserRole = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role, employee_id')
+        .eq('user_id', user.id)
+        .single();
+
+      if (error) throw error;
+      setUserRole(data);
+    } catch (error) {
+      console.error('Error fetching user role:', error);
+    }
+  };
 
   const fetchPrograms = async () => {
     if (!currentCompany) return;
@@ -37,15 +69,15 @@ export function Training() {
     try {
       const { data, error } = await supabase
         .from('training_programs')
-        .select(`
-          *,
-          enrollments:training_enrollments(count)
-        `)
+        .select('*')
         .eq('company_id', currentCompany.id)
         .order('start_date', { ascending: false });
 
       if (error) throw error;
       setPrograms(data || []);
+      if (data && data.length > 0 && !selectedProgram) {
+        setSelectedProgram(data[0]);
+      }
     } catch (error) {
       console.error('Error fetching training programs:', error);
     } finally {
@@ -53,18 +85,38 @@ export function Training() {
     }
   };
 
-  const ongoingCount = programs.filter(p => p.status === 'ongoing').length;
-  const completedCount = programs.filter(p => p.status === 'completed').length;
-  const totalParticipants = programs.reduce((sum, p) => sum + (p.enrollments[0]?.count || 0), 0);
-  const totalHours = programs.reduce((sum, p) => sum + p.duration_hours, 0);
+  const isHROrAdmin = userRole?.role && ['hr', 'admin', 'super_admin'].includes(userRole.role);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
   }
+
+  if (programs.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <h1 className="text-3xl font-bold text-gray-900">{t.training.title}</h1>
+            <p className="text-gray-600 mt-1">{t.training.subtitle}</p>
+          </div>
+        </div>
+        <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+          <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">
+            {language === 'ar' ? 'لا توجد برامج تدريبية' : 'No training programs'}
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {language === 'ar' ? 'ابدأ بإنشاء برنامج تدريبي' : 'Start by creating a training program'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-6">
@@ -75,122 +127,155 @@ export function Training() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">{t.training.trainingPrograms}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatInteger(programs.length, language)}</p>
-            </div>
-            <BookOpen className="h-12 w-12 text-blue-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">{t.training.inProgress}</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{formatInteger(ongoingCount, language)}</p>
-            </div>
-            <BookOpen className="h-12 w-12 text-green-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">{t.training.completed}</p>
-              <p className="text-2xl font-bold text-purple-600 mt-1">{formatInteger(completedCount, language)}</p>
-            </div>
-            <Award className="h-12 w-12 text-purple-600" />
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">{t.common.totalParticipants}</p>
-              <p className="text-2xl font-bold text-orange-600 mt-1">{formatInteger(totalParticipants, language)}</p>
-            </div>
-            <Users className="h-12 w-12 text-orange-600" />
-          </div>
-        </div>
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
+          {language === 'ar' ? 'اختر برنامج تدريبي' : 'Select Training Program'}
+        </label>
+        <select
+          value={selectedProgram?.id || ''}
+          onChange={(e) => {
+            const program = programs.find(p => p.id === e.target.value);
+            if (program) setSelectedProgram(program);
+          }}
+          className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        >
+          {programs.map((program) => (
+            <option key={program.id} value={program.id}>
+              {language === 'ar' && program.program_name_ar ? program.program_name_ar : program.program_name_en}
+            </option>
+          ))}
+        </select>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
-                  {t.common.programName}
-                </th>
-                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
-                  {t.training.duration}
-                </th>
-                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
-                  {t.common.startDate}
-                </th>
-                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
-                  {t.common.endDate}
-                </th>
-                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
-                  {t.common.participants}
-                </th>
-                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>
-                  {t.common.status}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {programs.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                    {t.messages.noResults}
-                  </td>
-                </tr>
-              ) : (
-                programs.map((program) => (
-                  <tr key={program.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
-                      <div className="text-sm font-medium text-gray-900">{program.name_en}</div>
-                      {program.description && (
-                        <div className="text-sm text-gray-500 truncate max-w-md">{program.description}</div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatInteger(program.duration_hours, language)} {t.common.hours}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(program.start_date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(program.end_date).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatInteger(program.enrollments[0]?.count || 0, language)}
-                      {program.max_participants && ` / ${formatInteger(program.max_participants, language)}`}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        program.status === 'ongoing'
-                          ? 'bg-green-100 text-green-800'
-                          : program.status === 'completed'
-                          ? 'bg-blue-100 text-blue-800'
-                          : program.status === 'planned'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {program.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      {selectedProgram && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">{language === 'ar' ? 'المدة' : 'Duration'}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">
+                    {formatInteger(selectedProgram.duration_hours, language)}
+                  </p>
+                  <p className="text-xs text-gray-500">{language === 'ar' ? 'ساعة' : 'hours'}</p>
+                </div>
+                <BookOpen className="h-10 w-10 text-blue-600" />
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">{language === 'ar' ? 'تاريخ البدء' : 'Start Date'}</p>
+                  <p className="text-lg font-bold text-gray-900 mt-1">
+                    {new Date(selectedProgram.start_date).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">{language === 'ar' ? 'تاريخ الانتهاء' : 'End Date'}</p>
+                  <p className="text-lg font-bold text-gray-900 mt-1">
+                    {new Date(selectedProgram.end_date).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {selectedProgram.max_participants && (
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-gray-600">{language === 'ar' ? 'الحد الأقصى' : 'Max Participants'}</p>
+                    <p className="text-2xl font-bold text-gray-900 mt-1">
+                      {formatInteger(selectedProgram.max_participants, language)}
+                    </p>
+                  </div>
+                  <Users className="h-10 w-10 text-green-600" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="bg-white border border-gray-200">
+              <TabsTrigger value="overview">
+                <BookOpen className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                {language === 'ar' ? 'نظرة عامة' : 'Overview'}
+              </TabsTrigger>
+              <TabsTrigger value="modules">
+                <Edit2 className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                {language === 'ar' ? 'الوحدات والشرائح' : 'Modules & Slides'}
+              </TabsTrigger>
+              <TabsTrigger value="quizzes">
+                <FileQuestion className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                {language === 'ar' ? 'الاختبارات' : 'Quizzes'}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="overview">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {language === 'ar' ? 'الوصف' : 'Description'}
+                    </h3>
+                    <p className="text-gray-600">
+                      {selectedProgram.description || (language === 'ar' ? 'لا يوجد وصف' : 'No description available')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="modules">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                {isHROrAdmin ? (
+                  <TrainingModules
+                    programId={selectedProgram.id}
+                    companyId={currentCompany!.id}
+                    isReadOnly={false}
+                  />
+                ) : (
+                  <TrainingModules
+                    programId={selectedProgram.id}
+                    companyId={currentCompany!.id}
+                    isReadOnly={true}
+                  />
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="quizzes">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                {isHROrAdmin ? (
+                  <QuizBuilder
+                    programId={selectedProgram.id}
+                    companyId={currentCompany!.id}
+                  />
+                ) : (
+                  userRole?.employee_id ? (
+                    <QuizTaker
+                      programId={selectedProgram.id}
+                      companyId={currentCompany!.id}
+                      employeeId={userRole.employee_id}
+                    />
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-gray-500">
+                        {language === 'ar' ? 'لا يمكن الوصول إلى الاختبارات' : 'Cannot access quizzes'}
+                      </p>
+                    </div>
+                  )
+                )}
+              </div>
+            </TabsContent>
+          </Tabs>
+        </>
+      )}
     </div>
   );
 }
