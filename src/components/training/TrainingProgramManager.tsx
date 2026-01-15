@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { Plus, Edit2, Trash2, Save, X, BookOpen } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, BookOpen, Info } from 'lucide-react';
 
 interface TrainingProgram {
   id: string;
@@ -77,7 +77,9 @@ export default function TrainingProgramManager({ companyId, programs, onPrograms
 
         if (error) throw error;
         showToast(
-          language === 'ar' ? 'تم إضافة البرنامج بنجاح' : 'Program added successfully',
+          language === 'ar'
+            ? 'تم إضافة البرنامج بنجاح! الآن يمكنك إضافة الوحدات التدريبية من تبويب "الوحدات والشرائح"'
+            : 'Program added successfully! Now you can add training modules from the "Modules & Slides" tab',
           'success'
         );
       }
@@ -167,6 +169,31 @@ export default function TrainingProgramManager({ companyId, programs, onPrograms
               ? (language === 'ar' ? 'تعديل البرنامج' : 'Edit Program')
               : (language === 'ar' ? 'برنامج تدريبي جديد' : 'New Training Program')}
           </h4>
+
+          {!editingProgram && (
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start space-x-3 rtl:space-x-reverse">
+                <Info className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <h5 className="text-sm font-semibold text-blue-900 mb-1">
+                    {language === 'ar' ? 'كيفية إضافة المواد التدريبية' : 'How to Upload Training Materials'}
+                  </h5>
+                  <p className="text-sm text-blue-800">
+                    {language === 'ar'
+                      ? 'بعد إنشاء البرنامج، يمكنك إضافة الوحدات التدريبية ورفع الملفات (PDF، فيديو، صور) من خلال:'
+                      : 'After creating the program, you can add training modules and upload files (PDFs, videos, images) by:'}
+                  </p>
+                  <ol className={`mt-2 text-sm text-blue-800 space-y-1 ${language === 'ar' ? 'list-arabic mr-5' : 'list-decimal ml-5'}`}>
+                    <li>{language === 'ar' ? 'العودة للصفحة الرئيسية' : 'Going back to the main page'}</li>
+                    <li>{language === 'ar' ? 'اختيار البرنامج من القائمة' : 'Selecting the program from the dropdown'}</li>
+                    <li>{language === 'ar' ? 'النقر على تبويب "الوحدات والشرائح"' : 'Clicking on "Modules & Slides" tab'}</li>
+                    <li>{language === 'ar' ? 'النقر على "إضافة وحدة" ورفع الملفات' : 'Clicking "Add Module" and uploading files'}</li>
+                  </ol>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
