@@ -15,7 +15,9 @@ import {
   Link as LinkIcon,
   ArrowUp,
   ArrowDown,
-  CheckCircle
+  CheckCircle,
+  Upload,
+  Download
 } from 'lucide-react';
 
 interface TrainingModule {
@@ -45,6 +47,8 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingModule, setEditingModule] = useState<TrainingModule | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [formData, setFormData] = useState({
     title_en: '',
     title_ar: '',
@@ -78,14 +82,56 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
     }
   };
 
+  const handleFileUpload = async (file: File): Promise<string | null> => {
+    try {
+      setUploading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${programId}/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('training-materials')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('training-materials')
+        .getPublicUrl(fileName);
+
+      return fileName;
+    } catch (error: any) {
+      console.error('Error uploading file:', error);
+      showToast(error.message, 'error');
+      return null;
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
+      let fileUrl = formData.content_url;
+
+      if (uploadedFile) {
+        const uploadedPath = await handleFileUpload(uploadedFile);
+        if (uploadedPath) {
+          fileUrl = uploadedPath;
+        } else {
+          showToast(
+            language === 'ar' ? 'فشل تحميل الملف' : 'Failed to upload file',
+            'error'
+          );
+          return;
+        }
+      }
+
       const moduleData = {
         training_program_id: programId,
         company_id: companyId,
         ...formData,
+        content_url: fileUrl,
         sequence_order: editingModule ? editingModule.sequence_order : modules.length,
         created_by: user?.id
       };
@@ -204,8 +250,38 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
       duration_minutes: 0,
       is_mandatory: true
     });
+    setUploadedFile(null);
     setEditingModule(null);
     setShowForm(false);
+  };
+
+  const getFileUrl = (path: string) => {
+    const { data } = supabase.storage
+      .from('training-materials')
+      .getPublicUrl(path);
+    return data.publicUrl;
+  };
+
+  const handleDownloadFile = async (path: string) => {
+    try {
+      const { data, error } = await supabase.storage
+        .from('training-materials')
+        .download(path);
+
+      if (error) throw error;
+
+      const url = URL.createObjectURL(data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = path.split('/').pop() || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (error: any) {
+      console.error('Error downloading file:', error);
+      showToast(error.message, 'error');
+    }
   };
 
   const getContentTypeIcon = (type: string) => {
@@ -339,6 +415,47 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
               />
             </div>
 
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {language === 'ar' ? 'أو ارفع ملف' : 'Or Upload File'}
+              </label>
+              <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                <label className="flex-1 cursor-pointer">
+                  <div className="flex items-center justify-center px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors">
+                    <Upload className="h-5 w-5 text-gray-400 mr-2 rtl:mr-0 rtl:ml-2" />
+                    <span className="text-sm text-gray-600">
+                      {uploadedFile
+                        ? uploadedFile.name
+                        : (language === 'ar' ? 'اختر ملف (PDF, PPT, فيديو, صورة)' : 'Choose file (PDF, PPT, Video, Image)')}
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept=".pdf,.ppt,.pptx,.doc,.docx,.mp4,.webm,.jpg,.jpeg,.png,.gif"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setUploadedFile(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
+                {uploadedFile && (
+                  <button
+                    type="button"
+                    onClick={() => setUploadedFile(null)}
+                    className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                {language === 'ar' ? 'الحد الأقصى: 50 ميجابايت' : 'Max size: 50MB'}
+              </p>
+            </div>
+
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -363,10 +480,20 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                disabled={uploading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Save className="h-4 w-4 inline mr-2 rtl:mr-0 rtl:ml-2" />
-                {language === 'ar' ? 'حفظ' : 'Save'}
+                {uploading ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 inline border-2 border-white border-t-transparent rounded-full mr-2 rtl:mr-0 rtl:ml-2"></div>
+                    {language === 'ar' ? 'جاري الرفع...' : 'Uploading...'}
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 inline mr-2 rtl:mr-0 rtl:ml-2" />
+                    {language === 'ar' ? 'حفظ' : 'Save'}
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -417,6 +544,15 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
                           <CheckCircle className="h-4 w-4 mr-1 rtl:mr-0 rtl:ml-1" />
                           {language === 'ar' ? 'مكتمل' : 'Completed'}
                         </span>
+                      )}
+                      {module.content_url && !module.content_url.startsWith('http') && (
+                        <button
+                          onClick={() => handleDownloadFile(module.content_url!)}
+                          className="inline-flex items-center px-2 py-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        >
+                          <Download className="h-4 w-4 mr-1 rtl:mr-0 rtl:ml-1" />
+                          {language === 'ar' ? 'تحميل الملف' : 'Download File'}
+                        </button>
                       )}
                     </div>
                   </div>
