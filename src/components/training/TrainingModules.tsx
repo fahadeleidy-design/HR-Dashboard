@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import FilePreview from './FilePreview';
 import {
   BookOpen,
   Plus,
@@ -17,7 +18,8 @@ import {
   ArrowDown,
   CheckCircle,
   Upload,
-  Download
+  Download,
+  Eye
 } from 'lucide-react';
 
 interface TrainingModule {
@@ -49,6 +51,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
   const [editingModule, setEditingModule] = useState<TrainingModule | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [previewFile, setPreviewFile] = useState<{ path: string; name: string } | null>(null);
   const [formData, setFormData] = useState({
     title_en: '',
     title_ar: '',
@@ -546,13 +549,25 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
                         </span>
                       )}
                       {module.content_url && !module.content_url.startsWith('http') && (
-                        <button
-                          onClick={() => handleDownloadFile(module.content_url!)}
-                          className="inline-flex items-center px-2 py-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                        >
-                          <Download className="h-4 w-4 mr-1 rtl:mr-0 rtl:ml-1" />
-                          {language === 'ar' ? 'تحميل الملف' : 'Download File'}
-                        </button>
+                        <>
+                          <button
+                            onClick={() => setPreviewFile({
+                              path: module.content_url!,
+                              name: language === 'ar' && module.title_ar ? module.title_ar : module.title_en
+                            })}
+                            className="inline-flex items-center px-2 py-1 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          >
+                            <Eye className="h-4 w-4 mr-1 rtl:mr-0 rtl:ml-1" />
+                            {language === 'ar' ? 'معاينة' : 'Preview'}
+                          </button>
+                          <button
+                            onClick={() => handleDownloadFile(module.content_url!)}
+                            className="inline-flex items-center px-2 py-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                          >
+                            <Download className="h-4 w-4 mr-1 rtl:mr-0 rtl:ml-1" />
+                            {language === 'ar' ? 'تحميل' : 'Download'}
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -593,6 +608,14 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
           ))
         )}
       </div>
+
+      {previewFile && (
+        <FilePreview
+          filePath={previewFile.path}
+          fileName={previewFile.name}
+          onClose={() => setPreviewFile(null)}
+        />
+      )}
     </div>
   );
 }
