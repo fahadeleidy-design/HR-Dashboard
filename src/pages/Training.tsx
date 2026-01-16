@@ -3,13 +3,14 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { BookOpen, Users, Award, FileQuestion, Edit2 } from 'lucide-react';
+import { BookOpen, Users, Award, FileQuestion, Edit2, UserPlus } from 'lucide-react';
 import { formatInteger } from '@/lib/formatters';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import TrainingModules from '@/components/training/TrainingModules';
 import QuizBuilder from '@/components/training/QuizBuilder';
 import QuizTaker from '@/components/training/QuizTaker';
 import TrainingProgramManager from '@/components/training/TrainingProgramManager';
+import TrainingAssignments from '@/components/training/TrainingAssignments';
 
 interface TrainingProgram {
   id: string;
@@ -258,6 +259,12 @@ export function Training() {
                 <FileQuestion className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
                 {language === 'ar' ? 'الاختبارات' : 'Quizzes'}
               </TabsTrigger>
+              {isHROrAdmin && (
+                <TabsTrigger value="assignments">
+                  <UserPlus className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                  {language === 'ar' ? 'التعيينات' : 'Assignments'}
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="overview">
@@ -317,6 +324,15 @@ export function Training() {
                 )}
               </div>
             </TabsContent>
+
+            {isHROrAdmin && (
+              <TabsContent value="assignments">
+                <TrainingAssignments
+                  programId={selectedProgram.id}
+                  companyId={currentCompany!.id}
+                />
+              </TabsContent>
+            )}
           </Tabs>
         </>
       )}
