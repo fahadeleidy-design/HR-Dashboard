@@ -107,16 +107,35 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
   const loadQuizzes = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('training_quizzes')
-        .select('*')
-        .eq('training_program_id', programId)
-        .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setQuizzes(data || []);
-      if (data && data.length > 0) {
-        setSelectedQuiz(data[0]);
+      // Load only assigned quizzes using the view
+      const { data: assignedQuizzes, error: assignmentError } = await supabase
+        .from('employee_available_quizzes')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .eq('training_program_id', programId)
+        .order('enabled_at', { ascending: false });
+
+      if (assignmentError) throw assignmentError;
+
+      // Convert the view results to Quiz objects
+      const quizList: Quiz[] = (assignedQuizzes || []).map(aq => ({
+        id: aq.quiz_id,
+        title_en: aq.quiz_title_en,
+        title_ar: aq.quiz_title_ar,
+        description: aq.quiz_description,
+        passing_score: aq.passing_score,
+        max_attempts: aq.max_attempts,
+        time_limit_minutes: aq.time_limit_minutes,
+        is_mandatory: aq.quiz_is_mandatory,
+        show_correct_answers: true,
+        randomize_questions: false,
+        randomize_options: false
+      }));
+
+      setQuizzes(quizList);
+      if (quizList.length > 0) {
+        setSelectedQuiz(quizList[0]);
       }
     } catch (error: any) {
       console.error('Error loading quizzes:', error);

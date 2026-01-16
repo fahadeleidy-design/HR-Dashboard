@@ -27,6 +27,15 @@ interface Quiz {
   show_correct_answers: boolean;
   randomize_questions: boolean;
   randomize_options: boolean;
+  training_module_id: string | null;
+}
+
+interface TrainingModule {
+  id: string;
+  title_en: string;
+  title_ar: string | null;
+  content_type: string;
+  sequence_order: number;
 }
 
 interface Question {
@@ -56,6 +65,7 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
   const { showToast } = useToast();
   const { language } = useLanguage();
   const [quizzes, setQuizzes] = useState<Quiz[]>([]);
+  const [modules, setModules] = useState<TrainingModule[]>([]);
   const [selectedQuiz, setSelectedQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +83,8 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
     is_mandatory: true,
     show_correct_answers: true,
     randomize_questions: false,
-    randomize_options: false
+    randomize_options: false,
+    training_module_id: null as string | null
   });
 
   const [questionFormData, setQuestionFormData] = useState({
@@ -89,6 +100,7 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
 
   useEffect(() => {
     loadQuizzes();
+    loadModules();
   }, [programId]);
 
   useEffect(() => {
@@ -116,6 +128,21 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
       showToast(error.message, 'error');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadModules = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('training_modules')
+        .select('id, title_en, title_ar, content_type, sequence_order')
+        .eq('training_program_id', programId)
+        .order('sequence_order');
+
+      if (error) throw error;
+      setModules(data || []);
+    } catch (error: any) {
+      console.error('Error loading modules:', error);
     }
   };
 
@@ -399,6 +426,33 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
                   onChange={(e) => setQuizFormData({ ...quizFormData, time_limit_minutes: parseInt(e.target.value) })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  {language === 'ar' ? 'ربط بوحدة تدريبية' : 'Link to Training Module'}
+                </label>
+                <select
+                  value={quizFormData.training_module_id || ''}
+                  onChange={(e) => setQuizFormData({ ...quizFormData, training_module_id: e.target.value || null })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">
+                    {language === 'ar' ? 'بدون ربط (اختبار عام)' : 'No Link (General Quiz)'}
+                  </option>
+                  {modules.map((module) => (
+                    <option key={module.id} value={module.id}>
+                      {language === 'ar' && module.title_ar ? module.title_ar : module.title_en}
+                      {' '}
+                      ({module.content_type})
+                    </option>
+                  ))}
+                </select>
+                <p className="mt-1 text-sm text-gray-500">
+                  {language === 'ar'
+                    ? 'اختياري: ربط الاختبار بوحدة تدريبية محددة'
+                    : 'Optional: Link this quiz to a specific training module'}
+                </p>
               </div>
             </div>
 
