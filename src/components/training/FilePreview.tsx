@@ -17,6 +17,12 @@ export default function FilePreview({ filePath, fileName, onClose }: FilePreview
 
   useEffect(() => {
     loadFile();
+
+    return () => {
+      if (fileUrl) {
+        URL.revokeObjectURL(fileUrl);
+      }
+    };
   }, [filePath]);
 
   const loadFile = async () => {
@@ -24,11 +30,12 @@ export default function FilePreview({ filePath, fileName, onClose }: FilePreview
       setLoading(true);
       const { data, error } = await supabase.storage
         .from('training-materials')
-        .createSignedUrl(filePath, 3600);
+        .download(filePath);
 
       if (error) throw error;
 
-      setFileUrl(data.signedUrl);
+      const url = URL.createObjectURL(data);
+      setFileUrl(url);
     } catch (error) {
       console.error('Error loading file:', error);
     } finally {
