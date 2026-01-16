@@ -121,10 +121,6 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('training-materials')
-        .getPublicUrl(fileName);
-
       return fileName;
     } catch (error: any) {
       console.error('Error uploading file:', error);
@@ -294,13 +290,6 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
     setUploadedFile(null);
     setEditingModule(null);
     setShowForm(false);
-  };
-
-  const getFileUrl = (path: string) => {
-    const { data } = supabase.storage
-      .from('training-materials')
-      .getPublicUrl(path);
-    return data.publicUrl;
   };
 
   const handleDownloadFile = async (path: string) => {

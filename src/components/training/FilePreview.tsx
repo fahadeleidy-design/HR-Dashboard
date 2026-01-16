@@ -22,11 +22,13 @@ export default function FilePreview({ filePath, fileName, onClose }: FilePreview
   const loadFile = async () => {
     try {
       setLoading(true);
-      const { data } = supabase.storage
+      const { data, error } = await supabase.storage
         .from('training-materials')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 3600);
 
-      setFileUrl(data.publicUrl);
+      if (error) throw error;
+
+      setFileUrl(data.signedUrl);
     } catch (error) {
       console.error('Error loading file:', error);
     } finally {
