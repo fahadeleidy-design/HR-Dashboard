@@ -35,6 +35,12 @@ interface TrainingModule {
   completed?: boolean;
 }
 
+interface TrainingProgram {
+  id: string;
+  program_name_en: string;
+  program_name_ar: string | null;
+}
+
 interface TrainingModulesProps {
   programId: string;
   companyId: string;
@@ -46,6 +52,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
   const { showToast } = useToast();
   const { language } = useLanguage();
   const [modules, setModules] = useState<TrainingModule[]>([]);
+  const [trainingPrograms, setTrainingPrograms] = useState<TrainingProgram[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingModule, setEditingModule] = useState<TrainingModule | null>(null);
@@ -53,6 +60,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewFile, setPreviewFile] = useState<{ path: string; name: string } | null>(null);
   const [formData, setFormData] = useState({
+    program_id: programId,
     title_en: '',
     title_ar: '',
     content_type: 'slide' as const,
@@ -64,7 +72,23 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
 
   useEffect(() => {
     loadModules();
+    loadTrainingPrograms();
   }, [programId]);
+
+  const loadTrainingPrograms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('training_programs')
+        .select('id, program_name_en, program_name_ar')
+        .eq('company_id', companyId)
+        .order('program_name_en');
+
+      if (error) throw error;
+      setTrainingPrograms(data || []);
+    } catch (error: any) {
+      console.error('Error loading training programs:', error);
+    }
+  };
 
   const loadModules = async () => {
     try {
@@ -131,10 +155,15 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
       }
 
       const moduleData = {
-        training_program_id: programId,
+        training_program_id: formData.program_id,
         company_id: companyId,
-        ...formData,
+        title_en: formData.title_en,
+        title_ar: formData.title_ar,
+        content_type: formData.content_type,
+        content: formData.content,
         content_url: fileUrl,
+        duration_minutes: formData.duration_minutes,
+        is_mandatory: formData.is_mandatory,
         sequence_order: editingModule ? editingModule.sequence_order : modules.length,
         created_by: user?.id
       };
@@ -170,9 +199,17 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
     }
   };
 
-  const handleEdit = (module: TrainingModule) => {
+  const handleEdit = async (module: TrainingModule) => {
     setEditingModule(module);
+
+    const { data: moduleData } = await supabase
+      .from('training_modules')
+      .select('training_program_id')
+      .eq('id', module.id)
+      .single();
+
     setFormData({
+      program_id: moduleData?.training_program_id || programId,
       title_en: module.title_en,
       title_ar: module.title_ar || '',
       content_type: module.content_type,
@@ -245,6 +282,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
 
   const resetForm = () => {
     setFormData({
+      program_id: programId,
       title_en: '',
       title_ar: '',
       content_type: 'slide',
@@ -333,6 +371,29 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
               : (language === 'ar' ? 'إضافة وحدة جديدة' : 'Add New Module')}
           </h4>
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {language === 'ar' ? 'البرنامج التدريبي' : 'Training Program'}
+              </label>
+              <select
+                required
+                value={formData.program_id}
+                onChange={(e) => setFormData({ ...formData, program_id: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">
+                  {language === 'ar' ? 'اختر البرنامج...' : 'Select Program...'}
+                </option>
+                {trainingPrograms.map((program) => (
+                  <option key={program.id} value={program.id}>
+                    {language === 'ar' && program.program_name_ar
+                      ? program.program_name_ar
+                      : program.program_name_en}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
