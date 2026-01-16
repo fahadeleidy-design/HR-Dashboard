@@ -25,6 +25,10 @@ interface Quiz {
   show_correct_answers: boolean;
   randomize_questions: boolean;
   randomize_options: boolean;
+  quiz_status?: string;
+  requires_retake?: boolean;
+  attempts_used?: number;
+  has_passed?: boolean;
 }
 
 interface Question {
@@ -130,7 +134,11 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
         is_mandatory: aq.quiz_is_mandatory,
         show_correct_answers: true,
         randomize_questions: false,
-        randomize_options: false
+        randomize_options: false,
+        quiz_status: aq.quiz_status,
+        requires_retake: aq.requires_retake,
+        attempts_used: aq.attempts_used,
+        has_passed: aq.has_passed
       }));
 
       setQuizzes(quizList);
@@ -376,6 +384,47 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
           )}
         </div>
 
+        {selectedQuiz && selectedQuiz.requires_retake && (
+          <div className="mb-4 bg-red-50 border-l-4 border-red-400 p-4">
+            <div className="flex items-start">
+              <AlertCircle className="h-6 w-6 text-red-400 mt-0.5 mr-3 rtl:mr-0 rtl:ml-3" />
+              <div>
+                <h4 className="text-red-800 font-semibold">
+                  {language === 'ar' ? 'يجب إعادة التدريب' : 'Training Retake Required'}
+                </h4>
+                <p className="text-red-700 mt-1">
+                  {language === 'ar'
+                    ? 'لقد استنفذت جميع المحاولات المتاحة. يجب عليك إعادة البرنامج التدريبي قبل أن تتمكن من إعادة الاختبار.'
+                    : 'You have exhausted all available attempts. You must retake the training program before you can retry this quiz.'}
+                </p>
+                <p className="text-red-700 mt-2 text-sm font-medium">
+                  {language === 'ar'
+                    ? 'يرجى التواصل مع قسم الموارد البشرية لإعادة تفعيل الاختبار.'
+                    : 'Please contact HR to re-enable this quiz after completing the training.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {selectedQuiz && selectedQuiz.has_passed && (
+          <div className="mb-4 bg-green-50 border-l-4 border-green-400 p-4">
+            <div className="flex items-start">
+              <Trophy className="h-6 w-6 text-green-400 mt-0.5 mr-3 rtl:mr-0 rtl:ml-3" />
+              <div>
+                <h4 className="text-green-800 font-semibold">
+                  {language === 'ar' ? 'تهانينا!' : 'Congratulations!'}
+                </h4>
+                <p className="text-green-700 mt-1">
+                  {language === 'ar'
+                    ? 'لقد نجحت في هذا الاختبار.'
+                    : 'You have successfully passed this quiz.'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {selectedQuiz && (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div className="bg-gray-50 rounded-lg p-3">
@@ -387,9 +436,13 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
               <p className="text-lg font-bold text-gray-900">{questions.length}</p>
             </div>
             <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-gray-600">{language === 'ar' ? 'المحاولات' : 'Attempts'}</p>
-              <p className="text-lg font-bold text-gray-900">
-                {attempts.length} / {selectedQuiz.max_attempts}
+              <p className="text-gray-600">{language === 'ar' ? 'المحاولات المتبقية' : 'Attempts Remaining'}</p>
+              <p className={`text-lg font-bold ${
+                selectedQuiz.max_attempts - (selectedQuiz.attempts_used || 0) <= 1
+                  ? 'text-red-600'
+                  : 'text-gray-900'
+              }`}>
+                {Math.max(0, selectedQuiz.max_attempts - (selectedQuiz.attempts_used || 0))} / {selectedQuiz.max_attempts}
               </p>
             </div>
             {selectedQuiz.time_limit_minutes && (
@@ -446,10 +499,16 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
         )}
 
         {!quizStarted && !showResults && (
-          <div className="mt-6 flex justify-center">
+          <div className="mt-6 flex flex-col items-center">
             <button
               onClick={handleStartQuiz}
-              disabled={selectedQuiz && attempts.length >= selectedQuiz.max_attempts}
+              disabled={
+                selectedQuiz && (
+                  selectedQuiz.requires_retake ||
+                  selectedQuiz.has_passed ||
+                  (selectedQuiz.attempts_used || 0) >= selectedQuiz.max_attempts
+                )
+              }
               className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {attempts.length > 0 ? (
@@ -464,6 +523,16 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
                 </>
               )}
             </button>
+            {selectedQuiz && selectedQuiz.requires_retake && (
+              <p className="mt-2 text-sm text-red-600">
+                {language === 'ar' ? 'الاختبار معطل - يجب إعادة التدريب' : 'Quiz disabled - training retake required'}
+              </p>
+            )}
+            {selectedQuiz && selectedQuiz.has_passed && (
+              <p className="mt-2 text-sm text-green-600">
+                {language === 'ar' ? 'لقد نجحت بالفعل في هذا الاختبار' : 'You have already passed this quiz'}
+              </p>
+            )}
           </div>
         )}
       </div>
