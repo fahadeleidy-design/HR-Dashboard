@@ -15,6 +15,7 @@ interface Loan {
   loan_amount: number;
   remaining_amount: number;
   monthly_installment: number;
+  number_of_installments: number;
   start_date: string;
   end_date?: string;
   status: string;
@@ -33,12 +34,21 @@ interface Employee {
   last_name_en: string;
 }
 
+interface LoanEligibility {
+  employee_id: string;
+  max_loan_amount: number;
+  outstanding_loans: number;
+  available_loan_amount: number;
+  is_eligible: boolean;
+}
+
 export function Loans() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const { userRole } = useAuth();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loanEligibility, setLoanEligibility] = useState<LoanEligibility | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingLoan, setEditingLoan] = useState<Loan | null>(null);
@@ -47,7 +57,7 @@ export function Loans() {
     employee_id: '',
     loan_type: 'personal',
     loan_amount: 0,
-    monthly_installment: 0,
+    number_of_installments: 6,
     start_date: new Date().toISOString().split('T')[0],
     notes: ''
   });
@@ -60,6 +70,14 @@ export function Loans() {
       fetchEmployees();
     }
   }, [currentCompany]);
+
+  useEffect(() => {
+    if (formData.employee_id) {
+      fetchLoanEligibility(formData.employee_id);
+    } else {
+      setLoanEligibility(null);
+    }
+  }, [formData.employee_id]);
 
   const fetchLoans = async () => {
     if (!currentCompany) return;
@@ -119,6 +137,25 @@ export function Loans() {
     }
   };
 
+  const fetchLoanEligibility = async (employeeId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('loan_eligibility')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching loan eligibility:', error);
+        return;
+      }
+
+      setLoanEligibility(data);
+    } catch (error: any) {
+      console.error('Exception fetching loan eligibility:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCompany) return;
@@ -128,30 +165,27 @@ export function Loans() {
       return;
     }
 
-    try {
-      const numberOfMonths = Math.ceil(formData.loan_amount / formData.monthly_installment);
-      const endDate = new Date(formData.start_date);
-      endDate.setMonth(endDate.getMonth() + numberOfMonths);
+    if (formData.number_of_installments > 6 || formData.number_of_installments < 1) {
+      alert('Number of installments must be between 1 and 6 months');
+      return;
+    }
 
+    if (loanEligibility && formData.loan_amount > loanEligibility.available_loan_amount) {
+      alert(`Loan amount (${formatCurrency(formData.loan_amount, language)}) exceeds available loan amount (${formatCurrency(loanEligibility.available_loan_amount, language)})`);
+      return;
+    }
+
+    try {
       const loanData = {
         company_id: currentCompany.id,
         employee_id: formData.employee_id,
-        loan_type: formData.loan_type.toLowerCase(), // Ensure lowercase
+        loan_type: formData.loan_type.toLowerCase(),
         loan_amount: formData.loan_amount,
-        remaining_amount: formData.loan_amount,
-        monthly_installment: formData.monthly_installment,
+        number_of_installments: formData.number_of_installments,
         start_date: formData.start_date,
-        end_date: endDate.toISOString().split('T')[0],
-        status: 'active',
+        status: 'pending',
         notes: formData.notes
       };
-
-      console.log('Submitting loan data:', {
-        ...loanData,
-        userRole: userRole?.role,
-        userEmployeeId: userRole?.employee_id,
-        currentUserId: (await supabase.auth.getUser()).data.user?.id
-      });
 
       if (editingLoan) {
         const { error } = await supabase
@@ -168,27 +202,16 @@ export function Loans() {
           .select();
 
         if (error) {
-          console.error('Insert error details:', {
-            message: error.message,
-            details: error.details,
-            hint: error.hint,
-            code: error.code,
-            fullError: error
-          });
           throw error;
         }
-        console.log('Loan created successfully:', data);
-        alert('Loan created successfully!');
+        alert('Loan request created successfully!');
       }
 
       resetForm();
       fetchLoans();
     } catch (error: any) {
       console.error('Error saving loan:', error);
-      const errorMessage = error.message +
-        (error.details ? `\nDetails: ${error.details}` : '') +
-        (error.hint ? `\nHint: ${error.hint}` : '');
-      alert('Failed to save loan: ' + errorMessage);
+      alert('Failed to save loan: ' + error.message);
     }
   };
 
@@ -198,7 +221,7 @@ export function Loans() {
       employee_id: loan.employee_id,
       loan_type: loan.loan_type,
       loan_amount: loan.loan_amount,
-      monthly_installment: loan.monthly_installment,
+      number_of_installments: loan.number_of_installments || 6,
       start_date: loan.start_date,
       notes: loan.notes || ''
     });
@@ -244,11 +267,12 @@ export function Loans() {
       employee_id: '',
       loan_type: 'personal',
       loan_amount: 0,
-      monthly_installment: 0,
+      number_of_installments: 6,
       start_date: new Date().toISOString().split('T')[0],
       notes: ''
     });
     setEditingLoan(null);
+    setLoanEligibility(null);
     setShowForm(false);
   };
 
@@ -402,8 +426,13 @@ export function Loans() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
                         SAR {Number(loan.remaining_amount || 0).toLocaleString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        SAR {Number(loan.monthly_installment || 0).toLocaleString()}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          SAR {Number(loan.monthly_installment || 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          {loan.number_of_installments} months
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -483,6 +512,15 @@ export function Loans() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">Loan Policy</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Maximum loan: 50% of End of Service benefits</li>
+                  <li>• Maximum repayment period: 6 months</li>
+                  <li>• Equal monthly installments</li>
+                </ul>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Employee *
@@ -514,6 +552,25 @@ export function Loans() {
                   />
                 )}
               </div>
+
+              {loanEligibility && (
+                <div className={`border rounded-lg p-4 ${
+                  loanEligibility.is_eligible ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                }`}>
+                  <h3 className={`text-sm font-semibold mb-2 ${
+                    loanEligibility.is_eligible ? 'text-green-900' : 'text-red-900'
+                  }`}>
+                    Loan Eligibility
+                  </h3>
+                  <div className={`text-sm space-y-1 ${
+                    loanEligibility.is_eligible ? 'text-green-800' : 'text-red-800'
+                  }`}>
+                    <p>Max Loan Amount: {formatCurrency(loanEligibility.max_loan_amount, language)}</p>
+                    <p>Outstanding Loans: {formatCurrency(loanEligibility.outstanding_loans, language)}</p>
+                    <p className="font-semibold">Available: {formatCurrency(loanEligibility.available_loan_amount, language)}</p>
+                  </div>
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -560,33 +617,44 @@ export function Loans() {
                     required
                     min="0"
                     step="0.01"
+                    max={loanEligibility?.available_loan_amount || undefined}
                   />
+                  {loanEligibility && formData.loan_amount > loanEligibility.available_loan_amount && (
+                    <p className="text-xs text-red-600 mt-1">
+                      Exceeds available amount
+                    </p>
+                  )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monthly Installment (SAR) *
+                    Number of Installments *
                   </label>
-                  <input
-                    type="number"
-                    value={formData.monthly_installment}
-                    onChange={(e) => setFormData({ ...formData, monthly_installment: Number(e.target.value) })}
+                  <select
+                    value={formData.number_of_installments}
+                    onChange={(e) => setFormData({ ...formData, number_of_installments: Number(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
-                    min="0"
-                    step="0.01"
-                  />
+                  >
+                    <option value={1}>1 month</option>
+                    <option value={2}>2 months</option>
+                    <option value={3}>3 months</option>
+                    <option value={4}>4 months</option>
+                    <option value={5}>5 months</option>
+                    <option value={6}>6 months</option>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">Maximum 6 months</p>
                 </div>
               </div>
 
-              {formData.loan_amount > 0 && formData.monthly_installment > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
-                    Number of months: {Math.ceil(formData.loan_amount / formData.monthly_installment)}
+              {formData.loan_amount > 0 && formData.number_of_installments > 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-800 font-semibold">
+                    Monthly Installment: {formatCurrency(formData.loan_amount / formData.number_of_installments, language)}
                   </p>
-                  <p className="text-sm text-blue-800">
+                  <p className="text-sm text-gray-700 mt-1">
                     Expected completion: {new Date(new Date(formData.start_date).setMonth(
-                      new Date(formData.start_date).getMonth() + Math.ceil(formData.loan_amount / formData.monthly_installment)
+                      new Date(formData.start_date).getMonth() + formData.number_of_installments
                     )).toLocaleDateString()}
                   </p>
                 </div>
