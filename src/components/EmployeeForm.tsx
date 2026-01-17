@@ -13,14 +13,18 @@ interface EmployeeFormProps {
 }
 
 export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps) {
-  const { currentCompany } = useCompany();
+  const { currentCompany, isConsolidatedView, companies: availableCompanies } = useCompany();
   const { t, isRTL } = useLanguage();
   const [companies, setCompanies] = useState<any[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [managers, setManagers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [payroll, setPayroll] = useState<any>(null);
-  const [selectedCompanyId, setSelectedCompanyId] = useState(employee?.company_id || currentCompany?.id || '');
+  const [selectedCompanyId, setSelectedCompanyId] = useState(
+    employee?.company_id ||
+    currentCompany?.id ||
+    (isConsolidatedView && availableCompanies.length > 0 ? availableCompanies[0].id : '')
+  );
   const [formData, setFormData] = useState({
     employee_number: employee?.employee_number || '',
     first_name_en: employee?.first_name_en || '',

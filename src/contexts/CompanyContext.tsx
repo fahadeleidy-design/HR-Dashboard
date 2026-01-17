@@ -26,9 +26,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     if (!user) {
       setCompanies([]);
       setCurrentCompanyState(null);
+      setIsConsolidatedViewState(false);
       setLoading(false);
       return;
     }
+
+    setLoading(true);
 
     try {
       const { data: userRoles, error: rolesError } = await supabase
@@ -86,20 +89,22 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
       setCompanies(userCompanies);
 
-      if (userCompanies.length > 0 && !currentCompany) {
+      if (userCompanies.length > 0) {
         const savedView = localStorage.getItem('currentView');
+        const savedCompanyId = localStorage.getItem('currentCompanyId');
+
         if (savedView === 'consolidated' && hasPrivilegedRole) {
           setIsConsolidatedViewState(true);
           setCurrentCompanyState(null);
-        } else {
-          const savedCompanyId = localStorage.getItem('currentCompanyId');
-          const company = savedCompanyId
-            ? userCompanies.find(c => c.id === savedCompanyId) || userCompanies[0]
-            : userCompanies[0];
+        } else if (savedCompanyId) {
+          const company = userCompanies.find(c => c.id === savedCompanyId) || userCompanies[0];
           setCurrentCompanyState(company);
           setIsConsolidatedViewState(false);
+        } else if (!currentCompany) {
+          setCurrentCompanyState(userCompanies[0]);
+          setIsConsolidatedViewState(false);
         }
-      } else if (userCompanies.length === 0) {
+      } else {
         console.warn('No companies available for user');
         setCurrentCompanyState(null);
         setIsConsolidatedViewState(false);
