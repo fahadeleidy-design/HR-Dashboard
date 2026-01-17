@@ -95,6 +95,7 @@ export function UserRoleManagement() {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
             action: 'list_users',
@@ -154,6 +155,7 @@ export function UserRoleManagement() {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
             action: 'create_user',
@@ -216,6 +218,12 @@ export function UserRoleManagement() {
       }
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+
+      console.log('Calling user-management function:', {
+        url: `${supabaseUrl}/functions/v1/user-management`,
+        companyId: currentCompany.id
+      });
+
       const response = await fetch(
         `${supabaseUrl}/functions/v1/user-management`,
         {
@@ -223,6 +231,7 @@ export function UserRoleManagement() {
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
           },
           body: JSON.stringify({
             action: 'bulk_create_employee_accounts',
@@ -231,7 +240,16 @@ export function UserRoleManagement() {
         }
       );
 
+      console.log('Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
+        throw new Error(`Server error: ${response.status} - ${errorText}`);
+      }
+
       const result = await response.json();
+      console.log('Result:', result);
 
       if (!result.success) {
         throw new Error(result.error || 'Failed to create employee accounts');
@@ -244,7 +262,14 @@ export function UserRoleManagement() {
       });
       loadUserRoles();
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || 'Failed to create employee accounts' });
+      console.error('Bulk create error:', error);
+      const errorMessage = error.message || 'Failed to create employee accounts';
+      setMessage({
+        type: 'error',
+        text: errorMessage.includes('Failed to fetch')
+          ? 'Network error: Unable to reach the server. Please check if the user-management edge function is deployed.'
+          : errorMessage
+      });
     } finally {
       setBulkCreating(false);
     }
