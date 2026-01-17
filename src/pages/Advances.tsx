@@ -31,11 +31,20 @@ interface Employee {
   last_name_en: string;
 }
 
+interface AdvanceEligibility {
+  employee_id: string;
+  max_advance_amount: number;
+  outstanding_advances: number;
+  is_eligible: boolean;
+  eligibility_status: string;
+}
+
 export function Advances() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const [advances, setAdvances] = useState<Advance[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [advanceEligibility, setAdvanceEligibility] = useState<AdvanceEligibility | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingAdvance, setEditingAdvance] = useState<Advance | null>(null);
@@ -43,7 +52,6 @@ export function Advances() {
   const [formData, setFormData] = useState({
     employee_id: '',
     amount: 0,
-    deduction_amount: 0,
     request_date: new Date().toISOString().split('T')[0],
     notes: ''
   });
@@ -56,6 +64,14 @@ export function Advances() {
       fetchEmployees();
     }
   }, [currentCompany]);
+
+  useEffect(() => {
+    if (formData.employee_id) {
+      fetchAdvanceEligibility(formData.employee_id);
+    } else {
+      setAdvanceEligibility(null);
+    }
+  }, [formData.employee_id]);
 
   const fetchAdvances = async () => {
     if (!currentCompany) return;
@@ -96,17 +112,49 @@ export function Advances() {
     }
   };
 
+  const fetchAdvanceEligibility = async (employeeId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('advance_eligibility')
+        .select('*')
+        .eq('employee_id', employeeId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching advance eligibility:', error);
+        return;
+      }
+
+      setAdvanceEligibility(data);
+    } catch (error: any) {
+      console.error('Exception fetching advance eligibility:', error);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCompany) return;
+
+    if (!formData.employee_id) {
+      alert('Please select an employee');
+      return;
+    }
+
+    if (advanceEligibility && formData.amount > advanceEligibility.max_advance_amount) {
+      alert(`Advance amount (${formatCurrency(formData.amount, language)}) exceeds monthly salary (${formatCurrency(advanceEligibility.max_advance_amount, language)})`);
+      return;
+    }
+
+    if (advanceEligibility && !advanceEligibility.is_eligible) {
+      alert(`Cannot create advance: ${advanceEligibility.eligibility_status}`);
+      return;
+    }
 
     try {
       const advanceData = {
         company_id: currentCompany.id,
         employee_id: formData.employee_id,
         amount: formData.amount,
-        remaining_amount: formData.amount,
-        deduction_amount: formData.deduction_amount,
         request_date: formData.request_date,
         status: 'pending',
         notes: formData.notes
@@ -142,7 +190,6 @@ export function Advances() {
     setFormData({
       employee_id: advance.employee_id,
       amount: advance.amount,
-      deduction_amount: advance.deduction_amount,
       request_date: advance.request_date,
       notes: advance.notes || ''
     });
@@ -206,11 +253,11 @@ export function Advances() {
     setFormData({
       employee_id: '',
       amount: 0,
-      deduction_amount: 0,
       request_date: new Date().toISOString().split('T')[0],
       notes: ''
     });
     setEditingAdvance(null);
+    setAdvanceEligibility(null);
     setShowForm(false);
   };
 
@@ -361,8 +408,13 @@ export function Advances() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-orange-600">
                         SAR {Number(advance.remaining_amount || 0).toLocaleString()}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        SAR {Number(advance.deduction_amount || 0).toLocaleString()}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-900">
+                          SAR {Number(advance.deduction_amount || 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-500">
+                          Full deduction
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="w-full bg-gray-200 rounded-full h-2">
@@ -436,6 +488,15 @@ export function Advances() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">Advance Policy</h3>
+                <ul className="text-sm text-blue-800 space-y-1">
+                  <li>• Maximum advance: Full monthly salary</li>
+                  <li>• Deduction: Full amount from next month's salary</li>
+                  <li>• Only one active advance allowed at a time</li>
+                </ul>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Employee *
@@ -455,36 +516,47 @@ export function Advances() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Advance Amount (SAR) *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.amount}
-                    onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                    min="0"
-                    step="0.01"
-                  />
+              {advanceEligibility && (
+                <div className={`border rounded-lg p-4 ${
+                  advanceEligibility.is_eligible ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
+                }`}>
+                  <h3 className={`text-sm font-semibold mb-2 ${
+                    advanceEligibility.is_eligible ? 'text-green-900' : 'text-red-900'
+                  }`}>
+                    Advance Eligibility
+                  </h3>
+                  <div className={`text-sm space-y-1 ${
+                    advanceEligibility.is_eligible ? 'text-green-800' : 'text-red-800'
+                  }`}>
+                    <p>Monthly Salary: {formatCurrency(advanceEligibility.max_advance_amount, language)}</p>
+                    <p>Outstanding Advances: {formatCurrency(advanceEligibility.outstanding_advances, language)}</p>
+                    <p className="font-semibold">Status: {advanceEligibility.eligibility_status}</p>
+                  </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Monthly Deduction (SAR) *
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.deduction_amount}
-                    onChange={(e) => setFormData({ ...formData, deduction_amount: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    required
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Advance Amount (SAR) *
+                </label>
+                <input
+                  type="number"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: Number(e.target.value) })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  required
+                  min="0"
+                  step="0.01"
+                  max={advanceEligibility?.max_advance_amount || undefined}
+                />
+                {advanceEligibility && formData.amount > advanceEligibility.max_advance_amount && (
+                  <p className="text-xs text-red-600 mt-1">
+                    Exceeds monthly salary
+                  </p>
+                )}
+                <p className="text-xs text-gray-500 mt-1">
+                  Maximum: {advanceEligibility ? formatCurrency(advanceEligibility.max_advance_amount, language) : 'Select employee first'}
+                </p>
               </div>
 
               <div>
@@ -500,15 +572,13 @@ export function Advances() {
                 />
               </div>
 
-              {formData.amount > 0 && formData.deduction_amount > 0 && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <p className="text-sm text-blue-800">
-                    Number of months to recover: {Math.ceil(formData.amount / formData.deduction_amount)}
+              {formData.amount > 0 && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                  <p className="text-sm text-gray-800 font-semibold">
+                    Deduction Amount: {formatCurrency(formData.amount, language)}
                   </p>
-                  <p className="text-sm text-blue-800">
-                    Expected recovery completion: {new Date(new Date(formData.request_date).setMonth(
-                      new Date(formData.request_date).getMonth() + Math.ceil(formData.amount / formData.deduction_amount)
-                    )).toLocaleDateString()}
+                  <p className="text-sm text-gray-700 mt-1">
+                    Full amount will be deducted from next month's salary
                   </p>
                 </div>
               )}
