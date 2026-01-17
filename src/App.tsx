@@ -37,6 +37,7 @@ import { EmployeeContracts } from './pages/EmployeeContracts';
 import { ComplianceDashboard } from './pages/ComplianceDashboard';
 import { SalaryScale } from './pages/SalaryScale';
 import { Recruitment } from './pages/Recruitment';
+import { PendingRequests } from './pages/PendingRequests';
 import ManagerAssignment from './components/ManagerAssignment';
 
 function App() {
@@ -105,6 +106,16 @@ function App() {
                 <ProtectedRoute>
                   <Layout>
                     <Leave />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/pending-requests"
+              element={
+                <ProtectedRoute>
+                  <Layout>
+                    <PendingRequests />
                   </Layout>
                 </ProtectedRoute>
               }
