@@ -44,6 +44,7 @@ import TenantConfiguration from './pages/TenantConfiguration';
 import CrossCompanyAnalytics from './pages/CrossCompanyAnalytics';
 import PermissionsManagement from './pages/PermissionsManagement';
 import WorkflowManagement from './pages/WorkflowManagement';
+import GlobalHR from './pages/GlobalHR';
 
 function App() {
   return (
@@ -208,6 +209,7 @@ function App() {
             <Route path="/cross-company-analytics" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><CrossCompanyAnalytics /></Layout></ProtectedRoute>} />
             <Route path="/permissions" element={<ProtectedRoute allowedRoles={['super_admin', 'admin', 'tenant_admin']}><Layout><PermissionsManagement /></Layout></ProtectedRoute>} />
             <Route path="/workflow" element={<ProtectedRoute allowedRoles={['super_admin', 'admin', 'hr_manager']}><Layout><WorkflowManagement /></Layout></ProtectedRoute>} />
+            <Route path="/global-hr" element={<ProtectedRoute allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager']}><Layout><GlobalHR /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
