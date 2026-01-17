@@ -33,6 +33,7 @@ import {
   UserPlus,
   Languages,
   UserCheck,
+  CheckCircle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationCenter } from './NotificationCenter';
@@ -58,6 +59,7 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const isEmployee = userRole?.role === 'employee';
+  const canApprovePendingRequests = ['manager', 'hr', 'finance', 'admin', 'super_admin'].includes(userRole?.role || '');
 
   const navSections = [
     {
@@ -74,6 +76,9 @@ export function Layout({ children }: LayoutProps) {
         { path: '/handbook', icon: BookOpen, label: t.nav.handbook },
         { path: '/attendance', icon: Clock, label: t.nav.attendance },
         { path: '/leave', icon: Calendar, label: t.nav.leave },
+        ...(canApprovePendingRequests ? [
+          { path: '/pending-requests', icon: CheckCircle, label: 'Pending Requests' },
+        ] : []),
       ]
     },
     {
