@@ -39,6 +39,9 @@ import { SalaryScale } from './pages/SalaryScale';
 import { Recruitment } from './pages/Recruitment';
 import { PendingRequests } from './pages/PendingRequests';
 import ManagerAssignment from './components/ManagerAssignment';
+import TenantAdministration from './pages/TenantAdministration';
+import TenantConfiguration from './pages/TenantConfiguration';
+import CrossCompanyAnalytics from './pages/CrossCompanyAnalytics';
 
 function App() {
   return (
@@ -198,6 +201,9 @@ function App() {
             <Route path="/salary-scale" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><SalaryScale /></Layout></ProtectedRoute>} />
             <Route path="/recruitment" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Recruitment /></Layout></ProtectedRoute>} />
             <Route path="/managers" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><ManagerAssignment /></Layout></ProtectedRoute>} />
+            <Route path="/tenant-administration" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><TenantAdministration /></Layout></ProtectedRoute>} />
+            <Route path="/tenant-configuration" element={<ProtectedRoute allowedRoles={['super_admin', 'admin']}><Layout><TenantConfiguration /></Layout></ProtectedRoute>} />
+            <Route path="/cross-company-analytics" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><CrossCompanyAnalytics /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
