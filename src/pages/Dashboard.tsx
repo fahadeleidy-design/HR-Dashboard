@@ -4,6 +4,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatInteger, formatNumber } from '@/lib/formatters';
+import { buildCompanyFilter } from '@/lib/queryHelpers';
 import {
   Users, UserCheck, UserX, TrendingUp, Calendar, AlertCircle,
   DollarSign, Clock, FileText, Car, Home, Shield, Plane,
@@ -40,7 +41,7 @@ interface DashboardStats {
 }
 
 export function Dashboard() {
-  const { currentCompany } = useCompany();
+  const { currentCompany, isConsolidatedView, companies } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats>({
@@ -116,13 +117,13 @@ export function Dashboard() {
   };
 
   useEffect(() => {
-    if (currentCompany) {
+    if (currentCompany || (isConsolidatedView && companies.length > 0)) {
       fetchDashboardStats();
     }
-  }, [currentCompany]);
+  }, [currentCompany, isConsolidatedView, companies]);
 
   const fetchDashboardStats = async () => {
-    if (!currentCompany) return;
+    if (!currentCompany && !isConsolidatedView) return;
 
     setLoading(true);
 
@@ -139,49 +140,66 @@ export function Dashboard() {
         travelResult,
         departmentsResult
       ] = await Promise.all([
-        supabase
-          .from('employees')
-          .select('status, is_saudi, gender, employment_type, iqama_expiry, passport_expiry')
-          .eq('company_id', currentCompany.id),
-        supabase
-          .from('leave_requests')
-          .select('status, start_date, end_date')
-          .eq('company_id', currentCompany.id),
-        supabase
-          .from('documents')
-          .select('expiry_date')
-          .eq('company_id', currentCompany.id)
-          .eq('status', 'active')
-          .gte('expiry_date', new Date().toISOString()),
-        supabase
-          .from('employees')
-          .select('id, basic_salary, housing_allowance, transport_allowance, other_allowances')
-          .eq('company_id', currentCompany.id)
-          .eq('status', 'active'),
-        supabase
-          .from('vehicles')
-          .select('id, status')
-          .eq('company_id', currentCompany.id),
-        supabase
-          .from('real_estate_properties')
-          .select('id')
-          .eq('company_id', currentCompany.id),
-        supabase
-          .from('contracts')
-          .select('status, end_date')
-          .eq('company_id', currentCompany.id),
-        supabase
-          .from('insurance_policies')
-          .select('status')
-          .eq('company_id', currentCompany.id),
-        supabase
-          .from('business_travel')
-          .select('approval_status')
-          .eq('company_id', currentCompany.id),
-        supabase
-          .from('departments')
-          .select('id')
-          .eq('company_id', currentCompany.id),
+        buildCompanyFilter(
+          supabase.from('employees').select('status, is_saudi, gender, employment_type, iqama_expiry, passport_expiry'),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
+        buildCompanyFilter(
+          supabase.from('leave_requests').select('status, start_date, end_date'),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
+        buildCompanyFilter(
+          supabase.from('documents').select('expiry_date').eq('status', 'active').gte('expiry_date', new Date().toISOString()),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
+        buildCompanyFilter(
+          supabase.from('employees').select('id, basic_salary, housing_allowance, transport_allowance, other_allowances').eq('status', 'active'),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
+        buildCompanyFilter(
+          supabase.from('vehicles').select('id, status'),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
+        buildCompanyFilter(
+          supabase.from('real_estate_properties').select('id'),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
+        buildCompanyFilter(
+          supabase.from('contracts').select('status, end_date'),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
+        buildCompanyFilter(
+          supabase.from('insurance_policies').select('status'),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
+        buildCompanyFilter(
+          supabase.from('business_travel').select('approval_status'),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
+        buildCompanyFilter(
+          supabase.from('departments').select('id'),
+          isConsolidatedView,
+          companies,
+          currentCompany
+        ),
       ]);
 
       const employees = employeesResult.data || [];

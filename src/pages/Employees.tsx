@@ -4,6 +4,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { buildCompanyFilter } from '@/lib/queryHelpers';
 import { Employee } from '@/types/database';
 import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X, ChevronDown, Users, Building2, Calendar, DollarSign, RefreshCw, Check, FileText, Mail, Phone, Briefcase, CheckSquare, Settings, Grid, List, AlertTriangle, Clock, MapPin, UserCheck, UserX, Archive, Activity, Bookmark, BarChart3, Zap, Command } from 'lucide-react';
 import { EmployeeForm } from '@/components/EmployeeForm';
@@ -36,7 +37,7 @@ interface ColumnConfig {
 }
 
 export function Employees() {
-  const { currentCompany } = useCompany();
+  const { currentCompany, isConsolidatedView, companies } = useCompany();
   const { t, isRTL, language } = useLanguage();
   const { userRole } = useAuth();
   const [searchParams] = useSearchParams();
@@ -73,6 +74,7 @@ export function Employees() {
 
   const [columns, setColumns] = useState<ColumnConfig[]>([
     { key: 'employee_number', label: 'Employee Number', visible: true },
+    { key: 'company', label: 'Company', visible: isConsolidatedView },
     { key: 'name', label: 'Name', visible: true },
     { key: 'job_title', label: 'Job Title', visible: true },
     { key: 'department', label: 'Department', visible: true },
@@ -87,12 +89,20 @@ export function Employees() {
   ]);
 
   useEffect(() => {
-    if (currentCompany) {
+    if (currentCompany || (isConsolidatedView && companies.length > 0)) {
       fetchEmployees();
       fetchDepartments();
       subscribeToChanges();
     }
-  }, [currentCompany]);
+  }, [currentCompany, isConsolidatedView, companies]);
+
+  useEffect(() => {
+    setColumns(prev =>
+      prev.map(col =>
+        col.key === 'company' ? { ...col, visible: isConsolidatedView } : col
+      )
+    );
+  }, [isConsolidatedView]);
 
   useEffect(() => {
     filterEmployees();
@@ -160,20 +170,24 @@ export function Employees() {
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredEmployees);
 
   const fetchEmployees = async () => {
-    if (!currentCompany) {
+    if (!currentCompany && !isConsolidatedView) {
       console.log('No company context available');
       setLoading(false);
       return;
     }
 
-    console.log('Fetching employees for company:', currentCompany.id);
+    console.log('Fetching employees:', isConsolidatedView ? 'All companies' : currentCompany?.id);
     setLoading(true);
     try {
-      const { data: employeesData, error: employeesError } = await supabase
-        .from('employees')
-        .select('*, departments!employees_department_id_fkey(name_en, name_ar)')
-        .eq('company_id', currentCompany.id)
-        .order('created_at', { ascending: false });
+      const { data: employeesData, error: employeesError } = await buildCompanyFilter(
+        supabase
+          .from('employees')
+          .select('*, departments!employees_department_id_fkey(name_en, name_ar), companies!employees_company_id_fkey(name_en, name_ar)')
+          .order('created_at', { ascending: false }),
+        isConsolidatedView,
+        companies,
+        currentCompany
+      );
 
       if (employeesError) {
         console.error('Error fetching employees:', employeesError);
@@ -182,10 +196,14 @@ export function Employees() {
 
       console.log('Fetched employees:', employeesData?.length || 0);
 
-      const { data: payrollData, error: payrollError } = await supabase
-        .from('payroll')
-        .select('employee_id, basic_salary')
-        .eq('company_id', currentCompany.id);
+      const { data: payrollData, error: payrollError } = await buildCompanyFilter(
+        supabase
+          .from('payroll')
+          .select('employee_id, basic_salary'),
+        isConsolidatedView,
+        companies,
+        currentCompany
+      );
 
       if (payrollError) console.error('Error fetching payroll:', payrollError);
 
@@ -207,14 +225,18 @@ export function Employees() {
   };
 
   const fetchDepartments = async () => {
-    if (!currentCompany) return;
+    if (!currentCompany && !isConsolidatedView) return;
 
     try {
-      const { data, error } = await supabase
-        .from('departments')
-        .select('id, name_en, name_ar')
-        .eq('company_id', currentCompany.id)
-        .order('name_en');
+      const { data, error } = await buildCompanyFilter(
+        supabase
+          .from('departments')
+          .select('id, name_en, name_ar')
+          .order('name_en'),
+        isConsolidatedView,
+        companies,
+        currentCompany
+      );
 
       if (error) throw error;
       setDepartments(data || []);
@@ -1211,6 +1233,11 @@ export function Employees() {
                       onSort={requestSort}
                     />
                   )}
+                  {columns.find(c => c.key === 'company')?.visible && isConsolidatedView && (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Company
+                    </th>
+                  )}
                   {columns.find(c => c.key === 'name')?.visible && (
                     <SortableTableHeader
                       label={t.common.name}
@@ -1344,6 +1371,16 @@ export function Employees() {
                       {columns.find(c => c.key === 'employee_number')?.visible && (
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {employee.employee_number}
+                        </td>
+                      )}
+                      {columns.find(c => c.key === 'company')?.visible && isConsolidatedView && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm text-gray-900">
+                              {(employee as any).companies?.name_en || 'N/A'}
+                            </span>
+                          </div>
                         </td>
                       )}
                       {columns.find(c => c.key === 'name')?.visible && (

@@ -7,7 +7,9 @@ interface CompanyContextType {
   currentCompany: Company | null;
   companies: Company[];
   loading: boolean;
+  isConsolidatedView: boolean;
   setCurrentCompany: (company: Company) => void;
+  setConsolidatedView: () => void;
   refreshCompanies: () => Promise<void>;
 }
 
@@ -18,6 +20,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [currentCompany, setCurrentCompanyState] = useState<Company | null>(null);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isConsolidatedView, setIsConsolidatedViewState] = useState(false);
 
   const fetchCompanies = async () => {
     if (!user) {
@@ -84,14 +87,22 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
       setCompanies(userCompanies);
 
       if (userCompanies.length > 0 && !currentCompany) {
-        const savedCompanyId = localStorage.getItem('currentCompanyId');
-        const company = savedCompanyId
-          ? userCompanies.find(c => c.id === savedCompanyId) || userCompanies[0]
-          : userCompanies[0];
-        setCurrentCompanyState(company);
+        const savedView = localStorage.getItem('currentView');
+        if (savedView === 'consolidated' && hasPrivilegedRole) {
+          setIsConsolidatedViewState(true);
+          setCurrentCompanyState(null);
+        } else {
+          const savedCompanyId = localStorage.getItem('currentCompanyId');
+          const company = savedCompanyId
+            ? userCompanies.find(c => c.id === savedCompanyId) || userCompanies[0]
+            : userCompanies[0];
+          setCurrentCompanyState(company);
+          setIsConsolidatedViewState(false);
+        }
       } else if (userCompanies.length === 0) {
         console.warn('No companies available for user');
         setCurrentCompanyState(null);
+        setIsConsolidatedViewState(false);
       }
     } catch (error) {
       console.error('Error fetching companies:', error);
@@ -108,7 +119,16 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
 
   const setCurrentCompany = (company: Company) => {
     setCurrentCompanyState(company);
+    setIsConsolidatedViewState(false);
     localStorage.setItem('currentCompanyId', company.id);
+    localStorage.setItem('currentView', 'single');
+  };
+
+  const setConsolidatedView = () => {
+    setCurrentCompanyState(null);
+    setIsConsolidatedViewState(true);
+    localStorage.setItem('currentView', 'consolidated');
+    localStorage.removeItem('currentCompanyId');
   };
 
   useEffect(() => {
@@ -121,7 +141,9 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     currentCompany,
     companies,
     loading: authLoading || loading,
+    isConsolidatedView,
     setCurrentCompany,
+    setConsolidatedView,
     refreshCompanies,
   };
 

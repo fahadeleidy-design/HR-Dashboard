@@ -43,12 +43,14 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const { user, signOut, userRole } = useAuth();
-  const { currentCompany, companies, setCurrentCompany } = useCompany();
+  const { currentCompany, companies, setCurrentCompany, isConsolidatedView, setConsolidatedView } = useCompany();
   const { language, setLanguage, t, isRTL } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const [showCompanyMenu, setShowCompanyMenu] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const isPrivilegedUser = ['super_admin', 'hr', 'finance'].includes(userRole?.role || '');
 
   const handleSignOut = async () => {
     await signOut();
@@ -151,23 +153,50 @@ export function Layout({ children }: LayoutProps) {
                 </div>
                 <div className={isRTL ? 'text-right' : 'text-left'}>
                   <h1 className="text-lg sm:text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">{t.common.appTitle}</h1>
-                  {currentCompany && companies.length > 0 && (
+                  {companies.length > 0 && (
                     <div className="relative">
                       <button
                         onClick={() => setShowCompanyMenu(!showCompanyMenu)}
                         className={`text-xs sm:text-sm text-gray-600 flex items-center gap-1 hover:text-primary-600 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
                       >
                         <Building2 className="h-3.5 w-3.5 flex-shrink-0" />
-                        <span className="max-w-[200px] truncate font-medium">{language === 'ar' && currentCompany.name_ar ? currentCompany.name_ar : currentCompany.name_en}</span>
-                        {companies.length > 1 && <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />}
+                        <span className="max-w-[200px] truncate font-medium">
+                          {isConsolidatedView
+                            ? (language === 'ar' ? 'العرض الموحد' : 'Consolidated View')
+                            : (currentCompany ? (language === 'ar' && currentCompany.name_ar ? currentCompany.name_ar : currentCompany.name_en) : '')
+                          }
+                        </span>
+                        {(companies.length > 1 || isPrivilegedUser) && <ChevronDown className="h-3.5 w-3.5 flex-shrink-0" />}
                       </button>
-                      {showCompanyMenu && companies.length > 1 && (
+                      {showCompanyMenu && (companies.length > 1 || isPrivilegedUser) && (
                         <>
                           <div
                             className="fixed inset-0 z-30"
                             onClick={() => setShowCompanyMenu(false)}
                           />
                           <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} mt-2 w-72 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-40 max-h-80 overflow-y-auto`}>
+                            {isPrivilegedUser && (
+                              <>
+                                <button
+                                  onClick={() => {
+                                    setConsolidatedView();
+                                    setShowCompanyMenu(false);
+                                  }}
+                                  className={`w-full px-4 py-3 text-sm hover:bg-primary-50 transition-colors ${isRTL ? 'text-right' : 'text-left'} ${
+                                    isConsolidatedView ? 'bg-primary-50 text-primary-700 font-semibold border-b-2 border-primary-500' : 'text-gray-700'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Building2 className="h-5 w-5 flex-shrink-0 text-primary-600" />
+                                    <div>
+                                      <div className="font-bold text-primary-700">{language === 'ar' ? 'العرض الموحد' : 'Consolidated View'}</div>
+                                      <div className="text-xs text-gray-500">{language === 'ar' ? 'جميع الشركات' : 'All Companies'}</div>
+                                    </div>
+                                  </div>
+                                </button>
+                                <div className="border-t border-gray-200 my-2"></div>
+                              </>
+                            )}
                             {companies.map((company) => (
                               <button
                                 key={company.id}
@@ -176,7 +205,7 @@ export function Layout({ children }: LayoutProps) {
                                   setShowCompanyMenu(false);
                                 }}
                                 className={`w-full px-4 py-2 text-sm hover:bg-primary-50 transition-colors ${isRTL ? 'text-right' : 'text-left'} ${
-                                  currentCompany.id === company.id ? 'bg-primary-50 text-primary-700 font-semibold' : 'text-gray-700'
+                                  !isConsolidatedView && currentCompany?.id === company.id ? 'bg-primary-50 text-primary-700 font-semibold' : 'text-gray-700'
                                 }`}
                               >
                                 <div className="flex items-center gap-2">
