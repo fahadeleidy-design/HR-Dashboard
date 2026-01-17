@@ -35,6 +35,7 @@ interface AdvanceEligibility {
   employee_id: string;
   max_advance_amount: number;
   outstanding_advances: number;
+  outstanding_loans: number;
   is_eligible: boolean;
   eligibility_status: string;
 }
@@ -494,6 +495,7 @@ export function Advances() {
                   <li>• Maximum advance: Full monthly salary</li>
                   <li>• Deduction: Full amount from next month's salary</li>
                   <li>• Only one active advance allowed at a time</li>
+                  <li>• Cannot request advance while an active loan exists</li>
                 </ul>
               </div>
 
@@ -530,6 +532,7 @@ export function Advances() {
                   }`}>
                     <p>Monthly Salary: {formatCurrency(advanceEligibility.max_advance_amount, language)}</p>
                     <p>Outstanding Advances: {formatCurrency(advanceEligibility.outstanding_advances, language)}</p>
+                    <p>Outstanding Loans: {formatCurrency(advanceEligibility.outstanding_loans, language)}</p>
                     <p className="font-semibold">Status: {advanceEligibility.eligibility_status}</p>
                   </div>
                 </div>

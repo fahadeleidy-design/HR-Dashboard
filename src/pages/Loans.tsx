@@ -38,8 +38,11 @@ interface LoanEligibility {
   employee_id: string;
   max_loan_amount: number;
   outstanding_loans: number;
+  outstanding_advances: number;
   available_loan_amount: number;
+  loans_this_year: number;
   is_eligible: boolean;
+  eligibility_status: string;
 }
 
 export function Loans() {
@@ -518,6 +521,8 @@ export function Loans() {
                   <li>• Maximum loan: 50% of End of Service benefits</li>
                   <li>• Maximum repayment period: 6 months</li>
                   <li>• Equal monthly installments</li>
+                  <li>• Cannot request loan while an active advance exists</li>
+                  <li>• Only one loan request per calendar year</li>
                 </ul>
               </div>
 
@@ -567,7 +572,10 @@ export function Loans() {
                   }`}>
                     <p>Max Loan Amount: {formatCurrency(loanEligibility.max_loan_amount, language)}</p>
                     <p>Outstanding Loans: {formatCurrency(loanEligibility.outstanding_loans, language)}</p>
+                    <p>Outstanding Advances: {formatCurrency(loanEligibility.outstanding_advances, language)}</p>
+                    <p>Loans This Year: {loanEligibility.loans_this_year}</p>
                     <p className="font-semibold">Available: {formatCurrency(loanEligibility.available_loan_amount, language)}</p>
+                    <p className="font-semibold">Status: {loanEligibility.eligibility_status}</p>
                   </div>
                 </div>
               )}
