@@ -46,13 +46,19 @@ Deno.serve(async (req: Request) => {
       throw new Error('Unauthorized');
     }
 
-    const { data: userRole, error: roleError } = await supabaseAdmin
+    const { data: userRoles, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role, company_id')
-      .eq('user_id', user.id)
-      .single();
+      .eq('user_id', user.id);
 
-    if (roleError || !userRole || !['super_admin', 'hr'].includes(userRole.role)) {
+    if (roleError || !userRoles || userRoles.length === 0) {
+      throw new Error('User does not have any roles assigned');
+    }
+
+    const hasSuperAdminRole = userRoles.some(r => r.role === 'super_admin');
+    const hasHrRole = userRoles.some(r => r.role === 'hr');
+
+    if (!hasSuperAdminRole && !hasHrRole) {
       throw new Error('User does not have permission to manage users');
     }
 
