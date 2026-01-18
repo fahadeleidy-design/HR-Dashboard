@@ -95,13 +95,15 @@ export function UserRoleManagement() {
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const response = await fetch(
-        `${supabaseUrl}/functions/v1/user-management`,
+        `${supabaseUrl}/functions/v1/user-management?_t=${Date.now()}`,
         {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${session.access_token}`,
             'Content-Type': 'application/json',
             'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
           },
           body: JSON.stringify({
             action: 'list_users',
