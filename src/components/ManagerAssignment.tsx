@@ -242,8 +242,8 @@ export default function ManagerAssignment() {
   };
 
   const getManagersForEmployee = (employeeId: string, employeeCompanyId: string) => {
-    // Filter out the employee themselves and only show managers from same company
-    return managers.filter(m => m.id !== employeeId && m.company_id === employeeCompanyId);
+    // Filter out the employee themselves - allow managers from any company
+    return managers.filter(m => m.id !== employeeId);
   };
 
   if (loading) {
@@ -413,6 +413,7 @@ export default function ManagerAssignment() {
                         {getManagersForEmployee(employee.id, employee.company_id).map((manager) => (
                           <option key={manager.id} value={manager.id}>
                             {getEmployeeDisplayName(manager)} ({manager.employee_number})
+                            {manager.companies && ` - ${language === 'ar' ? manager.companies.name_ar : manager.companies.name_en}`}
                           </option>
                         ))}
                       </select>
