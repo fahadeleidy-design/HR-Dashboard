@@ -107,14 +107,6 @@
     transform: translateX(100%);
   }
 
-  /* On desktop, sidebar is always visible */
-  @media (min-width: 1024px) {
-    .sidebar-hidden-ltr,
-    .sidebar-hidden-rtl {
-      transform: translateX(0);
-    }
-  }
-
   /* Arabic Number Support */
   [dir="rtl"] input[type="number"],
   [dir="rtl"] input[type="tel"] {
