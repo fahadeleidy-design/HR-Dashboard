@@ -755,16 +755,199 @@ Peer recognition
 - Ensure approval if required
 - Check employee permissions
 
+## Advanced Features (NOW AVAILABLE)
+
+### 9. Skill-Based Matching
+**Find the right people for projects, teams, and mentorship**
+
+#### Features:
+- **Matching Request Types**:
+  - Project assignments
+  - Mentorship programs
+  - Team formation
+  - Knowledge transfer
+- **Smart Algorithm**: Match employees based on skill proficiency
+- **Match Scoring**: 0-100% compatibility score
+- **Missing Skills**: Identify skill gaps in candidates
+- **Exceeding Skills**: Find employees with bonus capabilities
+- **Availability Tracking**: Check team member availability
+- **Manager Approval**: Built-in approval workflow
+
+#### How to Use:
+1. Navigate to **Skills Management** → **Skill Matching**
+2. Click "New Request"
+3. Fill in:
+   - Request Title and Type
+   - Description
+   - Required Skills (with proficiency levels)
+   - Timeline and Duration
+4. Click "Find Matches"
+5. Review matched employees with:
+   - Match percentage
+   - Matched skills
+   - Missing skills
+   - Employee availability
+6. Select best matches for your project
+
+#### Use Cases:
+- **Project Staffing**: Find skilled team members for projects
+- **Mentorship Pairing**: Match mentors with mentees
+- **Team Building**: Form balanced teams with complementary skills
+- **Knowledge Transfer**: Connect experts with learners
+- **Cross-functional Projects**: Find skills across departments
+- **Resource Planning**: Optimize skill distribution
+
+### 10. Learning Recommendations
+**AI-powered personalized learning paths**
+
+#### Features:
+- **Gap-Based Recommendations**: Auto-suggest courses for skill gaps
+- **Personalized Learning**: Tailored to individual needs
+- **Resource Types**:
+  - Online courses
+  - Videos and tutorials
+  - Articles and blogs
+  - Books and documentation
+  - Workshops and seminars
+  - Certification programs
+- **Progress Tracking**: Monitor learning completion
+- **Relevance Scoring**: AI calculates resource fit
+- **Multiple Providers**: Coursera, Udemy, LinkedIn Learning, internal
+- **Cost Information**: Free and paid options
+- **Time Estimates**: Duration in hours
+- **Ratings & Reviews**: Community feedback
+
+#### Recommendation Flow:
+1. **Gap Analysis**: System identifies skill gaps
+2. **Auto-Generate**: Recommendations created automatically
+3. **Prioritization**: Sorted by relevance and priority
+4. **Enrollment**: One-click enrollment
+5. **Progress**: Track learning journey
+6. **Completion**: Mark resources as complete
+7. **Feedback**: Rate and review resources
+
+#### How to Use:
+1. Navigate to **Skills Management** → **Learning**
+2. View personalized recommendations
+3. Filter by status:
+   - Suggested
+   - Enrolled
+   - In Progress
+   - Completed
+4. For each recommendation:
+   - See relevance score
+   - View target skill
+   - Check duration and cost
+   - Read description and tags
+5. Actions:
+   - Enroll in course
+   - Start learning
+   - Track progress
+   - Mark complete
+   - Dismiss if not relevant
+6. Provide feedback after completion
+
+#### Learning Status Workflow:
+```
+Suggested → Enrolled → In Progress → Completed
+     ↓
+  Dismissed
+```
+
+### 11. Certification Tracking
+**Comprehensive certification lifecycle management**
+
+#### Features:
+- **Certifications Catalog**: Pre-defined industry certifications
+- **Employee Certifications**: Track all employee certs
+- **Expiry Tracking**: Automatic expiry date monitoring
+- **Renewal Management**: Schedule and track renewals
+- **Continuing Education (CE)**: Track CE hours
+- **Verification**: Manager verification workflow
+- **Expiry Alerts**:
+  - 90 days: Yellow warning
+  - 30 days: Orange alert
+  - Expired: Red flag
+- **Certificate Storage**: Upload certificate files
+- **Reimbursement Tracking**: Track cert costs
+- **Status Management**: Active, Expired, In Progress
+
+#### Certification Lifecycle:
+1. **Obtain Certification**:
+   - Pass exam/requirements
+   - Receive certificate
+   - Record in system
+2. **Verification**:
+   - Upload certificate
+   - Manager verifies
+   - System validates
+3. **Active Period**:
+   - Track expiry date
+   - Monitor CE hours
+   - Receive reminders
+4. **Renewal**:
+   - Schedule renewal
+   - Complete requirements
+   - Update expiry date
+5. **Maintenance**:
+   - Complete CE hours
+   - Keep skills current
+   - Document progress
+
+#### How to Use:
+1. Navigate to **Skills Management** → **Certifications**
+2. View dashboard with:
+   - Total certifications
+   - Active certifications
+   - Expiring soon (90 days)
+   - Expired certifications
+3. Filter by status:
+   - All
+   - Active
+   - Expiring Soon
+   - Expired
+4. For each certification:
+   - View certificate details
+   - Check expiry date
+   - Track CE hours progress
+   - Verify authenticity
+   - Schedule renewal
+5. Add new certification:
+   - Enter cert details
+   - Set issue/expiry dates
+   - Upload certificate file
+   - Track CE requirements
+
+#### CE Hours Tracking:
+- Set required CE hours
+- Record completed hours
+- Visual progress bar
+- Deadline monitoring
+- Completion alerts
+
+#### Expiry Management:
+- Automated status updates
+- Color-coded alerts
+- Renewal reminders
+- Grace period tracking
+- Renewal history
+
 ## Roadmap
 
+### Recently Launched (Q1 2024)
+✓ Skill-based project matching
+✓ AI-powered learning recommendations
+✓ Certification tracking and renewals
+✓ Mentorship program management
+✓ CE hours tracking
+
 ### Upcoming Features (Q2 2024)
-- AI-powered skill recommendations
 - Skill gap heat maps
 - Advanced competency builder
 - Skills marketplace
 - External skills verification
-- Skills-based project matching
 - Career path visualization
+- Skills-based compensation
 
 ### Future Enhancements
 - Skills taxonomy management
