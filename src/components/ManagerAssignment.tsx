@@ -49,12 +49,24 @@ export default function ManagerAssignment() {
   const [selectedManager, setSelectedManager] = useState<string>('');
 
   useEffect(() => {
-    loadData();
-  }, [selectedCompany]);
+    if (user) {
+      console.log('Loading manager assignment data for user:', user.id);
+      loadData();
+    }
+  }, [selectedCompany, user]);
 
   const loadData = async () => {
     try {
       setLoading(true);
+
+      // Check user role
+      const { data: userRoleData } = await supabase
+        .from('user_roles')
+        .select('role, company_id')
+        .eq('user_id', user?.id)
+        .single();
+
+      console.log('User role:', userRoleData);
 
       // Load companies
       const { data: companiesData, error: companiesError } = await supabase
@@ -62,7 +74,11 @@ export default function ManagerAssignment() {
         .select('id, name_en, name_ar')
         .order('name_en');
 
-      if (companiesError) throw companiesError;
+      if (companiesError) {
+        console.error('Error loading companies:', companiesError);
+        throw companiesError;
+      }
+      console.log('Loaded companies:', companiesData?.length || 0);
       setCompanies(companiesData || []);
 
       // Load employees without manager join
@@ -94,11 +110,20 @@ export default function ManagerAssignment() {
 
       if (selectedCompany !== 'all') {
         query = query.eq('company_id', selectedCompany);
+        console.log('Loading employees for company:', selectedCompany);
+      } else {
+        console.log('Loading all employees');
       }
 
       const { data: employeesData, error: employeesError } = await query;
 
-      if (employeesError) throw employeesError;
+      if (employeesError) {
+        console.error('Error loading employees:', employeesError);
+        throw employeesError;
+      }
+
+      console.log('Loaded employees:', employeesData?.length || 0);
+      console.log('Sample employee data:', employeesData?.[0]);
 
       // Manually map manager information
       const employeesWithManagers = (employeesData || []).map(emp => {
@@ -115,13 +140,22 @@ export default function ManagerAssignment() {
         };
       });
 
+      console.log('Setting employees:', employeesWithManagers.length);
       setEmployees(employeesWithManagers);
 
       // Set potential managers (all active employees)
       setManagers(employeesWithManagers);
+      console.log('Data load complete');
     } catch (error: any) {
       console.error('Error loading data:', error);
-      showToast(error.message, 'error');
+      const errorMessage = error.message || 'Failed to load data';
+      console.error('Full error details:', JSON.stringify(error, null, 2));
+      showToast(
+        `${language === 'ar' ? 'خطأ في تحميل البيانات' : 'Error loading data'}: ${errorMessage}`,
+        'error'
+      );
+      setEmployees([]);
+      setManagers([]);
     } finally {
       setLoading(false);
     }
@@ -191,10 +225,12 @@ export default function ManagerAssignment() {
       emp.first_name_ar.includes(searchTerm) ||
       emp.last_name_ar.includes(searchTerm) ||
       emp.employee_number.toLowerCase().includes(searchLower) ||
-      emp.email.toLowerCase().includes(searchLower);
+      (emp.email && emp.email.toLowerCase().includes(searchLower));
 
     return matchesSearch;
   });
+
+  console.log('Render - Total employees:', employees.length, 'Filtered:', filteredEmployees.length);
 
   const getEmployeeDisplayName = (emp: Employee) => {
     return language === 'ar'
@@ -439,9 +475,13 @@ export default function ManagerAssignment() {
                 {language === 'ar' ? 'لا توجد موظفين' : 'No employees found'}
               </h3>
               <p className="mt-1 text-sm text-gray-500">
-                {language === 'ar'
-                  ? 'حاول تغيير معايير البحث'
-                  : 'Try changing your search criteria'}
+                {employees.length === 0
+                  ? (language === 'ar'
+                      ? 'لا توجد موظفين في هذه الشركة أو لا يمكنك الوصول إليهم'
+                      : 'No employees in this company or you do not have access')
+                  : (language === 'ar'
+                      ? 'حاول تغيير معايير البحث'
+                      : 'Try changing your search criteria')}
               </p>
             </div>
           )}
