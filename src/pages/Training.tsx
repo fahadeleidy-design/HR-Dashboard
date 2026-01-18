@@ -3,7 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { BookOpen, Users, Award, FileQuestion, Edit2, UserPlus, Settings } from 'lucide-react';
+import { BookOpen, Users, Award, FileQuestion, Edit2, UserPlus, Settings, Map, Shield, TrendingUp } from 'lucide-react';
 import { formatInteger } from '@/lib/formatters';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/Tabs';
 import TrainingModules from '@/components/training/TrainingModules';
@@ -12,6 +12,10 @@ import QuizTaker from '@/components/training/QuizTaker';
 import TrainingProgramManager from '@/components/training/TrainingProgramManager';
 import TrainingAssignments from '@/components/training/TrainingAssignments';
 import QuizManagement from '@/components/training/QuizManagement';
+import CourseCatalog from '@/components/lms/CourseCatalog';
+import LearningPaths from '@/components/lms/LearningPaths';
+import ComplianceTracking from '@/components/lms/ComplianceTracking';
+import LearningAnalytics from '@/components/lms/LearningAnalytics';
 
 interface TrainingProgram {
   id: string;
@@ -272,6 +276,24 @@ export function Training() {
                   </TabsTrigger>
                 </>
               )}
+              <TabsTrigger value="catalog">
+                <BookOpen className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                {language === 'ar' ? 'كتالوج الدورات' : 'Course Catalog'}
+              </TabsTrigger>
+              <TabsTrigger value="paths">
+                <Map className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                {language === 'ar' ? 'مسارات التعلم' : 'Learning Paths'}
+              </TabsTrigger>
+              <TabsTrigger value="compliance">
+                <Shield className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                {language === 'ar' ? 'التدريب الإلزامي' : 'Compliance'}
+              </TabsTrigger>
+              {isHROrAdmin && (
+                <TabsTrigger value="analytics">
+                  <TrendingUp className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
+                  {language === 'ar' ? 'التحليلات' : 'Analytics'}
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="overview">
@@ -350,6 +372,24 @@ export function Training() {
                   />
                 </TabsContent>
               </>
+            )}
+
+            <TabsContent value="catalog">
+              <CourseCatalog />
+            </TabsContent>
+
+            <TabsContent value="paths">
+              <LearningPaths />
+            </TabsContent>
+
+            <TabsContent value="compliance">
+              <ComplianceTracking />
+            </TabsContent>
+
+            {isHROrAdmin && (
+              <TabsContent value="analytics">
+                <LearningAnalytics />
+              </TabsContent>
             )}
           </Tabs>
         </>
