@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
-import { Shield, Plus, Trash2, AlertCircle, CheckCircle, X, Users } from 'lucide-react';
+import { Shield, Plus, Trash2, AlertCircle, CheckCircle, X, Users, Edit2 } from 'lucide-react';
 
 interface Employee {
   id: string;
@@ -69,6 +69,11 @@ export function UserRoleManagement() {
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
   const [bulkCreating, setBulkCreating] = useState(false);
   const [bulkResults, setBulkResults] = useState<any>(null);
+  const [editingRole, setEditingRole] = useState<UserRole | null>(null);
+  const [editForm, setEditForm] = useState({
+    employee_id: '',
+    role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'employee'
+  });
 
   useEffect(() => {
     if (currentCompany) {
@@ -179,6 +184,44 @@ export function UserRoleManagement() {
       loadUserRoles();
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Failed to add user role' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEditRole = (userRole: UserRole) => {
+    setEditingRole(userRole);
+    setEditForm({
+      employee_id: userRole.employee_id || '',
+      role: userRole.role
+    });
+    setShowAddForm(false);
+  };
+
+  const handleUpdateRole = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRole) return;
+
+    setSaving(true);
+    setMessage(null);
+
+    try {
+      const { error } = await supabase
+        .from('user_roles')
+        .update({
+          employee_id: editForm.employee_id || null,
+          role: editForm.role
+        })
+        .eq('id', editingRole.id);
+
+      if (error) throw error;
+
+      setMessage({ type: 'success', text: 'User role updated successfully!' });
+      setEditingRole(null);
+      setEditForm({ employee_id: '', role: 'employee' });
+      loadUserRoles();
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message || 'Failed to update user role' });
     } finally {
       setSaving(false);
     }
@@ -314,7 +357,11 @@ export function UserRoleManagement() {
               {bulkCreating ? 'Creating...' : 'Create Employee Accounts'}
             </button>
             <button
-              onClick={() => setShowAddForm(!showAddForm)}
+              onClick={() => {
+                setShowAddForm(!showAddForm);
+                setEditingRole(null);
+                setEditForm({ employee_id: '', role: 'employee' });
+              }}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
             >
               {showAddForm ? <X className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
@@ -408,6 +455,90 @@ export function UserRoleManagement() {
           >
             Close Results
           </button>
+        </div>
+      )}
+
+      {editingRole && (
+        <div className="p-6 bg-blue-50 border-b border-blue-200">
+          <div className="mb-4">
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <Edit2 className="h-5 w-5 text-blue-600" />
+              Edit User Role: {editingRole.email}
+            </h3>
+            <p className="text-sm text-gray-600 mt-1">Update role and employee linkage</p>
+          </div>
+          <form onSubmit={handleUpdateRole} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Link to Employee (Optional)
+                </label>
+                <select
+                  value={editForm.employee_id}
+                  onChange={(e) => setEditForm({ ...editForm, employee_id: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">No employee link</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Role *
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {ROLES.map((role) => (
+                    <label
+                      key={role.value}
+                      className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                        editForm.role === role.value
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="edit_role"
+                        value={role.value}
+                        checked={editForm.role === role.value}
+                        onChange={(e) => setEditForm({ ...editForm, role: e.target.value as any })}
+                        className="mt-1"
+                      />
+                      <div className="flex-1">
+                        <div className="font-medium text-gray-900">{role.label}</div>
+                        <div className="text-sm text-gray-600 mt-1">{role.description}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                type="submit"
+                disabled={saving}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                {saving ? 'Updating...' : 'Update User Role'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingRole(null);
+                  setEditForm({ employee_id: '', role: 'employee' });
+                }}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
@@ -547,13 +678,22 @@ export function UserRoleManagement() {
                       <div className="text-sm text-gray-600 max-w-xs">{roleInfo?.description}</div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleDeleteRole(userRole.id)}
-                        className="text-red-600 hover:text-red-800 transition-colors"
-                        title="Remove role"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleEditRole(userRole)}
+                          className="text-blue-600 hover:text-blue-800 transition-colors"
+                          title="Edit role"
+                        >
+                          <Edit2 className="h-5 w-5" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteRole(userRole.id)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          title="Remove role"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
