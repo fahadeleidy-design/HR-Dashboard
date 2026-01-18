@@ -86,6 +86,7 @@ export function UserRoleManagement() {
     if (!currentCompany) return;
 
     setLoading(true);
+    setUserRoles([]);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
@@ -206,20 +207,28 @@ export function UserRoleManagement() {
     setMessage(null);
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('user_roles')
         .update({
           employee_id: editForm.employee_id || null,
           role: editForm.role
         })
-        .eq('id', editingRole.id);
+        .eq('id', editingRole.id)
+        .select()
+        .single();
 
       if (error) throw error;
 
-      setMessage({ type: 'success', text: 'User role updated successfully!' });
+      if (!data) {
+        throw new Error('Failed to verify update');
+      }
+
       setEditingRole(null);
       setEditForm({ employee_id: '', role: 'employee' });
-      loadUserRoles();
+
+      await loadUserRoles();
+
+      setMessage({ type: 'success', text: `User role updated to ${editForm.role} successfully!` });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message || 'Failed to update user role' });
     } finally {
