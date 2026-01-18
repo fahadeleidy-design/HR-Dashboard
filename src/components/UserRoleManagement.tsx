@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Shield, Plus, Trash2, AlertCircle, CheckCircle, X, Users, Edit2 } from 'lucide-react';
 
@@ -56,6 +57,7 @@ const ROLES = [
 
 export function UserRoleManagement() {
   const { currentCompany } = useCompany();
+  const { userRole } = useAuth();
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,6 +76,10 @@ export function UserRoleManagement() {
     employee_id: '',
     role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'employee'
   });
+
+  // Filter available roles based on current user's role
+  const isSuperAdmin = userRole?.role === 'super_admin';
+  const availableRoles = isSuperAdmin ? ROLES : ROLES.filter(r => r.value !== 'super_admin');
 
   useEffect(() => {
     if (currentCompany) {
@@ -193,6 +199,16 @@ export function UserRoleManagement() {
   };
 
   const handleEditRole = (userRole: UserRole) => {
+    // Only super_admin can edit super_admin roles
+    if (userRole.role === 'super_admin' && !isSuperAdmin) {
+      setMessage({
+        type: 'error',
+        text: 'Only Super Admins can edit Super Admin roles'
+      });
+      setTimeout(() => setMessage(null), 5000);
+      return;
+    }
+
     setEditingRole(userRole);
     setEditForm({
       employee_id: userRole.employee_id || '',
@@ -357,6 +373,11 @@ export function UserRoleManagement() {
               User Role Management
             </h2>
             <p className="text-sm text-gray-600 mt-1">Manage user access and permissions</p>
+            {!isSuperAdmin && (
+              <div className="mt-2 text-xs text-orange-600 bg-orange-50 border border-orange-200 rounded px-2 py-1 inline-block">
+                Note: Only Super Admins can assign or modify Super Admin roles
+              </div>
+            )}
           </div>
           <div className="flex gap-2">
             <button
@@ -503,7 +524,7 @@ export function UserRoleManagement() {
                   Role *
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {ROLES.map((role) => (
+                  {availableRoles.map((role) => (
                     <label
                       key={role.value}
                       className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
@@ -594,7 +615,7 @@ export function UserRoleManagement() {
                   Role *
                 </label>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {ROLES.map((role) => (
+                  {availableRoles.map((role) => (
                     <label
                       key={role.value}
                       className={`flex items-start gap-3 p-4 border-2 rounded-lg cursor-pointer transition-all ${
@@ -690,20 +711,28 @@ export function UserRoleManagement() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => handleEditRole(userRole)}
-                          className="text-blue-600 hover:text-blue-800 transition-colors"
-                          title="Edit role"
-                        >
-                          <Edit2 className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteRole(userRole.id)}
-                          className="text-red-600 hover:text-red-800 transition-colors"
-                          title="Remove role"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
+                        {(userRole.role !== 'super_admin' || isSuperAdmin) ? (
+                          <>
+                            <button
+                              onClick={() => handleEditRole(userRole)}
+                              className="text-blue-600 hover:text-blue-800 transition-colors"
+                              title="Edit role"
+                            >
+                              <Edit2 className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteRole(userRole.id)}
+                              className="text-red-600 hover:text-red-800 transition-colors"
+                              title="Remove role"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic" title="Only Super Admins can manage Super Admin roles">
+                            Protected
+                          </span>
+                        )}
                       </div>
                     </td>
                   </tr>
