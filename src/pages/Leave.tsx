@@ -3,10 +3,11 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { Plus, Calendar, Check, X, Clock } from 'lucide-react';
+import { Plus, Calendar, Check, X, Clock, Settings, DollarSign, AlertTriangle, TrendingUp } from 'lucide-react';
 import { ScrollableTable } from '@/components/ScrollableTable';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { LeaveConfiguration } from '@/components/leave/LeaveConfiguration';
 
 interface LeaveRequest {
   id: string;
@@ -15,11 +16,14 @@ interface LeaveRequest {
   start_date: string;
   end_date: string;
   total_days: number;
+  is_half_day: boolean;
+  half_day_period: string | null;
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
   approved_by: string | null;
   approved_at: string | null;
   rejection_reason: string | null;
+  covers_blackout_date: boolean;
   created_at: string;
   employee: {
     employee_number: string;
@@ -30,6 +34,8 @@ interface LeaveRequest {
     name_en: string;
     name_ar: string;
     max_days_per_year: number;
+    allow_half_days: boolean;
+    leave_category: string;
   };
 }
 
@@ -39,6 +45,9 @@ interface LeaveType {
   name_ar: string;
   max_days_per_year: number;
   paid: boolean;
+  allow_half_days: boolean;
+  minimum_increment: number;
+  leave_category: string;
 }
 
 interface LeaveBalance {
@@ -50,6 +59,9 @@ interface LeaveBalance {
   used_days: number;
   pending_days: number;
   remaining_days: number;
+  carried_forward: number;
+  accrued_this_year: number;
+  encashed_days: number;
   leave_type: {
     name_en: string;
     name_ar: string;
@@ -60,6 +72,15 @@ interface LeaveBalance {
   };
 }
 
+interface EncashmentRequest {
+  id: string;
+  leave_type_id: string;
+  days_to_encash: number;
+  encashment_amount: number;
+  status: string;
+  requested_at: string;
+}
+
 export function Leave() {
   const { currentCompany } = useCompany();
   const { user } = useAuth();
@@ -68,10 +89,14 @@ export function Leave() {
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [encashmentRequests, setEncashmentRequests] = useState<EncashmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [showBalances, setShowBalances] = useState(true);
+  const [showConfiguration, setShowConfiguration] = useState(false);
+  const [showEncashmentForm, setShowEncashmentForm] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [blackoutWarning, setBlackoutWarning] = useState<string | null>(null);
 
   const [requestForm, setRequestForm] = useState({
     employee_id: '',
@@ -79,6 +104,14 @@ export function Leave() {
     start_date: '',
     end_date: '',
     reason: '',
+    is_half_day: false,
+    half_day_period: '' as 'first_half' | 'second_half' | '',
+  });
+
+  const [encashmentForm, setEncashmentForm] = useState({
+    employee_id: '',
+    leave_type_id: '',
+    days_to_encash: 0,
   });
 
   useEffect(() => {
@@ -87,9 +120,16 @@ export function Leave() {
       fetchLeaveTypes();
       fetchEmployees();
       fetchLeaveBalances();
+      fetchEncashmentRequests();
       subscribeToChanges();
     }
   }, [currentCompany]);
+
+  useEffect(() => {
+    if (requestForm.start_date && requestForm.end_date && requestForm.employee_id) {
+      checkBlackoutDates();
+    }
+  }, [requestForm.start_date, requestForm.end_date, requestForm.employee_id]);
 
   const fetchLeaveRequests = async () => {
     if (!currentCompany) return;
@@ -101,7 +141,7 @@ export function Leave() {
         .select(`
           *,
           employee:employees!leave_requests_employee_id_fkey(employee_number, first_name_en, last_name_en),
-          leave_type:leave_types!leave_requests_leave_type_id_fkey(name_en, name_ar, max_days_per_year)
+          leave_type:leave_types!leave_requests_leave_type_id_fkey(name_en, name_ar, max_days_per_year, allow_half_days, leave_category)
         `)
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
@@ -137,7 +177,7 @@ export function Leave() {
     try {
       const { data, error } = await supabase
         .from('employees')
-        .select('id, employee_number, first_name_en, last_name_en')
+        .select('id, employee_number, first_name_en, last_name_en, department_id')
         .eq('company_id', currentCompany.id)
         .eq('status', 'active')
         .order('employee_number');
@@ -172,6 +212,50 @@ export function Leave() {
     }
   };
 
+  const fetchEncashmentRequests = async () => {
+    if (!currentCompany) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('leave_encashment_requests')
+        .select('*')
+        .eq('company_id', currentCompany.id)
+        .order('requested_at', { ascending: false });
+
+      if (error) throw error;
+      setEncashmentRequests(data || []);
+    } catch (error) {
+      console.error('Error fetching encashment requests:', error);
+    }
+  };
+
+  const checkBlackoutDates = async () => {
+    if (!currentCompany || !requestForm.employee_id || !requestForm.start_date || !requestForm.end_date) return;
+
+    try {
+      const employee = employees.find(e => e.id === requestForm.employee_id);
+      if (!employee) return;
+
+      const { data, error } = await supabase.rpc('check_blackout_dates', {
+        p_company_id: currentCompany.id,
+        p_department_id: employee.department_id,
+        p_leave_type_id: requestForm.leave_type_id,
+        p_start_date: requestForm.start_date,
+        p_end_date: requestForm.end_date,
+      });
+
+      if (error) throw error;
+
+      if (data) {
+        setBlackoutWarning('Warning: This leave request covers a blackout period. Special approval may be required.');
+      } else {
+        setBlackoutWarning(null);
+      }
+    } catch (error) {
+      console.error('Error checking blackout dates:', error);
+    }
+  };
+
   const subscribeToChanges = () => {
     if (!currentCompany) return;
 
@@ -187,6 +271,7 @@ export function Leave() {
         },
         () => {
           fetchLeaveRequests();
+          fetchLeaveBalances();
         }
       )
       .subscribe();
@@ -196,7 +281,9 @@ export function Leave() {
     };
   };
 
-  const calculateDays = (start: string, end: string) => {
+  const calculateDays = (start: string, end: string, isHalfDay: boolean) => {
+    if (isHalfDay) return 0.5;
+
     const startDate = new Date(start);
     const endDate = new Date(end);
     const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
@@ -209,17 +296,20 @@ export function Leave() {
     if (!currentCompany) return;
 
     try {
-      const days = calculateDays(requestForm.start_date, requestForm.end_date);
+      const days = calculateDays(requestForm.start_date, requestForm.end_date, requestForm.is_half_day);
 
       const { error } = await supabase.from('leave_requests').insert([{
         company_id: currentCompany.id,
         employee_id: requestForm.employee_id,
         leave_type_id: requestForm.leave_type_id,
         start_date: requestForm.start_date,
-        end_date: requestForm.end_date,
+        end_date: requestForm.is_half_day ? requestForm.start_date : requestForm.end_date,
         total_days: days,
+        is_half_day: requestForm.is_half_day,
+        half_day_period: requestForm.is_half_day ? requestForm.half_day_period : null,
         reason: requestForm.reason,
         status: 'pending',
+        covers_blackout_date: !!blackoutWarning,
       }]);
 
       if (error) throw error;
@@ -231,13 +321,50 @@ export function Leave() {
         start_date: '',
         end_date: '',
         reason: '',
+        is_half_day: false,
+        half_day_period: '',
       });
+      setBlackoutWarning(null);
 
-      // Refresh the list immediately
       await fetchLeaveRequests();
+      await fetchLeaveBalances();
     } catch (error: any) {
       console.error('Error creating leave request:', error);
       alert(error.message || 'Failed to create leave request');
+    }
+  };
+
+  const handleEncashmentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCompany) return;
+
+    try {
+      const { data: amountData, error: amountError } = await supabase.rpc('calculate_encashment_amount', {
+        p_employee_id: encashmentForm.employee_id,
+        p_leave_type_id: encashmentForm.leave_type_id,
+        p_days_to_encash: encashmentForm.days_to_encash,
+      });
+
+      if (amountError) throw amountError;
+
+      const { error } = await supabase.from('leave_encashment_requests').insert([{
+        company_id: currentCompany.id,
+        employee_id: encashmentForm.employee_id,
+        leave_type_id: encashmentForm.leave_type_id,
+        year: new Date().getFullYear(),
+        days_to_encash: encashmentForm.days_to_encash,
+        encashment_amount: amountData,
+        status: 'pending',
+      }]);
+
+      if (error) throw error;
+
+      setShowEncashmentForm(false);
+      setEncashmentForm({ employee_id: '', leave_type_id: '', days_to_encash: 0 });
+      await fetchEncashmentRequests();
+    } catch (error: any) {
+      console.error('Error creating encashment request:', error);
+      alert(error.message || 'Failed to create encashment request');
     }
   };
 
@@ -254,8 +381,8 @@ export function Leave() {
 
       if (error) throw error;
 
-      // Refresh the list immediately
       await fetchLeaveRequests();
+      await fetchLeaveBalances();
     } catch (error: any) {
       console.error('Error approving leave:', error);
       alert(error.message || 'Failed to approve leave request');
@@ -279,8 +406,8 @@ export function Leave() {
 
       if (error) throw error;
 
-      // Refresh the list immediately
       await fetchLeaveRequests();
+      await fetchLeaveBalances();
     } catch (error: any) {
       console.error('Error rejecting leave:', error);
       alert(error.message || 'Failed to reject leave request');
@@ -298,10 +425,27 @@ export function Leave() {
 
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredRequests);
 
+  const selectedLeaveType = leaveTypes.find(lt => lt.id === requestForm.leave_type_id);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (showConfiguration) {
+    return (
+      <div>
+        <button
+          onClick={() => setShowConfiguration(false)}
+          className="mb-4 text-primary-600 hover:text-primary-700 flex items-center space-x-2"
+        >
+          <X className="h-5 w-5" />
+          <span>Back to Leave Management</span>
+        </button>
+        <LeaveConfiguration />
       </div>
     );
   }
@@ -311,15 +455,31 @@ export function Leave() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">Leave Management</h1>
-          <p className="text-gray-600 mt-1">Manage leave requests and approvals</p>
+          <p className="text-gray-600 mt-1">Manage leave requests, balances, and encashment</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t.leave.requestLeave}</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowConfiguration(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+          >
+            <Settings className="h-4 w-4" />
+            <span>Configure</span>
+          </button>
+          <button
+            onClick={() => setShowEncashmentForm(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+          >
+            <DollarSign className="h-4 w-4" />
+            <span>Request Encashment</span>
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>{t.leave.requestLeave}</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow">
@@ -341,16 +501,19 @@ export function Leave() {
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Leave Type</th>
-                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total Entitlement</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Carried</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Accrued</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Used</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Pending</th>
+                    <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Encashed</th>
                     <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Remaining</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {leaveBalances.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
+                      <td colSpan={9} className="px-4 py-8 text-center text-gray-500">
                         No leave balances found
                       </td>
                     </tr>
@@ -363,18 +526,42 @@ export function Leave() {
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {balance.leave_type.name_en}
                         </td>
-                        <td className="px-4 py-3 text-sm text-center text-gray-900">
-                          {balance.total_entitlement} days
+                        <td className="px-4 py-3 text-sm text-center text-gray-900 font-medium">
+                          {balance.total_entitlement}
                         </td>
                         <td className="px-4 py-3 text-sm text-center">
-                          <span className="text-red-600 font-medium">{balance.used_days} days</span>
+                          {balance.carried_forward > 0 ? (
+                            <span className="text-blue-600 font-medium flex items-center justify-center">
+                              <TrendingUp className="h-3 w-3 mr-1" />
+                              {balance.carried_forward}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm text-center">
-                          <span className="text-yellow-600 font-medium">{balance.pending_days} days</span>
+                          {balance.accrued_this_year > 0 ? (
+                            <span className="text-green-600 font-medium">{balance.accrued_this_year}</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          <span className="text-red-600 font-medium">{balance.used_days}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          <span className="text-yellow-600 font-medium">{balance.pending_days}</span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-center">
+                          {balance.encashed_days > 0 ? (
+                            <span className="text-purple-600 font-medium">{balance.encashed_days}</span>
+                          ) : (
+                            <span className="text-gray-400">-</span>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-sm text-center">
                           <span className={`font-medium ${balance.remaining_days > 0 ? 'text-green-600' : 'text-gray-400'}`}>
-                            {balance.remaining_days} days
+                            {balance.remaining_days}
                           </span>
                         </td>
                       </tr>
@@ -464,6 +651,9 @@ export function Leave() {
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Category
+                </th>
                 <SortableTableHeader
                   label="Start Date"
                   sortKey="start_date"
@@ -499,7 +689,7 @@ export function Leave() {
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     No leave requests found.
                   </td>
                 </tr>
@@ -512,8 +702,23 @@ export function Leave() {
                       </div>
                       <div className="text-sm text-gray-500">{request.employee.employee_number}</div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {request.leave_type.name_en}
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{request.leave_type.name_en}</div>
+                      {request.is_half_day && (
+                        <div className="text-xs text-blue-600">
+                          Half Day ({request.half_day_period?.replace('_', ' ')})
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${
+                        request.leave_type.leave_category === 'statutory' ? 'bg-blue-100 text-blue-800' :
+                        request.leave_type.leave_category === 'discretionary' ? 'bg-green-100 text-green-800' :
+                        request.leave_type.leave_category === 'emergency' ? 'bg-red-100 text-red-800' :
+                        'bg-gray-100 text-gray-800'
+                      }`}>
+                        {request.leave_type.leave_category}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(request.start_date).toLocaleDateString()}
@@ -521,8 +726,16 @@ export function Leave() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {new Date(request.end_date).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {request.total_days} days
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {request.total_days} {request.total_days === 1 ? 'day' : 'days'}
+                      </div>
+                      {request.covers_blackout_date && (
+                        <div className="flex items-center text-xs text-orange-600">
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Blackout
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -567,8 +780,8 @@ export function Leave() {
       </div>
 
       {showForm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-200">
               <h2 className="text-2xl font-bold text-gray-900">Request Leave</h2>
             </div>
@@ -602,15 +815,65 @@ export function Leave() {
                     { value: '', label: 'Select Leave Type' },
                     ...leaveTypes.map(type => ({
                       value: type.id,
-                      label: `${type.name_en}`,
-                      searchText: `${type.name_en} ${type.name_ar}`
+                      label: `${type.name_en} (${type.leave_category})`,
+                      searchText: `${type.name_en} ${type.name_ar} ${type.leave_category}`
                     }))
                   ]}
                   value={requestForm.leave_type_id}
-                  onChange={(value) => setRequestForm({...requestForm, leave_type_id: value})}
+                  onChange={(value) => setRequestForm({...requestForm, leave_type_id: value, is_half_day: false})}
                   placeholder={t.leave.selectLeaveType}
                 />
               </div>
+
+              {selectedLeaveType?.allow_half_days && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={requestForm.is_half_day}
+                      onChange={(e) => setRequestForm({
+                        ...requestForm,
+                        is_half_day: e.target.checked,
+                        end_date: e.target.checked ? requestForm.start_date : requestForm.end_date
+                      })}
+                      className="h-4 w-4 text-primary-600 rounded"
+                    />
+                    <span className="text-sm font-medium text-blue-900">Request Half Day</span>
+                  </label>
+
+                  {requestForm.is_half_day && (
+                    <div className="mt-3">
+                      <label className="block text-sm font-medium text-blue-900 mb-2">Period *</label>
+                      <div className="flex space-x-4">
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name="half_day_period"
+                            value="first_half"
+                            checked={requestForm.half_day_period === 'first_half'}
+                            onChange={(e) => setRequestForm({...requestForm, half_day_period: e.target.value as any})}
+                            className="h-4 w-4 text-primary-600"
+                            required={requestForm.is_half_day}
+                          />
+                          <span className="text-sm text-blue-900">First Half (Morning)</span>
+                        </label>
+                        <label className="flex items-center space-x-2">
+                          <input
+                            type="radio"
+                            name="half_day_period"
+                            value="second_half"
+                            checked={requestForm.half_day_period === 'second_half'}
+                            onChange={(e) => setRequestForm({...requestForm, half_day_period: e.target.value as any})}
+                            className="h-4 w-4 text-primary-600"
+                            required={requestForm.is_half_day}
+                          />
+                          <span className="text-sm text-blue-900">Second Half (Afternoon)</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -633,17 +896,36 @@ export function Leave() {
                   <input
                     type="date"
                     required
-                    value={requestForm.end_date}
+                    value={requestForm.is_half_day ? requestForm.start_date : requestForm.end_date}
                     onChange={(e) => setRequestForm({...requestForm, end_date: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                    disabled={requestForm.is_half_day}
                   />
                 </div>
               </div>
 
-              {requestForm.start_date && requestForm.end_date && (
+              {blackoutWarning && (
+                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 flex items-start space-x-3">
+                  <AlertTriangle className="h-5 w-5 text-orange-600 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-orange-900">Blackout Period Warning</p>
+                    <p className="text-sm text-orange-700 mt-1">{blackoutWarning}</p>
+                  </div>
+                </div>
+              )}
+
+              {requestForm.start_date && requestForm.end_date && !requestForm.is_half_day && (
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
                   <p className="text-sm text-blue-900">
-                    Total Days: {calculateDays(requestForm.start_date, requestForm.end_date)} days
+                    Total Days: {calculateDays(requestForm.start_date, requestForm.end_date, false)} days
+                  </p>
+                </div>
+              )}
+
+              {requestForm.is_half_day && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-900">
+                    Total Days: 0.5 days
                   </p>
                 </div>
               )}
@@ -666,7 +948,16 @@ export function Leave() {
                   type="button"
                   onClick={() => {
                     setShowForm(false);
-                    setRequestForm({ employee_id: '', leave_type_id: '', start_date: '', end_date: '', reason: '' });
+                    setRequestForm({
+                      employee_id: '',
+                      leave_type_id: '',
+                      start_date: '',
+                      end_date: '',
+                      reason: '',
+                      is_half_day: false,
+                      half_day_period: ''
+                    });
+                    setBlackoutWarning(null);
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
                 >
@@ -675,6 +966,98 @@ export function Leave() {
                 <button
                   type="submit"
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
+                >
+                  Submit Request
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEncashmentForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-2xl font-bold text-gray-900">Request Leave Encashment</h2>
+              <p className="text-sm text-gray-600 mt-1">Convert unused leave days to cash payment</p>
+            </div>
+
+            <form onSubmit={handleEncashmentSubmit} className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Employee *
+                </label>
+                <SearchableSelect
+                  options={[
+                    { value: '', label: 'Select Employee' },
+                    ...employees.map(emp => ({
+                      value: emp.id,
+                      label: `${emp.employee_number} - ${emp.first_name_en} ${emp.last_name_en}`,
+                      searchText: `${emp.employee_number} ${emp.first_name_en} ${emp.last_name_en}`
+                    }))
+                  ]}
+                  value={encashmentForm.employee_id}
+                  onChange={(value) => setEncashmentForm({...encashmentForm, employee_id: value})}
+                  placeholder="Select Employee"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Leave Type *
+                </label>
+                <SearchableSelect
+                  options={[
+                    { value: '', label: 'Select Leave Type' },
+                    ...leaveTypes.map(type => ({
+                      value: type.id,
+                      label: type.name_en,
+                      searchText: `${type.name_en} ${type.name_ar}`
+                    }))
+                  ]}
+                  value={encashmentForm.leave_type_id}
+                  onChange={(value) => setEncashmentForm({...encashmentForm, leave_type_id: value})}
+                  placeholder="Select Leave Type"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Days to Encash *
+                </label>
+                <input
+                  type="number"
+                  required
+                  step="0.5"
+                  min="0.5"
+                  value={encashmentForm.days_to_encash || ''}
+                  onChange={(e) => setEncashmentForm({...encashmentForm, days_to_encash: parseFloat(e.target.value)})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="e.g., 5"
+                />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  The encashment amount will be calculated based on your salary and company policy.
+                </p>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEncashmentForm(false);
+                    setEncashmentForm({ employee_id: '', leave_type_id: '', days_to_encash: 0 });
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
                 >
                   Submit Request
                 </button>
