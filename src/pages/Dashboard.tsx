@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
@@ -11,6 +12,7 @@ import {
   CreditCard, Briefcase, Award, UserCog, TrendingDown, Building2
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
+import { EmployeeDashboard } from '@/components/EmployeeDashboard';
 
 interface DashboardStats {
   totalEmployees: number;
@@ -41,9 +43,14 @@ interface DashboardStats {
 }
 
 export function Dashboard() {
+  const { userRole } = useAuth();
   const { currentCompany, isConsolidatedView, companies } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const navigate = useNavigate();
+
+  if (userRole?.role === 'employee') {
+    return <EmployeeDashboard />;
+  }
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
     activeEmployees: 0,
