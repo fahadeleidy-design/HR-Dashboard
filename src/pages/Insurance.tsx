@@ -187,18 +187,18 @@ export function Insurance() {
 
   const getStatusBadge = (status: string, daysUntilExpiry: number) => {
     if (status === 'cancelled' || status === 'terminated') {
-      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">Cancelled</span>;
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-red-100 text-red-800">{t.insurance.cancelled}</span>;
     }
     if (daysUntilExpiry < 0) {
-      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">Expired</span>;
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">{t.insurance.expired}</span>;
     }
     if (daysUntilExpiry <= 30) {
-      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">Expiring Soon</span>;
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">{t.insurance.expiringSoon}</span>;
     }
     if (status === 'active') {
-      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">Active</span>;
+      return <span className="px-2 py-1 text-xs font-medium rounded-full bg-green-100 text-green-800">{t.common.active}</span>;
     }
-    return <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">Pending</span>;
+    return <span className="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">{t.insurance.pending}</span>;
   };
 
   const getPolicyIcon = (type: string) => {
@@ -267,7 +267,7 @@ export function Insurance() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
       <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={isRTL ? 'text-right' : 'text-left'}>
           <h1 className="text-3xl font-bold text-gray-900">{t.insurance.title}</h1>
@@ -284,8 +284,8 @@ export function Insurance() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm text-gray-600">{t.insurance.activePolicies}</p>
               <p className="text-2xl font-bold text-green-600 mt-1">{formatNumber(activePolicies, language)}</p>
             </div>
@@ -294,8 +294,8 @@ export function Insurance() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm text-gray-600">{t.common.expiringSoon}</p>
               <p className="text-2xl font-bold text-yellow-600 mt-1">{formatNumber(expiringPolicies, language)}</p>
               <p className="text-xs text-gray-500 mt-1">{t.insurance.within30Days}</p>
@@ -305,8 +305,8 @@ export function Insurance() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm text-gray-600">{t.insurance.totalPremium}</p>
               <p className="text-2xl font-bold text-blue-600 mt-1">
                 {formatCurrency(totalPremium, language)}
@@ -318,11 +318,11 @@ export function Insurance() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">People Covered</p>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-sm text-gray-600">{t.insurance.peopleCovered}</p>
               <p className="text-2xl font-bold text-purple-600 mt-1">{totalCovered}</p>
-              <p className="text-xs text-gray-500 mt-1">Employees + Dependents</p>
+              <p className="text-xs text-gray-500 mt-1">{t.insurance.employeesPlusDependents}</p>
             </div>
             <Users className="h-12 w-12 text-purple-600 opacity-20" />
           </div>
@@ -330,12 +330,12 @@ export function Insurance() {
       </div>
 
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-start space-x-3">
+        <div className={`flex items-start ${isRTL ? 'space-x-reverse space-x-3 flex-row-reverse' : 'space-x-3'}`}>
           <Shield className="h-5 w-5 text-blue-600 mt-0.5" />
-          <div>
-            <h3 className="text-sm font-semibold text-blue-900">CCHI Compliance Notice</h3>
+          <div className={isRTL ? 'text-right' : 'text-left'}>
+            <h3 className="text-sm font-semibold text-blue-900">{t.insurance.ccchiNotice}</h3>
             <p className="text-sm text-blue-800 mt-1">
-              All health insurance policies must be CCHI-approved. Ensure your policies have valid CCHI approval codes and meet minimum coverage requirements as mandated by Saudi law.
+              {t.insurance.ccchiDescription}
             </p>
           </div>
         </div>
@@ -343,40 +343,40 @@ export function Insurance() {
 
       <div className="bg-white rounded-lg shadow">
         <div className="border-b border-gray-200">
-          <div className="flex justify-between items-center p-4">
-            <div className="flex space-x-1">
+          <div className={`flex justify-between items-center p-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={`flex ${isRTL ? 'space-x-reverse space-x-1' : 'space-x-1'}`}>
               <button
                 onClick={() => setActiveTab('health')}
-                className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md ${
+                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-4 py-2 text-sm font-medium rounded-md ${
                   activeTab === 'health'
                     ? 'bg-primary-100 text-primary-700'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <Heart className="h-4 w-4" />
-                <span>Health ({healthPolicies})</span>
+                <span>{t.insurance.health} ({healthPolicies})</span>
               </button>
               <button
                 onClick={() => setActiveTab('vehicle')}
-                className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md ${
+                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-4 py-2 text-sm font-medium rounded-md ${
                   activeTab === 'vehicle'
                     ? 'bg-primary-100 text-primary-700'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <Car className="h-4 w-4" />
-                <span>Vehicle ({vehiclePolicies})</span>
+                <span>{t.insurance.vehicle} ({vehiclePolicies})</span>
               </button>
               <button
                 onClick={() => setActiveTab('workmen')}
-                className={`flex items-center space-x-2 px-4 py-2 text-sm font-medium rounded-md ${
+                className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} px-4 py-2 text-sm font-medium rounded-md ${
                   activeTab === 'workmen'
                     ? 'bg-primary-100 text-primary-700'
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
                 <Users className="h-4 w-4" />
-                <span>Workmen ({workmenPolicies})</span>
+                <span>{isRTL ? 'إصابات العمل' : 'Workmen'} ({workmenPolicies})</span>
               </button>
               <button
                 onClick={() => setActiveTab('all')}
@@ -386,7 +386,7 @@ export function Insurance() {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                All ({policies.length})
+                {t.common.all} ({policies.length})
               </button>
             </div>
             <button
@@ -398,27 +398,29 @@ export function Insurance() {
           </div>
 
           <div className="p-4 border-t border-gray-200 bg-gray-50">
-            <div className="flex space-x-4">
+            <div className={`flex ${isRTL ? 'space-x-reverse space-x-4 flex-row-reverse' : 'space-x-4'}`}>
               <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400`} />
                 <input
                   type="text"
                   placeholder={t.insurance.searchPlaceholder}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                  dir={isRTL ? 'rtl' : 'ltr'}
                 />
               </div>
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                className={`px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                dir={isRTL ? 'rtl' : 'ltr'}
               >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="pending">Pending</option>
-                <option value="expired">Expired</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="all">{t.insurance.allStatuses}</option>
+                <option value="active">{t.common.active}</option>
+                <option value="pending">{t.insurance.pending}</option>
+                <option value="expired">{t.insurance.expired}</option>
+                <option value="cancelled">{t.insurance.cancelled}</option>
               </select>
             </div>
           </div>
@@ -428,14 +430,14 @@ export function Insurance() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Policy #</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Provider</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Coverage</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Valid Until</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Premium</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.insurance.policyNumber}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.type}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.insurance.provider}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{isRTL ? 'التغطية' : 'Coverage'}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.insurance.validUntil}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.insurance.premium}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.status}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200 bg-white">
@@ -443,8 +445,8 @@ export function Insurance() {
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                     <Shield className="h-12 w-12 mx-auto text-gray-400 mb-3" />
-                    <p className="text-lg font-medium">No policies found</p>
-                    <p className="text-sm mt-1">Create your first insurance policy to get started</p>
+                    <p className="text-lg font-medium">{t.insurance.noPoliciesFound}</p>
+                    <p className="text-sm mt-1">{t.insurance.createFirstPolicy}</p>
                   </td>
                 </tr>
               ) : (
@@ -463,9 +465,9 @@ export function Insurance() {
                           {policy.policy_type.replace('_', ' ')}
                         </span>
                         {policy.policy_type === 'health' && policy.cchi_approval_code && (
-                          <div className="flex items-center text-xs text-green-600 mt-1">
-                            <CheckCircle className="h-3 w-3 mr-1" />
-                            CCHI Approved
+                          <div className={`flex items-center text-xs text-green-600 mt-1 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                            <CheckCircle className={`h-3 w-3 ${isRTL ? 'ml-1' : 'mr-1'}`} />
+                            {t.insurance.ccchiApproved}
                           </div>
                         )}
                       </td>
@@ -476,34 +478,34 @@ export function Insurance() {
                         )}
                       </td>
                       <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">{policy.coverage_type}</div>
+                        <div className={`text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{policy.coverage_type}</div>
                         {policy.policy_type === 'health' && (
-                          <div className="flex items-center space-x-2 mt-1">
+                          <div className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'} mt-1`}>
                             {policy.maternity_covered && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-pink-100 text-pink-800">
-                                Maternity
+                                {t.insurance.maternity}
                               </span>
                             )}
                             {policy.dental_covered && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                Dental
+                                {t.insurance.dental}
                               </span>
                             )}
                             {policy.optical_covered && (
                               <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                                Optical
+                                {t.insurance.optical}
                               </span>
                             )}
                           </div>
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">
+                        <div className={`text-sm text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
                           {format(new Date(policy.end_date), 'dd MMM yyyy')}
                         </div>
                         {daysUntilExpiry >= 0 && (
-                          <div className={`text-xs ${daysUntilExpiry <= 30 ? 'text-yellow-600 font-medium' : 'text-gray-500'}`}>
-                            {daysUntilExpiry} days left
+                          <div className={`text-xs ${daysUntilExpiry <= 30 ? 'text-yellow-600 font-medium' : 'text-gray-500'} ${isRTL ? 'text-right' : 'text-left'}`}>
+                            {daysUntilExpiry} {t.insurance.daysLeft}
                           </div>
                         )}
                       </td>
@@ -563,10 +565,10 @@ export function Insurance() {
 
       {showDetailsModal && selectedPolicy && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+          <div className={`bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto ${isRTL ? 'rtl' : 'ltr'}`}>
             <div className="p-6 border-b border-gray-200">
-              <div className="flex justify-between items-start">
-                <div>
+              <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
                   <h2 className="text-2xl font-bold text-gray-900">{selectedPolicy.policy_number}</h2>
                   <p className="text-gray-600 mt-1">{selectedPolicy.insurance_provider}</p>
                 </div>
@@ -734,19 +736,19 @@ export function Insurance() {
             </div>
 
             <div className="p-6 border-t border-gray-200 bg-gray-50">
-              <div className="flex justify-between items-center">
-                <div className="text-sm text-gray-500">
-                  Created: {format(new Date(selectedPolicy.created_at), 'dd MMM yyyy HH:mm')}
+              <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={`text-sm text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {isRTL ? 'تم الإنشاء:' : 'Created:'} {format(new Date(selectedPolicy.created_at), 'dd MMM yyyy HH:mm')}
                 </div>
-                <div className="flex space-x-3">
+                <div className={`flex ${isRTL ? 'space-x-reverse space-x-3 flex-row-reverse' : 'space-x-3'}`}>
                   <button
                     onClick={() => setShowDetailsModal(false)}
                     className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
                   >
-                    Close
+                    {t.insurance.close}
                   </button>
                   <button className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
-                    Edit Policy
+                    {t.insurance.editPolicy}
                   </button>
                 </div>
               </div>
@@ -757,11 +759,11 @@ export function Insurance() {
 
       {showBeneficiariesModal && selectedPolicy && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+          <div className={`bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto ${isRTL ? 'rtl' : 'ltr'}`}>
             <div className="p-6 border-b border-gray-200">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Policy Beneficiaries</h2>
+              <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
+                  <h2 className="text-2xl font-bold text-gray-900">{t.insurance.policyBeneficiaries}</h2>
                   <p className="text-gray-600 mt-1">{selectedPolicy.policy_number}</p>
                 </div>
                 <button
@@ -774,11 +776,11 @@ export function Insurance() {
             </div>
 
             <div className="p-6">
-              <div className="mb-4 flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-900">
-                  Beneficiary List ({beneficiaries.filter(b => b.policy_id === selectedPolicy.id).length})
+              <div className={`mb-4 flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <h3 className={`text-lg font-semibold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.insurance.beneficiaryList} ({beneficiaries.filter(b => b.policy_id === selectedPolicy.id).length})
                 </h3>
-                <button className="flex items-center space-x-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">
+                <button className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2 flex-row-reverse' : 'space-x-2'} px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700`}>
                   <Plus className="h-4 w-4" />
                   <span>{t.insurance.addBeneficiary}</span>
                 </button>
@@ -853,12 +855,12 @@ export function Insurance() {
             </div>
 
             <div className="p-6 border-t border-gray-200 bg-gray-50">
-              <div className="flex justify-end">
+              <div className={`flex ${isRTL ? 'justify-start' : 'justify-end'}`}>
                 <button
                   onClick={() => setShowBeneficiariesModal(false)}
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100"
                 >
-                  Close
+                  {t.insurance.close}
                 </button>
               </div>
             </div>
@@ -868,13 +870,13 @@ export function Insurance() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+          <div className={`bg-white rounded-lg shadow-xl max-w-4xl w-full my-8 ${isRTL ? 'rtl' : 'ltr'}`}>
             <form onSubmit={handleSubmit}>
               <div className="p-6 border-b border-gray-200">
-                <div className="flex justify-between items-start">
-                  <div>
+                <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className={isRTL ? 'text-right' : 'text-left'}>
                     <h2 className="text-2xl font-bold text-gray-900">{t.insurance.addNewPolicy}</h2>
-                    <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.insurance.addPolicyDescription}</p>
+                    <p className="text-gray-600 mt-1">{t.insurance.addPolicyDescription}</p>
                   </div>
                   <button
                     type="button"
@@ -889,95 +891,101 @@ export function Insurance() {
               <div className="p-6 max-h-[calc(100vh-300px)] overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Policy Number <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.policyNumber} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       value={formData.policy_number}
                       onChange={(e) => setFormData({ ...formData, policy_number: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Policy Type <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.policyType} <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
                       value={formData.policy_type}
                       onChange={(e) => setFormData({ ...formData, policy_type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     >
-                      <option value="health">Health Insurance</option>
-                      <option value="vehicle">Vehicle Insurance</option>
-                      <option value="workmen_compensation">Workmen Compensation</option>
-                      <option value="life">Life Insurance</option>
-                      <option value="property">Property Insurance</option>
+                      <option value="health">{t.insurance.healthInsurance}</option>
+                      <option value="vehicle">{t.insurance.vehicleInsurance}</option>
+                      <option value="workmen_compensation">{t.insurance.workmenCompensation}</option>
+                      <option value="life">{t.insurance.lifeInsurance}</option>
+                      <option value="property">{t.insurance.propertyInsurance}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Insurance Provider <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.insuranceProvider} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       value={formData.insurance_provider}
                       onChange={(e) => setFormData({ ...formData, insurance_provider: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="e.g., Bupa, MedGulf, Tawuniya"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                      placeholder={isRTL ? 'مثال: بوبا، ميدغلف، التعاونية' : 'e.g., Bupa, MedGulf, Tawuniya'}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Policy Class
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.policyClass}
                     </label>
                     <input
                       type="text"
                       value={formData.policy_class}
                       onChange={(e) => setFormData({ ...formData, policy_class: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="e.g., Class A, Premium, Standard"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                      placeholder={isRTL ? 'مثال: الفئة أ، ممتاز، قياسي' : 'e.g., Class A, Premium, Standard'}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Coverage Type <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.coverageType} <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
                       value={formData.coverage_type}
                       onChange={(e) => setFormData({ ...formData, coverage_type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     >
-                      <option value="individual">Individual</option>
-                      <option value="family">Family</option>
-                      <option value="group">Group</option>
+                      <option value="individual">{t.insurance.individual}</option>
+                      <option value="family">{t.insurance.family}</option>
+                      <option value="group">{t.insurance.group}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      CCHI Approval Code
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.ccchiApprovalCode}
                     </label>
                     <input
                       type="text"
                       value={formData.cchi_approval_code}
                       onChange={(e) => setFormData({ ...formData, cchi_approval_code: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="CCHI approval code"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                      placeholder={isRTL ? 'رمز اعتماد مجلس الضمان الصحي' : 'CCHI approval code'}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Start Date <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.common.startDate} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -989,8 +997,8 @@ export function Insurance() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      End Date <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.common.endDate} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -1002,8 +1010,8 @@ export function Insurance() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Premium Amount (SAR) <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {isRTL ? 'مبلغ القسط (ر.س)' : 'Premium Amount (SAR)'} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -1011,28 +1019,29 @@ export function Insurance() {
                       step="0.01"
                       value={formData.premium_amount}
                       onChange={(e) => setFormData({ ...formData, premium_amount: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Network Type
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.networkType}
                     </label>
                     <select
                       value={formData.network_type}
                       onChange={(e) => setFormData({ ...formData, network_type: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
+                      dir={isRTL ? 'rtl' : 'ltr'}
                     >
-                      <option value="nationwide">Nationwide</option>
-                      <option value="regional">Regional</option>
-                      <option value="local">Local</option>
+                      <option value="nationwide">{t.insurance.nationwide}</option>
+                      <option value="regional">{t.insurance.regional}</option>
+                      <option value="local">{t.insurance.local}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Coverage Limit (SAR)
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.coverageLimit} ({isRTL ? 'ر.س' : 'SAR'})
                     </label>
                     <input
                       type="number"
@@ -1044,21 +1053,21 @@ export function Insurance() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Deductible (SAR)
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.deductible} ({isRTL ? 'ر.س' : 'SAR'})
                     </label>
                     <input
                       type="number"
                       step="0.01"
                       value={formData.deductible}
                       onChange={(e) => setFormData({ ...formData, deductible: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Co-pay Percentage (%)
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.copayPercentage} (%)
                     </label>
                     <input
                       type="number"
@@ -1067,97 +1076,97 @@ export function Insurance() {
                       max="100"
                       value={formData.copay_percentage}
                       onChange={(e) => setFormData({ ...formData, copay_percentage: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Covered Employees Count
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.coveredEmployeesCount}
                     </label>
                     <input
                       type="number"
                       value={formData.covered_employees_count}
                       onChange={(e) => setFormData({ ...formData, covered_employees_count: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Covered Dependents Count
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.insurance.coveredDependentsCount}
                     </label>
                     <input
                       type="number"
                       value={formData.covered_dependents_count}
                       onChange={(e) => setFormData({ ...formData, covered_dependents_count: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'text-right' : 'text-left'}`}
                     />
                   </div>
                 </div>
 
                 <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Coverage Options</label>
+                  <label className={`block text-sm font-medium text-gray-700 mb-3 ${isRTL ? 'text-right' : 'text-left'}`}>{t.insurance.coverageOptions}</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <label className="flex items-center space-x-2">
+                    <label className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2 flex-row-reverse' : 'space-x-2'}`}>
                       <input
                         type="checkbox"
                         checked={formData.maternity_covered}
                         onChange={(e) => setFormData({ ...formData, maternity_covered: e.target.checked })}
                         className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm text-gray-700">Maternity</span>
+                      <span className="text-sm text-gray-700">{t.insurance.maternity}</span>
                     </label>
 
-                    <label className="flex items-center space-x-2">
+                    <label className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2 flex-row-reverse' : 'space-x-2'}`}>
                       <input
                         type="checkbox"
                         checked={formData.dental_covered}
                         onChange={(e) => setFormData({ ...formData, dental_covered: e.target.checked })}
                         className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm text-gray-700">Dental</span>
+                      <span className="text-sm text-gray-700">{t.insurance.dental}</span>
                     </label>
 
-                    <label className="flex items-center space-x-2">
+                    <label className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2 flex-row-reverse' : 'space-x-2'}`}>
                       <input
                         type="checkbox"
                         checked={formData.optical_covered}
                         onChange={(e) => setFormData({ ...formData, optical_covered: e.target.checked })}
                         className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm text-gray-700">Optical</span>
+                      <span className="text-sm text-gray-700">{t.insurance.optical}</span>
                     </label>
 
-                    <label className="flex items-center space-x-2">
+                    <label className={`flex items-center ${isRTL ? 'space-x-reverse space-x-2 flex-row-reverse' : 'space-x-2'}`}>
                       <input
                         type="checkbox"
                         checked={formData.emergency_covered}
                         onChange={(e) => setFormData({ ...formData, emergency_covered: e.target.checked })}
                         className="w-4 h-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                       />
-                      <span className="text-sm text-gray-700">Emergency</span>
+                      <span className="text-sm text-gray-700">{t.insurance.emergency}</span>
                     </label>
                   </div>
                 </div>
               </div>
 
               <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <div className="flex justify-end space-x-3">
+                <div className={`flex justify-end ${isRTL ? 'space-x-reverse space-x-3 flex-row-reverse' : 'space-x-3'}`}>
                   <button
                     type="button"
                     onClick={() => { setShowAddModal(false); resetForm(); }}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50"
                     disabled={saving}
                   >
-                    Cancel
+                    {t.common.cancel}
                   </button>
                   <button
                     type="submit"
                     disabled={saving}
                     className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {saving ? 'Saving...' : 'Create Policy'}
+                    {saving ? t.insurance.saving : t.insurance.createPolicy}
                   </button>
                 </div>
               </div>
