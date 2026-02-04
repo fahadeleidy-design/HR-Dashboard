@@ -547,45 +547,45 @@ export function Payroll() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
           <h1 className="text-3xl font-bold text-gray-900">
-            {isEmployee ? 'My Payslips' : 'Comprehensive Payroll Management'}
+            {isEmployee ? t.payroll.payslips : t.payroll.title}
           </h1>
           <p className="text-gray-600 mt-1">
             {isEmployee
-              ? 'View your salary details and payslips'
-              : 'Batch processing, approvals, payslips, loans, advances & analytics'
+              ? t.payroll.viewPayslip
+              : t.payroll.subtitle
             }
           </p>
         </div>
         {!isEmployee && (
-          <div className="flex space-x-3">
+          <div className={`flex ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-3`}>
             <button
               onClick={() => setView('batches')}
-              className={`px-4 py-2 rounded-md transition-colors ${
+              className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2 px-4 py-2 rounded-md transition-colors ${
                 view === 'batches' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <FileText className="h-4 w-4 inline mr-2" />
-              Batches
+              <FileText className="h-4 w-4" />
+              <span>{t.payroll.payrollBatch}</span>
             </button>
             <button
               onClick={() => setView('analytics')}
-              className={`px-4 py-2 rounded-md transition-colors ${
+              className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2 px-4 py-2 rounded-md transition-colors ${
                 view === 'analytics' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <TrendingUp className="h-4 w-4 inline mr-2" />
-              Analytics
+              <TrendingUp className="h-4 w-4" />
+              <span>{t.payroll.payrollAnalytics}</span>
             </button>
             <button
               onClick={() => setView('create')}
-              className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
+              className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors`}
             >
-              <Plus className="h-4 w-4 inline mr-2" />
-              New Batch
+              <Plus className="h-4 w-4" />
+              <span>{t.common.create}</span>
             </button>
           </div>
         )}
@@ -594,12 +594,12 @@ export function Payroll() {
       {!isEmployee && view === 'batches' && (
         <div className="space-y-6">
           {batches.length > 0 && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="flex items-center justify-between">
+            <div className={`bg-blue-50 border border-blue-200 rounded-lg p-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <div>
-                  <p className="text-sm font-medium text-blue-900">Latest Batch: {batches[0].month}</p>
+                  <p className="text-sm font-medium text-blue-900">{t.payroll.payrollBatch}: {batches[0].month}</p>
                   <p className="text-xs text-blue-700 mt-1">
-                    {batches[0].total_employees} employees | SAR {Number(batches[0].total_net || 0).toLocaleString()} total
+                    {batches[0].total_employees} {t.common.employees} | SAR {Number(batches[0].total_net || 0).toLocaleString()} {t.common.total}
                   </p>
                 </div>
                 <button
@@ -609,7 +609,7 @@ export function Payroll() {
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
                 >
-                  View Details
+                  {t.common.viewDetails}
                 </button>
               </div>
             </div>
@@ -617,9 +617,9 @@ export function Payroll() {
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Total Batches</p>
+              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
+                  <p className="text-sm text-gray-600">{t.payroll.totalPayroll}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">{batches.length}</p>
                 </div>
                 <FileText className="h-12 w-12 text-blue-600" />
@@ -627,9 +627,9 @@ export function Payroll() {
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Draft Batches</p>
+              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
+                  <p className="text-sm text-gray-600">{t.performance.draft}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
                     {batches.filter(b => b.status === 'draft').length}
                   </p>
@@ -639,9 +639,9 @@ export function Payroll() {
             </div>
 
             <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">Approved Batches</p>
+              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
+                  <p className="text-sm text-gray-600">{t.leave.approved}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
                     {batches.filter(b => b.status === 'approved').length}
                   </p>

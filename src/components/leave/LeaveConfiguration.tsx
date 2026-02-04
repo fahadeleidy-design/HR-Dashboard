@@ -200,14 +200,14 @@ export function LeaveConfiguration() {
   };
 
   const deleteBlackoutDate = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this blackout date?')) return;
+    if (!confirm(t.common.confirmDelete)) return;
 
     try {
       const { error } = await supabase.from('leave_blackout_dates').delete().eq('id', id);
       if (error) throw error;
       await fetchData();
     } catch (error: any) {
-      alert('Error deleting blackout date: ' + error.message);
+      alert(t.messages.error + ': ' + error.message);
     }
   };
 
@@ -220,33 +220,33 @@ export function LeaveConfiguration() {
   }
 
   const tabs = [
-    { id: 'accrual', label: 'Accrual Rules', icon: Clock },
-    { id: 'carryover', label: 'Carryover Rules', icon: Calendar },
+    { id: 'accrual', label: t.leave.accrualRate, icon: Clock },
+    { id: 'carryover', label: t.leave.carryForward, icon: Calendar },
     { id: 'encashment', label: 'Encashment Rules', icon: DollarSign },
     { id: 'probation', label: 'Probation Rules', icon: UserCheck },
     { id: 'blackout', label: 'Blackout Dates', icon: Ban },
   ];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Leave Configuration</h1>
-          <p className="text-gray-600 mt-1">Configure leave policies and rules</p>
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
+      <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.leave.leaveConfiguration}</h1>
+          <p className="text-gray-600 mt-1">{t.leave.leavePolicy}</p>
         </div>
         <Settings className="h-8 w-8 text-gray-400" />
       </div>
 
       <div className="bg-white rounded-lg shadow">
         <div className="border-b border-gray-200">
-          <div className="flex space-x-4 p-4 overflow-x-auto">
+          <div className={`flex ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-4 p-4 overflow-x-auto`}>
             {tabs.map((tab) => {
               const Icon = tab.icon;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
+                  className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2 px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
                     activeTab === tab.id
                       ? 'bg-primary-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -263,20 +263,20 @@ export function LeaveConfiguration() {
         <div className="p-6">
           {activeTab === 'accrual' && (
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-2">Accrual Rules</h3>
-                <p className="text-sm text-blue-700">Define how leave days are accrued over time for each leave type.</p>
+              <div className={`bg-blue-50 border border-blue-200 rounded-lg p-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+                <h3 className="font-semibold text-blue-900 mb-2">{t.leave.accrualRate}</h3>
+                <p className="text-sm text-blue-700">{t.leave.leavePolicy}</p>
               </div>
 
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Leave Type</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Frequency</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rate (Days)</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Prorate on Join</th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Active</th>
+                      <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.leave.leaveType}</th>
+                      <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.frequency}</th>
+                      <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.leave.accrualRate}</th>
+                      <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>Prorate</th>
+                      <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.active}</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -286,7 +286,7 @@ export function LeaveConfiguration() {
 
                       return (
                         <tr key={type.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">{type.name_en}</td>
+                          <td className={`px-4 py-3 text-sm font-medium text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{isRTL ? type.name_ar : type.name_en}</td>
                           <td className="px-4 py-3">
                             <select
                               value={rule.accrual_frequency}

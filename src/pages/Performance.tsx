@@ -14,38 +14,38 @@ export function Performance() {
   const [activeTab, setActiveTab] = useState('dashboard');
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
       <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
         <h1 className="text-3xl font-bold text-gray-900">
-          {isRTL ? 'إدارة الأداء' : 'Performance Management'}
+          {t.performance.title}
         </h1>
         <p className="text-gray-600 mt-1">
-          {isRTL ? 'نظام شامل لإدارة الأداء والأهداف والتطوير' : 'Comprehensive performance, goals, and development management system'}
+          {t.performance.subtitle}
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-7 bg-white border border-gray-200">
           <TabsTrigger value="dashboard">
-            {isRTL ? 'لوحة التحكم' : 'Dashboard'}
+            {t.performance.performanceDashboard}
           </TabsTrigger>
           <TabsTrigger value="goals">
-            {isRTL ? 'الأهداف' : 'Goals'}
+            {t.performance.goals}
           </TabsTrigger>
           <TabsTrigger value="reviews">
-            {isRTL ? 'التقييمات' : 'Reviews'}
+            {t.performance.reviews}
           </TabsTrigger>
           <TabsTrigger value="cycles">
-            {isRTL ? 'دورات التقييم' : 'Cycles'}
+            {t.performance.reviewCycles}
           </TabsTrigger>
           <TabsTrigger value="feedback">
-            {isRTL ? 'التغذية الراجعة' : 'Feedback'}
+            {t.performance.feedback}
           </TabsTrigger>
           <TabsTrigger value="succession">
-            {isRTL ? 'التخطيط للخلافة' : 'Succession'}
+            {t.performance.successionPlanning}
           </TabsTrigger>
           <TabsTrigger value="recognition">
-            {isRTL ? 'التقدير' : 'Recognition'}
+            {t.performance.recognitionCenter}
           </TabsTrigger>
         </TabsList>
 

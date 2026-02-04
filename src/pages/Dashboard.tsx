@@ -402,16 +402,16 @@ export function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
+      <div className={isRTL ? 'text-right' : 'text-left'}>
         <h1 className="text-3xl font-bold text-gray-900">{t.dashboard.title}</h1>
         <p className="text-gray-600 mt-1">
-          {t.common.welcome} {isRTL ? (currentCompany?.name_ar || currentCompany?.name_en || 'نظام إدارة الموارد البشرية') : (currentCompany?.name_en || 'Saudi HR Management System')}
+          {t.common.welcome} {isRTL ? (currentCompany?.name_ar || currentCompany?.name_en) : (currentCompany?.name_en)}
         </p>
       </div>
 
       <div>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">{isRTL ? 'نظرة عامة على الموظفين' : 'Employee Overview'}</h2>
+        <h2 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.employees.title}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
             onClick={() => navigate('/employees')}

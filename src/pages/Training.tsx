@@ -153,10 +153,10 @@ export function Training() {
         {isHROrAdmin && activeTab !== 'programs' && (
           <button
             onClick={() => setActiveTab('programs')}
-            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className={`inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${isRTL ? 'flex-row-reverse' : ''}`}
           >
-            <BookOpen className="h-4 w-4 mr-2 rtl:mr-0 rtl:ml-2" />
-            {language === 'ar' ? 'إدارة البرامج' : 'Manage Programs'}
+            <BookOpen className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+            {t.training.trainingPrograms}
           </button>
         )}
       </div>
@@ -165,9 +165,9 @@ export function Training() {
         <div>
           <button
             onClick={() => setActiveTab('overview')}
-            className="mb-4 text-sm text-blue-600 hover:text-blue-800"
+            className={`mb-4 text-sm text-blue-600 hover:text-blue-800 ${isRTL ? 'text-right' : 'text-left'}`}
           >
-            ← {language === 'ar' ? 'عودة إلى البرامج' : 'Back to Programs'}
+            {isRTL ? '→' : '←'} {t.common.back}
           </button>
           <TrainingProgramManager
             companyId={currentCompany!.id}
@@ -177,9 +177,9 @@ export function Training() {
         </div>
       ) : (
         <>
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <div className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 ${isRTL ? 'text-right' : 'text-left'}`}>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              {language === 'ar' ? 'اختر برنامج تدريبي' : 'Select Training Program'}
+              {t.training.trainingPrograms}
             </label>
             <select
               value={selectedProgram?.id || ''}
@@ -187,11 +187,12 @@ export function Training() {
                 const program = programs.find(p => p.id === e.target.value);
                 if (program) setSelectedProgram(program);
               }}
-              className="w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              className={`w-full md:w-96 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 ${isRTL ? 'text-right' : 'text-left'}`}
+              dir={isRTL ? 'rtl' : 'ltr'}
             >
               {programs.map((program) => (
                 <option key={program.id} value={program.id}>
-                  {language === 'ar' && program.program_name_ar ? program.program_name_ar : program.program_name_en}
+                  {isRTL && program.program_name_ar ? program.program_name_ar : program.program_name_en}
                 </option>
               ))}
             </select>
@@ -201,24 +202,24 @@ export function Training() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{language === 'ar' ? 'المدة' : 'Duration'}</p>
+              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
+                  <p className="text-sm text-gray-600">{t.training.duration}</p>
                   <p className="text-2xl font-bold text-gray-900 mt-1">
                     {formatInteger(selectedProgram.duration_hours, language)}
                   </p>
-                  <p className="text-xs text-gray-500">{language === 'ar' ? 'ساعة' : 'hours'}</p>
+                  <p className="text-xs text-gray-500">{t.common.hours}</p>
                 </div>
                 <BookOpen className="h-10 w-10 text-blue-600" />
               </div>
             </div>
 
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-gray-600">{language === 'ar' ? 'تاريخ البدء' : 'Start Date'}</p>
+              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={isRTL ? 'text-right' : 'text-left'}>
+                  <p className="text-sm text-gray-600">{t.common.startDate}</p>
                   <p className="text-lg font-bold text-gray-900 mt-1">
-                    {new Date(selectedProgram.start_date).toLocaleDateString()}
+                    {new Date(selectedProgram.start_date).toLocaleDateString(isRTL ? 'ar-SA' : 'en-US')}
                   </p>
                 </div>
               </div>

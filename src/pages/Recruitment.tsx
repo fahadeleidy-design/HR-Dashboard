@@ -10,45 +10,42 @@ import { OfferManagement } from '@/components/recruitment/OfferManagement';
 import { RecruitmentAnalytics } from '@/components/recruitment/RecruitmentAnalytics';
 
 export function Recruitment() {
-  const { isRTL } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const [activeTab, setActiveTab] = useState('dashboard');
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
       <div className={`${isRTL ? 'text-right' : 'text-left'}`}>
         <h1 className="text-3xl font-bold text-gray-900">
-          {isRTL ? 'إدارة التوظيف والتعيين' : 'Recruitment & Hiring Management'}
+          {t.recruitment.title}
         </h1>
         <p className="text-gray-600 mt-1">
-          {isRTL
-            ? 'نظام شامل لتتبع المتقدمين وإدارة عمليات التوظيف مع الامتثال للوائح السعودية'
-            : 'Comprehensive Applicant Tracking System (ATS) with Saudi compliance'
-          }
+          {t.recruitment.subtitle}
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-7 bg-white border border-gray-200">
           <TabsTrigger value="dashboard">
-            {isRTL ? 'لوحة التحكم' : 'Dashboard'}
+            {t.dashboard.title}
           </TabsTrigger>
           <TabsTrigger value="requisitions">
-            {isRTL ? 'طلبات التوظيف' : 'Requisitions'}
+            {t.recruitment.requisitions}
           </TabsTrigger>
           <TabsTrigger value="candidates">
-            {isRTL ? 'المرشحين' : 'Candidates'}
+            {t.recruitment.candidates}
           </TabsTrigger>
           <TabsTrigger value="screening">
-            {isRTL ? 'الفرز' : 'Screening'}
+            {t.recruitment.screening}
           </TabsTrigger>
           <TabsTrigger value="interviews">
-            {isRTL ? 'المقابلات' : 'Interviews'}
+            {t.recruitment.interviews}
           </TabsTrigger>
           <TabsTrigger value="offers">
-            {isRTL ? 'العروض' : 'Offers'}
+            {t.recruitment.offers}
           </TabsTrigger>
           <TabsTrigger value="analytics">
-            {isRTL ? 'التحليلات' : 'Analytics'}
+            {t.recruitment.analytics}
           </TabsTrigger>
         </TabsList>
 
