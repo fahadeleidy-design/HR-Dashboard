@@ -945,34 +945,128 @@ export const arTranslations = {
   realEstate: {
     title: 'الأصول العقارية',
     subtitle: 'إدارة العقارات والأصول الثابتة',
+
+    // التبويبات والأعداد
+    properties: 'العقارات',
+    assets: 'الأصول',
+    property: 'عقار',
+    asset: 'أصل',
+
+    // الإحصائيات
+    propertyValue: 'قيمة العقارات',
+    assetValue: 'قيمة الأصول',
+
+    // الحقول العامة
+    location: 'الموقع',
+    ownership: 'الملكية',
+    value: 'القيمة',
+    number: 'الرقم',
+
+    // الإجراءات
     addProperty: 'إضافة عقار',
+    addAsset: 'إضافة أصل',
+    editProperty: 'تعديل عقار',
+    editAsset: 'تعديل أصل',
     propertyDetails: 'تفاصيل العقار',
+    assetDetails: 'تفاصيل الأصل',
+
+    // أنواع العقارات
     propertyType: 'نوع العقار',
     office: 'مكتب',
     warehouse: 'مستودع',
     land: 'أرض',
     building: 'مبنى',
     apartment: 'شقة',
+    retail: 'متجر',
+    factory: 'مصنع',
+    residential: 'سكني',
+
+    // أنواع الأصول
+    assetType: 'نوع الأصل',
+    equipment: 'معدات',
+    furniture: 'أثاث',
+    computer: 'حاسوب',
+    vehicle: 'مركبة',
+    machinery: 'آلات',
+    tools: 'أدوات',
+
+    // حقول العقار
+    propertyName: 'اسم العقار',
     propertyAddress: 'عنوان العقار',
+    address: 'العنوان',
+    city: 'المدينة',
+    district: 'الحي',
     area: 'المساحة',
+    areaSqm: 'المساحة (متر مربع)',
     squareMeters: 'متر مربع',
+
+    // الملكية
     ownershipType: 'نوع الملكية',
     owned: 'مملوك',
     rented: 'مستأجر',
     leased: 'مؤجر',
+    deedNumber: 'رقم الصك',
+
+    // المالية
     purchaseDate: 'تاريخ الشراء',
     purchasePrice: 'سعر الشراء',
+    purchaseCost: 'تكلفة الشراء',
     currentValue: 'القيمة الحالية',
+
+    // الإيجار
     rentAmount: 'قيمة الإيجار',
+    monthlyRent: 'الإيجار الشهري',
+    annualRent: 'الإيجار السنوي',
     rentStartDate: 'تاريخ بدء الإيجار',
     rentEndDate: 'تاريخ انتهاء الإيجار',
+    leaseStartDate: 'تاريخ بدء الإيجار',
+    leaseEndDate: 'تاريخ انتهاء الإيجار',
     landlord: 'المالك',
+    landlordName: 'اسم المالك',
     landlordContact: 'تواصل المالك',
+
+    // الدفع
     paymentFrequency: 'دورية الدفع',
     monthly: 'شهري',
     quarterly: 'ربع سنوي',
     semiAnnually: 'نصف سنوي',
     annually: 'سنوي',
+
+    // حقول الأصل
+    assetName: 'اسم الأصل',
+    assetNumber: 'رقم الأصل',
+    description: 'الوصف',
+    manufacturer: 'الشركة المصنعة',
+    model: 'الموديل',
+    serialNumber: 'الرقم التسلسلي',
+    depreciationRate: 'معدل الإهلاك',
+    assignedTo: 'مخصص لـ',
+    assignedEmployee: 'الموظف المخصص',
+    assignedDepartment: 'القسم المخصص',
+    assignedLocation: 'الموقع',
+
+    // الصيانة
+    warrantyExpiry: 'انتهاء الضمان',
+    maintenanceDue: 'موعد الصيانة',
+    maintenanceDueDate: 'تاريخ استحقاق الصيانة',
+
+    // الحالة
+    purpose: 'الغرض',
+    notes: 'ملاحظات',
+    maintenance: 'صيانة',
+    retired: 'متقاعد',
+    disposed: 'متخلص منه',
+
+    // الرسائل
+    deletePropertyConfirm: 'هل أنت متأكد من حذف هذا العقار؟',
+    deleteAssetConfirm: 'هل أنت متأكد من حذف هذا الأصل؟',
+    propertyAddedSuccess: 'تمت إضافة العقار بنجاح!',
+    propertyUpdatedSuccess: 'تم تحديث العقار بنجاح!',
+    propertyDeletedSuccess: 'تم حذف العقار بنجاح!',
+    assetAddedSuccess: 'تمت إضافة الأصل بنجاح!',
+    assetUpdatedSuccess: 'تم تحديث الأصل بنجاح!',
+    assetDeletedSuccess: 'تم حذف الأصل بنجاح!',
+    noAssetsFound: 'لم يتم العثور على أصول',
   },
 
   contracts: {

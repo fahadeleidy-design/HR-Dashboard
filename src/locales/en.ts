@@ -864,34 +864,128 @@ export const enTranslations = {
   realEstate: {
     title: 'Real Estate Assets',
     subtitle: 'Manage properties and fixed assets',
+
+    // Tabs and Counts
+    properties: 'Properties',
+    assets: 'Assets',
+    property: 'Property',
+    asset: 'Asset',
+
+    // Stats
+    propertyValue: 'Property Value',
+    assetValue: 'Asset Value',
+
+    // Common Fields
+    location: 'Location',
+    ownership: 'Ownership',
+    value: 'Value',
+    number: 'Number',
+
+    // Actions
     addProperty: 'Add Property',
+    addAsset: 'Add Asset',
+    editProperty: 'Edit Property',
+    editAsset: 'Edit Asset',
     propertyDetails: 'Property Details',
+    assetDetails: 'Asset Details',
+
+    // Property Types
     propertyType: 'Property Type',
     office: 'Office',
     warehouse: 'Warehouse',
     land: 'Land',
     building: 'Building',
     apartment: 'Apartment',
+    retail: 'Retail',
+    factory: 'Factory',
+    residential: 'Residential',
+
+    // Asset Types
+    assetType: 'Asset Type',
+    equipment: 'Equipment',
+    furniture: 'Furniture',
+    computer: 'Computer',
+    vehicle: 'Vehicle',
+    machinery: 'Machinery',
+    tools: 'Tools',
+
+    // Property Fields
+    propertyName: 'Property Name',
     propertyAddress: 'Property Address',
+    address: 'Address',
+    city: 'City',
+    district: 'District',
     area: 'Area',
+    areaSqm: 'Area (sqm)',
     squareMeters: 'Square Meters',
+
+    // Ownership
     ownershipType: 'Ownership Type',
     owned: 'Owned',
     rented: 'Rented',
     leased: 'Leased',
+    deedNumber: 'Deed Number',
+
+    // Financial
     purchaseDate: 'Purchase Date',
     purchasePrice: 'Purchase Price',
+    purchaseCost: 'Purchase Cost',
     currentValue: 'Current Value',
+
+    // Rent/Lease
     rentAmount: 'Rent Amount',
+    monthlyRent: 'Monthly Rent',
+    annualRent: 'Annual Rent',
     rentStartDate: 'Rent Start Date',
     rentEndDate: 'Rent End Date',
+    leaseStartDate: 'Lease Start Date',
+    leaseEndDate: 'Lease End Date',
     landlord: 'Landlord',
+    landlordName: 'Landlord Name',
     landlordContact: 'Landlord Contact',
+
+    // Payment
     paymentFrequency: 'Payment Frequency',
     monthly: 'Monthly',
     quarterly: 'Quarterly',
     semiAnnually: 'Semi-Annually',
     annually: 'Annually',
+
+    // Asset Fields
+    assetName: 'Asset Name',
+    assetNumber: 'Asset Number',
+    description: 'Description',
+    manufacturer: 'Manufacturer',
+    model: 'Model',
+    serialNumber: 'Serial Number',
+    depreciationRate: 'Depreciation Rate',
+    assignedTo: 'Assigned To',
+    assignedEmployee: 'Assigned Employee',
+    assignedDepartment: 'Assigned Department',
+    assignedLocation: 'Location',
+
+    // Maintenance
+    warrantyExpiry: 'Warranty Expiry',
+    maintenanceDue: 'Maintenance Due',
+    maintenanceDueDate: 'Maintenance Due Date',
+
+    // Status
+    purpose: 'Purpose',
+    notes: 'Notes',
+    maintenance: 'Maintenance',
+    retired: 'Retired',
+    disposed: 'Disposed',
+
+    // Messages
+    deletePropertyConfirm: 'Are you sure you want to delete this property?',
+    deleteAssetConfirm: 'Are you sure you want to delete this asset?',
+    propertyAddedSuccess: 'Property added successfully!',
+    propertyUpdatedSuccess: 'Property updated successfully!',
+    propertyDeletedSuccess: 'Property deleted successfully!',
+    assetAddedSuccess: 'Asset added successfully!',
+    assetUpdatedSuccess: 'Asset updated successfully!',
+    assetDeletedSuccess: 'Asset deleted successfully!',
+    noAssetsFound: 'No assets found',
   },
 
   contracts: {

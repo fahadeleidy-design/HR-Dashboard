@@ -132,11 +132,11 @@ export function RealEstate() {
       if (editingProperty) {
         const { error } = await supabase.from('real_estate_properties').update(data).eq('id', editingProperty.id);
         if (error) throw error;
-        alert('Property updated successfully!');
+        alert(t.realEstate.propertyUpdatedSuccess);
       } else {
         const { error } = await supabase.from('real_estate_properties').insert([data]);
         if (error) throw error;
-        alert('Property added successfully!');
+        alert(t.realEstate.propertyAddedSuccess);
       }
 
       setShowPropertyForm(false);
@@ -171,11 +171,11 @@ export function RealEstate() {
       if (editingAsset) {
         const { error } = await supabase.from('company_assets').update(data).eq('id', editingAsset.id);
         if (error) throw error;
-        alert('Asset updated successfully!');
+        alert(t.realEstate.assetUpdatedSuccess);
       } else {
         const { error } = await supabase.from('company_assets').insert([data]);
         if (error) throw error;
-        alert('Asset added successfully!');
+        alert(t.realEstate.assetAddedSuccess);
       }
 
       setShowAssetForm(false);
@@ -188,11 +188,11 @@ export function RealEstate() {
   };
 
   const handleDeleteProperty = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this property?')) return;
+    if (!confirm(t.realEstate.deletePropertyConfirm)) return;
     try {
       const { error } = await supabase.from('real_estate_properties').delete().eq('id', id);
       if (error) throw error;
-      alert('Property deleted successfully!');
+      alert(t.realEstate.propertyDeletedSuccess);
       fetchData();
     } catch (error: any) {
       alert('Failed to delete property: ' + error.message);
@@ -200,11 +200,11 @@ export function RealEstate() {
   };
 
   const handleDeleteAsset = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this asset?')) return;
+    if (!confirm(t.realEstate.deleteAssetConfirm)) return;
     try {
       const { error } = await supabase.from('company_assets').delete().eq('id', id);
       if (error) throw error;
-      alert('Asset deleted successfully!');
+      alert(t.realEstate.assetDeletedSuccess);
       fetchData();
     } catch (error: any) {
       alert('Failed to delete asset: ' + error.message);
@@ -276,7 +276,7 @@ export function RealEstate() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
       <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={isRTL ? 'text-right' : 'text-left'}>
           <h1 className="text-3xl font-bold text-gray-900">{t.realEstate.title}</h1>
@@ -293,8 +293,8 @@ export function RealEstate() {
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm text-gray-600">{t.realEstate.properties}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(totalProperties, language)}</p>
             </div>
@@ -303,8 +303,8 @@ export function RealEstate() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm text-gray-600">{t.realEstate.assets}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(totalAssets, language)}</p>
             </div>
@@ -313,8 +313,8 @@ export function RealEstate() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm text-gray-600">{t.realEstate.propertyValue}</p>
               <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(totalPropertyValue, language)}</p>
             </div>
@@ -323,8 +323,8 @@ export function RealEstate() {
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm text-gray-600">{t.realEstate.assetValue}</p>
               <p className="text-xl font-bold text-gray-900 mt-1">{formatCurrency(totalAssetValue, language)}</p>
             </div>
@@ -335,7 +335,7 @@ export function RealEstate() {
 
       <div className="bg-white rounded-lg shadow">
         <div className="border-b border-gray-200">
-          <nav className="flex">
+          <nav className={`flex ${isRTL ? 'flex-row-reverse' : ''}`}>
             <button
               onClick={() => setActiveTab('properties')}
               className={`px-6 py-3 text-sm font-medium ${
@@ -392,7 +392,7 @@ export function RealEstate() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        <div className="flex space-x-2">
+                        <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
                           <button
                             onClick={() => {
                               setEditingProperty(property);
@@ -432,7 +432,7 @@ export function RealEstate() {
               <tbody className="divide-y divide-gray-200">
                 {sortedAssets.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">No assets found</td>
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">{t.realEstate.noAssetsFound}</td>
                   </tr>
                 ) : (
                   sortedAssets.map((asset) => (
@@ -452,7 +452,7 @@ export function RealEstate() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-500">
-                        <div className="flex space-x-2">
+                        <div className={`flex ${isRTL ? 'space-x-reverse space-x-2' : 'space-x-2'}`}>
                           <button
                             onClick={() => {
                               setEditingAsset(asset);
@@ -480,94 +480,162 @@ export function RealEstate() {
         </div>
       </div>
 
-      {/* Property Form Modal - Truncated for size, contains full form fields */}
       {showPropertyForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b flex items-center justify-between">
-              <h2 className="text-2xl font-bold">{editingProperty ? 'Edit Property' : 'Add Property'}</h2>
+          <div className={`bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col ${isRTL ? 'rtl' : 'ltr'}`}>
+            <div className={`p-6 border-b flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <h2 className={`text-2xl font-bold ${isRTL ? 'text-right' : 'text-left'}`}>{editingProperty ? t.realEstate.editProperty : t.realEstate.addProperty}</h2>
               <button onClick={() => { setShowPropertyForm(false); setEditingProperty(null); resetPropertyForm(); }}>
                 <X className="h-6 w-6" />
               </button>
             </div>
             <form onSubmit={handlePropertySubmit} className="p-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-2 gap-6">
-                <div><label className="block text-sm font-medium mb-1">Property Type *</label>
-                  <select required value={propertyForm.property_type} onChange={(e) => setPropertyForm({...propertyForm, property_type: e.target.value})} className="w-full px-3 py-2 border rounded-md">
-                    <option value="office">Office</option><option value="warehouse">Warehouse</option><option value="retail">Retail</option><option value="factory">Factory</option><option value="land">Land</option><option value="residential">Residential</option>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.propertyType} *</label>
+                  <select required value={propertyForm.property_type} onChange={(e) => setPropertyForm({...propertyForm, property_type: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <option value="office">{t.realEstate.office}</option>
+                    <option value="warehouse">{t.realEstate.warehouse}</option>
+                    <option value="retail">{t.realEstate.retail}</option>
+                    <option value="factory">{t.realEstate.factory}</option>
+                    <option value="land">{t.realEstate.land}</option>
+                    <option value="residential">{t.realEstate.residential}</option>
                   </select>
                 </div>
-                <div><label className="block text-sm font-medium mb-1">Property Name *</label><input type="text" required value={propertyForm.property_name} onChange={(e) => setPropertyForm({...propertyForm, property_name: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div className="col-span-2"><label className="block text-sm font-medium mb-1">Address *</label><input type="text" required value={propertyForm.address} onChange={(e) => setPropertyForm({...propertyForm, address: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">City *</label><input type="text" required value={propertyForm.city} onChange={(e) => setPropertyForm({...propertyForm, city: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">District</label><input type="text" value={propertyForm.district} onChange={(e) => setPropertyForm({...propertyForm, district: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Ownership Type *</label>
-                  <select required value={propertyForm.ownership_type} onChange={(e) => setPropertyForm({...propertyForm, ownership_type: e.target.value})} className="w-full px-3 py-2 border rounded-md">
-                    <option value="owned">Owned</option><option value="leased">Leased</option><option value="rented">Rented</option>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.propertyName} *</label>
+                  <input type="text" required value={propertyForm.property_name} onChange={(e) => setPropertyForm({...propertyForm, property_name: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                </div>
+                <div className="col-span-2">
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.address} *</label>
+                  <input type="text" required value={propertyForm.address} onChange={(e) => setPropertyForm({...propertyForm, address: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.city} *</label>
+                  <input type="text" required value={propertyForm.city} onChange={(e) => setPropertyForm({...propertyForm, city: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.district}</label>
+                  <input type="text" value={propertyForm.district} onChange={(e) => setPropertyForm({...propertyForm, district: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.ownershipType} *</label>
+                  <select required value={propertyForm.ownership_type} onChange={(e) => setPropertyForm({...propertyForm, ownership_type: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <option value="owned">{t.realEstate.owned}</option>
+                    <option value="leased">{t.realEstate.leased}</option>
+                    <option value="rented">{t.realEstate.rented}</option>
                   </select>
                 </div>
-                <div><label className="block text-sm font-medium mb-1">Current Value (SAR)</label><input type="number" min="0" value={propertyForm.current_value} onChange={(e) => setPropertyForm({...propertyForm, current_value: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Area (sqm)</label><input type="number" min="0" value={propertyForm.area_sqm} onChange={(e) => setPropertyForm({...propertyForm, area_sqm: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.currentValue} ({isRTL ? 'ر.س' : 'SAR'})</label>
+                  <input type="number" min="0" value={propertyForm.current_value} onChange={(e) => setPropertyForm({...propertyForm, current_value: parseFloat(e.target.value)})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.areaSqm}</label>
+                  <input type="number" min="0" value={propertyForm.area_sqm} onChange={(e) => setPropertyForm({...propertyForm, area_sqm: parseFloat(e.target.value)})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
+                </div>
                 {propertyForm.ownership_type === 'leased' || propertyForm.ownership_type === 'rented' ? (
                   <>
-                    <div><label className="block text-sm font-medium mb-1">Monthly Rent (SAR)</label><input type="number" min="0" value={propertyForm.monthly_rent} onChange={(e) => setPropertyForm({...propertyForm, monthly_rent: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
                     <div>
-                      <label className="block text-sm font-medium mb-1">Payment Frequency</label>
-                      <select value={propertyForm.payment_frequency} onChange={(e) => setPropertyForm({...propertyForm, payment_frequency: e.target.value})} className="w-full px-3 py-2 border rounded-md">
-                        <option value="monthly">Monthly</option>
-                        <option value="quarterly">Quarterly</option>
-                        <option value="semi_annually">Semi-Annually</option>
-                        <option value="annually">Annually</option>
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.monthlyRent} ({isRTL ? 'ر.س' : 'SAR'})</label>
+                      <input type="number" min="0" value={propertyForm.monthly_rent} onChange={(e) => setPropertyForm({...propertyForm, monthly_rent: parseFloat(e.target.value)})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.paymentFrequency}</label>
+                      <select value={propertyForm.payment_frequency} onChange={(e) => setPropertyForm({...propertyForm, payment_frequency: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                        <option value="monthly">{t.realEstate.monthly}</option>
+                        <option value="quarterly">{t.realEstate.quarterly}</option>
+                        <option value="semi_annually">{t.realEstate.semiAnnually}</option>
+                        <option value="annually">{t.realEstate.annually}</option>
                       </select>
                     </div>
-                    <div><label className="block text-sm font-medium mb-1">Lease End Date</label><input type="date" value={propertyForm.lease_end_date} onChange={(e) => setPropertyForm({...propertyForm, lease_end_date: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                    <div><label className="block text-sm font-medium mb-1">Landlord Name</label><input type="text" value={propertyForm.landlord_name} onChange={(e) => setPropertyForm({...propertyForm, landlord_name: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.leaseEndDate}</label>
+                      <input type="date" value={propertyForm.lease_end_date} onChange={(e) => setPropertyForm({...propertyForm, lease_end_date: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.landlordName}</label>
+                      <input type="text" value={propertyForm.landlord_name} onChange={(e) => setPropertyForm({...propertyForm, landlord_name: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                    </div>
                   </>
                 ) : null}
               </div>
-              <div className="mt-6 flex justify-end space-x-3">
-                <button type="button" onClick={() => { setShowPropertyForm(false); resetPropertyForm(); }} className="px-4 py-2 border rounded-md">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md">{editingProperty ? 'Update' : 'Add'} Property</button>
+              <div className={`mt-6 flex ${isRTL ? 'justify-start space-x-reverse space-x-3 flex-row-reverse' : 'justify-end space-x-3'}`}>
+                <button type="button" onClick={() => { setShowPropertyForm(false); resetPropertyForm(); }} className="px-4 py-2 border rounded-md">{t.common.cancel}</button>
+                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md">{editingProperty ? t.common.update : t.common.add} {t.realEstate.property}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Asset Form Modal - Similar structure */}
       {showAssetForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b flex items-center justify-between">
-              <h2 className="text-2xl font-bold">{editingAsset ? 'Edit Asset' : 'Add Asset'}</h2>
+          <div className={`bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col ${isRTL ? 'rtl' : 'ltr'}`}>
+            <div className={`p-6 border-b flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <h2 className={`text-2xl font-bold ${isRTL ? 'text-right' : 'text-left'}`}>{editingAsset ? t.realEstate.editAsset : t.realEstate.addAsset}</h2>
               <button onClick={() => { setShowAssetForm(false); setEditingAsset(null); resetAssetForm(); }}>
                 <X className="h-6 w-6" />
               </button>
             </div>
             <form onSubmit={handleAssetSubmit} className="p-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-2 gap-6">
-                <div><label className="block text-sm font-medium mb-1">Asset Type *</label>
-                  <select required value={assetForm.asset_type} onChange={(e) => setAssetForm({...assetForm, asset_type: e.target.value})} className="w-full px-3 py-2 border rounded-md">
-                    <option value="equipment">Equipment</option><option value="furniture">Furniture</option><option value="computer">Computer</option><option value="vehicle">Vehicle</option><option value="machinery">Machinery</option><option value="tools">Tools</option>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.assetType} *</label>
+                  <select required value={assetForm.asset_type} onChange={(e) => setAssetForm({...assetForm, asset_type: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <option value="equipment">{t.realEstate.equipment}</option>
+                    <option value="furniture">{t.realEstate.furniture}</option>
+                    <option value="computer">{t.realEstate.computer}</option>
+                    <option value="vehicle">{t.realEstate.vehicle}</option>
+                    <option value="machinery">{t.realEstate.machinery}</option>
+                    <option value="tools">{t.realEstate.tools}</option>
                   </select>
                 </div>
-                <div><label className="block text-sm font-medium mb-1">Asset Number *</label><input type="text" required value={assetForm.asset_number} onChange={(e) => setAssetForm({...assetForm, asset_number: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div className="col-span-2"><label className="block text-sm font-medium mb-1">Asset Name *</label><input type="text" required value={assetForm.asset_name} onChange={(e) => setAssetForm({...assetForm, asset_name: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Purchase Date *</label><input type="date" required value={assetForm.purchase_date} onChange={(e) => setAssetForm({...assetForm, purchase_date: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Purchase Cost (SAR)</label><input type="number" min="0" value={assetForm.purchase_cost} onChange={(e) => setAssetForm({...assetForm, purchase_cost: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Current Value (SAR)</label><input type="number" min="0" value={assetForm.current_value} onChange={(e) => setAssetForm({...assetForm, current_value: parseFloat(e.target.value)})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Manufacturer</label><input type="text" value={assetForm.manufacturer} onChange={(e) => setAssetForm({...assetForm, manufacturer: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Model</label><input type="text" value={assetForm.model} onChange={(e) => setAssetForm({...assetForm, model: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Serial Number</label><input type="text" value={assetForm.serial_number} onChange={(e) => setAssetForm({...assetForm, serial_number: e.target.value})} className="w-full px-3 py-2 border rounded-md" /></div>
-                <div><label className="block text-sm font-medium mb-1">Status *</label>
-                  <select required value={assetForm.status} onChange={(e) => setAssetForm({...assetForm, status: e.target.value})} className="w-full px-3 py-2 border rounded-md">
-                    <option value="active">Active</option><option value="maintenance">Maintenance</option><option value="retired">Retired</option><option value="disposed">Disposed</option>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.assetNumber} *</label>
+                  <input type="text" required value={assetForm.asset_number} onChange={(e) => setAssetForm({...assetForm, asset_number: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                </div>
+                <div className="col-span-2">
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.assetName} *</label>
+                  <input type="text" required value={assetForm.asset_name} onChange={(e) => setAssetForm({...assetForm, asset_name: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.purchaseDate} *</label>
+                  <input type="date" required value={assetForm.purchase_date} onChange={(e) => setAssetForm({...assetForm, purchase_date: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.purchaseCost} ({isRTL ? 'ر.س' : 'SAR'})</label>
+                  <input type="number" min="0" value={assetForm.purchase_cost} onChange={(e) => setAssetForm({...assetForm, purchase_cost: parseFloat(e.target.value)})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.currentValue} ({isRTL ? 'ر.س' : 'SAR'})</label>
+                  <input type="number" min="0" value={assetForm.current_value} onChange={(e) => setAssetForm({...assetForm, current_value: parseFloat(e.target.value)})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.manufacturer}</label>
+                  <input type="text" value={assetForm.manufacturer} onChange={(e) => setAssetForm({...assetForm, manufacturer: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.model}</label>
+                  <input type="text" value={assetForm.model} onChange={(e) => setAssetForm({...assetForm, model: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.serialNumber}</label>
+                  <input type="text" value={assetForm.serial_number} onChange={(e) => setAssetForm({...assetForm, serial_number: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'} />
+                </div>
+                <div>
+                  <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.common.status} *</label>
+                  <select required value={assetForm.status} onChange={(e) => setAssetForm({...assetForm, status: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                    <option value="active">{t.common.active}</option>
+                    <option value="maintenance">{t.realEstate.maintenance}</option>
+                    <option value="retired">{t.realEstate.retired}</option>
+                    <option value="disposed">{t.realEstate.disposed}</option>
                   </select>
                 </div>
               </div>
-              <div className="mt-6 flex justify-end space-x-3">
-                <button type="button" onClick={() => { setShowAssetForm(false); resetAssetForm(); }} className="px-4 py-2 border rounded-md">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md">{editingAsset ? 'Update' : 'Add'} Asset</button>
+              <div className={`mt-6 flex ${isRTL ? 'justify-start space-x-reverse space-x-3 flex-row-reverse' : 'justify-end space-x-3'}`}>
+                <button type="button" onClick={() => { setShowAssetForm(false); resetAssetForm(); }} className="px-4 py-2 border rounded-md">{t.common.cancel}</button>
+                <button type="submit" className="px-4 py-2 bg-primary-600 text-white rounded-md">{editingAsset ? t.common.update : t.common.add} {t.realEstate.asset}</button>
               </div>
             </form>
           </div>
