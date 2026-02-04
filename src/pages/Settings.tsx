@@ -307,8 +307,8 @@ export function Settings() {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
+      <div className={isRTL ? 'text-right' : 'text-left'}>
         <h1 className="text-3xl font-bold text-gray-900">{t.settings.title}</h1>
         <p className="text-gray-600 mt-1">{t.settings.subtitle}</p>
       </div>
@@ -317,8 +317,8 @@ export function Settings() {
         <div className={`flex items-center gap-4 mb-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <Building2 className="h-12 w-12 text-primary-600" />
           <div className={isRTL ? 'text-right' : 'text-left'}>
-            <h2 className="text-xl font-bold text-gray-900">{isRTL ? 'معلومات الشركة' : 'Company Information'}</h2>
-            <p className="text-gray-600">{isRTL ? 'تفاصيل الشركة الحالية' : 'Current company details'}</p>
+            <h2 className="text-xl font-bold text-gray-900">{t.settings.companySettings}</h2>
+            <p className="text-gray-600">{t.settings.subtitle}</p>
           </div>
         </div>
 
@@ -350,50 +350,50 @@ export function Settings() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                CR Number
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {t.settings.crNumber}
               </label>
               <input
                 type="text"
                 value={currentCompany.cr_number || ''}
                 disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 ${isRTL ? 'text-right' : 'text-left'}`}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Establishment Number
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {isRTL ? 'رقم المنشأة' : 'Establishment Number'}
               </label>
               <input
                 type="text"
                 value={currentCompany.establishment_number || ''}
                 disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 ${isRTL ? 'text-right' : 'text-left'}`}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nitaqat Entity Size
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {isRTL ? 'حجم المنشأة في نطاقات' : 'Nitaqat Entity Size'}
               </label>
               <input
                 type="text"
                 value={currentCompany.nitaqat_entity_size}
                 disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 ${isRTL ? 'text-right' : 'text-left'}`}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nitaqat Activity
+              <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {isRTL ? 'نشاط المنشأة' : 'Nitaqat Activity'}
               </label>
               <input
                 type="text"
                 value={currentCompany.nitaqat_activity}
                 disabled
-                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+                className={`w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50 ${isRTL ? 'text-right' : 'text-left'}`}
               />
             </div>
           </div>

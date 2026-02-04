@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useLanguage } from '@/contexts/LanguageContext';
 import {
   Building2, Users, Shield, TrendingUp, AlertCircle, CheckCircle,
   XCircle, Settings, Plus, Search, Filter
@@ -31,6 +32,7 @@ interface TenantHealthMetrics {
 }
 
 export default function TenantAdministration() {
+  const { t, isRTL } = useLanguage();
   const [tenants, setTenants] = useState<TenantOverview[]>([]);
   const [healthMetrics, setHealthMetrics] = useState<TenantHealthMetrics[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,28 +101,28 @@ export default function TenantAdministration() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Tenant Administration</h1>
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-2xl font-semibold text-gray-900">{t.tenantAdmin.title}</h1>
           <p className="mt-1 text-sm text-gray-600">
-            Centralized management of all tenants and organizations
+            {t.tenantAdmin.subtitle}
           </p>
         </div>
         <button
           onClick={() => window.location.href = '/tenant-admin/new'}
-          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className={`flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 ${isRTL ? 'flex-row-reverse' : ''}`}
         >
-          <Plus className="w-5 h-5 mr-2" />
-          New Tenant
+          <Plus className={`w-5 h-5 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+          {t.tenantAdmin.addTenant}
         </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Tenants</p>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-sm font-medium text-gray-600">{t.common.total} {t.tenantAdmin.tenants}</p>
               <p className="text-2xl font-semibold text-gray-900 mt-1">{aggregateStats.totalTenants}</p>
             </div>
             <div className="p-3 bg-blue-100 rounded-lg">
@@ -130,9 +132,9 @@ export default function TenantAdministration() {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Active Tenants</p>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-sm font-medium text-gray-600">{t.common.active} {t.tenantAdmin.tenants}</p>
               <p className="text-2xl font-semibold text-gray-900 mt-1">{aggregateStats.activeTenants}</p>
             </div>
             <div className="p-3 bg-green-100 rounded-lg">
@@ -142,10 +144,10 @@ export default function TenantAdministration() {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Employees</p>
-              <p className="text-2xl font-semibold text-gray-900 mt-1">{aggregateStats.totalEmployees.toLocaleString()}</p>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-sm font-medium text-gray-600">{t.common.total} {t.common.employees}</p>
+              <p className="text-2xl font-semibold text-gray-900 mt-1">{aggregateStats.totalEmployees.toLocaleString(isRTL ? 'ar-SA' : 'en-US')}</p>
             </div>
             <div className="p-3 bg-indigo-100 rounded-lg">
               <Users className="w-6 h-6 text-indigo-600" />
@@ -154,9 +156,9 @@ export default function TenantAdministration() {
         </div>
 
         <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Users</p>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-sm font-medium text-gray-600">{t.common.total} {isRTL ? 'المستخدمون' : 'Users'}</p>
               <p className="text-2xl font-semibold text-gray-900 mt-1">{aggregateStats.totalUsers}</p>
             </div>
             <div className="p-3 bg-orange-100 rounded-lg">

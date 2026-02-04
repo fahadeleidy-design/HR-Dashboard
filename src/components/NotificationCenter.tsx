@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Bell, Check, X, AlertCircle, Info, CheckCircle, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Notification {
   id: string;
@@ -17,6 +18,7 @@ interface Notification {
 
 export function NotificationCenter() {
   const { currentCompany } = useCompany();
+  const { t, isRTL } = useLanguage();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
@@ -175,21 +177,21 @@ export function NotificationCenter() {
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+          <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} mt-2 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden ${isRTL ? 'rtl' : 'ltr'}`}>
             <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-gray-900">Notifications</h3>
+              <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <h3 className="text-lg font-bold text-gray-900">{t.notifications.title}</h3>
                 {unreadCount > 0 && (
                   <button
                     onClick={markAllAsRead}
                     className="text-sm text-blue-600 hover:text-blue-800 font-medium"
                   >
-                    Mark all read
+                    {t.notifications.markAllAsRead}
                   </button>
                 )}
               </div>
               {unreadCount > 0 && (
-                <p className="text-sm text-gray-600 mt-1">{unreadCount} unread</p>
+                <p className={`text-sm text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{unreadCount} {t.notifications.unread}</p>
               )}
             </div>
 
@@ -201,8 +203,8 @@ export function NotificationCenter() {
               ) : notifications.length === 0 ? (
                 <div className="p-8 text-center">
                   <Bell className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">No notifications</p>
-                  <p className="text-gray-400 text-sm mt-1">You're all caught up!</p>
+                  <p className="text-gray-500 font-medium">{t.notifications.noNotifications}</p>
+                  <p className="text-gray-400 text-sm mt-1">{isRTL ? 'لا توجد إشعارات جديدة!' : 'You\'re all caught up!'}</p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
