@@ -4,9 +4,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
-import { Plus, DollarSign, TrendingDown, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
+import { Plus, DollarSign, TrendingDown, CheckCircle, XCircle, Edit, Trash2, Eye, Clock, Users } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
 
 interface Loan {
   id: string;
@@ -20,6 +21,15 @@ interface Loan {
   end_date?: string;
   status: string;
   notes?: string;
+  manager_approved_by?: string;
+  manager_approved_at?: string;
+  hr_approved_by?: string;
+  hr_approved_at?: string;
+  finance_approved_by?: string;
+  finance_approved_at?: string;
+  rejected_by?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
   employee: {
     employee_number: string;
     first_name_en: string;
@@ -64,6 +74,8 @@ export function Loans() {
     start_date: new Date().toISOString().split('T')[0],
     notes: ''
   });
+  const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const { sortedData, sortConfig, requestSort } = useSortableData(loans);
 
@@ -282,11 +294,34 @@ export function Loans() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'manager_approved': return 'bg-blue-100 text-blue-800';
+      case 'hr_approved': return 'bg-indigo-100 text-indigo-800';
       case 'active': return 'bg-green-100 text-green-800';
+      case 'approved': return 'bg-green-100 text-green-800';
       case 'completed': return 'bg-blue-100 text-blue-800';
       case 'cancelled': return 'bg-red-100 text-red-800';
+      case 'rejected': return 'bg-red-100 text-red-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStatusDisplay = (status: string) => {
+    const statusMap: Record<string, { label: string; labelAr: string }> = {
+      pending: { label: 'Pending Manager', labelAr: 'بانتظار المدير' },
+      manager_approved: { label: 'Pending HR', labelAr: 'بانتظار الموارد البشرية' },
+      hr_approved: { label: 'Pending Finance', labelAr: 'بانتظار المالية' },
+      active: { label: 'Active', labelAr: 'نشط' },
+      approved: { label: 'Approved', labelAr: 'موافق عليه' },
+      completed: { label: 'Completed', labelAr: 'مكتمل' },
+      cancelled: { label: 'Cancelled', labelAr: 'ملغى' },
+      rejected: { label: 'Rejected', labelAr: 'مرفوض' }
+    };
+    return statusMap[status] || { label: status.toUpperCase(), labelAr: status };
+  };
+
+  const handleViewDetails = (loanId: string) => {
+    setSelectedLoanId(loanId);
+    setShowDetailModal(true);
   };
 
   const totalLoans = loans.reduce((sum, loan) => sum + Number(loan.loan_amount || 0), 0);
@@ -448,17 +483,24 @@ export function Loans() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(loan.status)}`}>
-                          {loan.status.toUpperCase()}
+                          {isRTL ? getStatusDisplay(loan.status).labelAr : getStatusDisplay(loan.status).label}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2">
-                          {userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) && (
+                        <div className={`flex space-x-2 ${isRTL ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                          <button
+                            onClick={() => handleViewDetails(loan.id)}
+                            className="text-primary-600 hover:text-primary-800"
+                            title={isRTL ? 'عرض التفاصيل' : 'View Details'}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          {userRole?.role && ['hr', 'finance', 'super_admin', 'admin'].includes(userRole.role) && (
                             <>
                               <button
                                 onClick={() => handleEdit(loan)}
                                 className="text-blue-600 hover:text-blue-800"
-                                title="Edit"
+                                title={isRTL ? 'تعديل' : 'Edit'}
                               >
                                 <Edit className="h-4 w-4" />
                               </button>
@@ -466,16 +508,16 @@ export function Loans() {
                                 <button
                                   onClick={() => handleStatusChange(loan.id, 'completed')}
                                   className="text-green-600 hover:text-green-800"
-                                  title="Mark as Completed"
+                                  title={isRTL ? 'اكتمل' : 'Mark as Completed'}
                                 >
                                   <CheckCircle className="h-4 w-4" />
                                 </button>
                               )}
-                              {loan.status === 'pending' && (
+                              {['pending', 'manager_approved', 'hr_approved'].includes(loan.status) && (
                                 <button
                                   onClick={() => handleStatusChange(loan.id, 'cancelled')}
                                   className="text-red-600 hover:text-red-800"
-                                  title="Cancel"
+                                  title={isRTL ? 'إلغاء' : 'Cancel'}
                                 >
                                   <XCircle className="h-4 w-4" />
                                 </button>
@@ -486,14 +528,11 @@ export function Loans() {
                             <button
                               onClick={() => handleDelete(loan.id)}
                               className="text-red-600 hover:text-red-800"
-                              title="Delete"
+                              title={isRTL ? 'حذف' : 'Delete'}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
                           )}
-                          {!userRole?.role || userRole.role === 'employee' ? (
-                            <span className="text-xs text-gray-400 italic">View only</span>
-                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -703,6 +742,20 @@ export function Loans() {
             </form>
           </div>
         </div>
+      )}
+
+      {showDetailModal && selectedLoanId && currentCompany && (
+        <RequestDetailModal
+          isOpen={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedLoanId(null);
+          }}
+          requestType="loan"
+          requestId={selectedLoanId}
+          companyId={currentCompany.id}
+          onStatusChange={fetchLoans}
+        />
       )}
     </div>
   );

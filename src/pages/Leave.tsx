@@ -3,11 +3,12 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { Plus, Calendar, Check, X, Clock, Settings, DollarSign, AlertTriangle, TrendingUp } from 'lucide-react';
+import { Plus, Calendar, Check, X, Clock, Settings, DollarSign, AlertTriangle, TrendingUp, Eye, Users } from 'lucide-react';
 import { ScrollableTable } from '@/components/ScrollableTable';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { LeaveConfiguration } from '@/components/leave/LeaveConfiguration';
+import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
 
 interface LeaveRequest {
   id: string;
@@ -19,9 +20,15 @@ interface LeaveRequest {
   is_half_day: boolean;
   half_day_period: string | null;
   reason: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'manager_approved' | 'hr_approved' | 'approved' | 'rejected';
   approved_by: string | null;
   approved_at: string | null;
+  manager_approved_by: string | null;
+  manager_approved_at: string | null;
+  hr_approved_by: string | null;
+  hr_approved_at: string | null;
+  rejected_by: string | null;
+  rejected_at: string | null;
   rejection_reason: string | null;
   covers_blackout_date: boolean;
   created_at: string;
@@ -97,6 +104,8 @@ export function Leave() {
   const [showEncashmentForm, setShowEncashmentForm] = useState(false);
   const [filter, setFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [blackoutWarning, setBlackoutWarning] = useState<string | null>(null);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const [requestForm, setRequestForm] = useState({
     employee_id: '',
@@ -416,12 +425,29 @@ export function Leave() {
 
   const filteredRequests = leaveRequests.filter(request => {
     if (filter === 'all') return true;
+    if (filter === 'pending') return ['pending', 'manager_approved', 'hr_approved'].includes(request.status);
     return request.status === filter;
   });
 
-  const pendingCount = leaveRequests.filter(r => r.status === 'pending').length;
+  const pendingCount = leaveRequests.filter(r => ['pending', 'manager_approved', 'hr_approved'].includes(r.status)).length;
   const approvedCount = leaveRequests.filter(r => r.status === 'approved').length;
   const rejectedCount = leaveRequests.filter(r => r.status === 'rejected').length;
+
+  const getStatusDisplay = (status: string) => {
+    const statusMap: Record<string, { label: string; labelAr: string; color: string }> = {
+      pending: { label: 'Pending Manager', labelAr: 'بانتظار المدير', color: 'bg-yellow-100 text-yellow-800' },
+      manager_approved: { label: 'Pending HR', labelAr: 'بانتظار الموارد البشرية', color: 'bg-blue-100 text-blue-800' },
+      hr_approved: { label: 'Pending Final', labelAr: 'بانتظار الموافقة النهائية', color: 'bg-indigo-100 text-indigo-800' },
+      approved: { label: 'Approved', labelAr: 'موافق عليه', color: 'bg-green-100 text-green-800' },
+      rejected: { label: 'Rejected', labelAr: 'مرفوض', color: 'bg-red-100 text-red-800' }
+    };
+    return statusMap[status] || { label: status, labelAr: status, color: 'bg-gray-100 text-gray-800' };
+  };
+
+  const handleViewDetails = (requestId: string) => {
+    setSelectedRequestId(requestId);
+    setShowDetailModal(true);
+  };
 
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredRequests);
 
@@ -738,38 +764,46 @@ export function Leave() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                        request.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : request.status === 'approved'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {request.status}
-                      </span>
+                      {(() => {
+                        const statusInfo = getStatusDisplay(request.status);
+                        return (
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+                            {isRTL ? statusInfo.labelAr : statusInfo.label}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {request.reason}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {request.status === 'pending' && (
-                        <div className="flex justify-end space-x-2">
-                          <button
-                            onClick={() => handleApprove(request.id)}
-                            className="text-green-600 hover:text-green-900"
-                            title="Approve"
-                          >
-                            <Check className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() => handleReject(request.id)}
-                            className="text-red-600 hover:text-red-900"
-                            title="Reject"
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex justify-end space-x-2">
+                        <button
+                          onClick={() => handleViewDetails(request.id)}
+                          className="text-primary-600 hover:text-primary-900"
+                          title={isRTL ? 'عرض التفاصيل' : 'View Details'}
+                        >
+                          <Eye className="h-5 w-5" />
+                        </button>
+                        {['pending', 'manager_approved', 'hr_approved'].includes(request.status) && (
+                          <>
+                            <button
+                              onClick={() => handleApprove(request.id)}
+                              className="text-green-600 hover:text-green-900"
+                              title={isRTL ? 'موافقة' : 'Approve'}
+                            >
+                              <Check className="h-5 w-5" />
+                            </button>
+                            <button
+                              onClick={() => handleReject(request.id)}
+                              className="text-red-600 hover:text-red-900"
+                              title={isRTL ? 'رفض' : 'Reject'}
+                            >
+                              <X className="h-5 w-5" />
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -1065,6 +1099,23 @@ export function Leave() {
             </form>
           </div>
         </div>
+      )}
+
+      {showDetailModal && selectedRequestId && currentCompany && (
+        <RequestDetailModal
+          isOpen={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedRequestId(null);
+          }}
+          requestType="leave_request"
+          requestId={selectedRequestId}
+          companyId={currentCompany.id}
+          onStatusChange={() => {
+            fetchLeaveRequests();
+            fetchLeaveBalances();
+          }}
+        />
       )}
     </div>
   );

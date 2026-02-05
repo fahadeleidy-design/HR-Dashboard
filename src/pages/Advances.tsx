@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
-import { Plus, DollarSign, Clock, CheckCircle, XCircle, Edit, Trash2 } from 'lucide-react';
+import { Plus, DollarSign, Clock, CheckCircle, XCircle, Edit, Trash2, Eye, Users } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
 
 interface Advance {
   id: string;
@@ -17,6 +19,15 @@ interface Advance {
   approved_date?: string;
   status: string;
   notes?: string;
+  manager_approved_by?: string;
+  manager_approved_at?: string;
+  hr_approved_by?: string;
+  hr_approved_at?: string;
+  finance_approved_by?: string;
+  finance_approved_at?: string;
+  rejected_by?: string;
+  rejected_at?: string;
+  rejection_reason?: string;
   employee: {
     employee_number: string;
     first_name_en: string;
@@ -43,12 +54,15 @@ interface AdvanceEligibility {
 export function Advances() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const { userRole } = useAuth();
   const [advances, setAdvances] = useState<Advance[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [advanceEligibility, setAdvanceEligibility] = useState<AdvanceEligibility | null>(null);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingAdvance, setEditingAdvance] = useState<Advance | null>(null);
+  const [selectedAdvanceId, setSelectedAdvanceId] = useState<string | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
 
   const [formData, setFormData] = useState({
     employee_id: '',
@@ -265,11 +279,30 @@ export function Advances() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800';
+      case 'manager_approved': return 'bg-blue-100 text-blue-800';
+      case 'hr_approved': return 'bg-indigo-100 text-indigo-800';
       case 'approved': return 'bg-green-100 text-green-800';
       case 'rejected': return 'bg-red-100 text-red-800';
       case 'completed': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
     }
+  };
+
+  const getStatusDisplay = (status: string) => {
+    const statusMap: Record<string, { label: string; labelAr: string }> = {
+      pending: { label: 'Pending Manager', labelAr: 'بانتظار المدير' },
+      manager_approved: { label: 'Pending HR', labelAr: 'بانتظار الموارد البشرية' },
+      hr_approved: { label: 'Pending Finance', labelAr: 'بانتظار المالية' },
+      approved: { label: 'Approved', labelAr: 'موافق عليه' },
+      rejected: { label: 'Rejected', labelAr: 'مرفوض' },
+      completed: { label: 'Completed', labelAr: 'مكتمل' }
+    };
+    return statusMap[status] || { label: status.toUpperCase(), labelAr: status };
+  };
+
+  const handleViewDetails = (advanceId: string) => {
+    setSelectedAdvanceId(advanceId);
+    setShowDetailModal(true);
   };
 
   const totalAdvances = advances.reduce((sum, adv) => sum + Number(adv.amount || 0), 0);
@@ -431,43 +464,54 @@ export function Advances() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(advance.status)}`}>
-                          {advance.status.toUpperCase()}
+                          {isRTL ? getStatusDisplay(advance.status).labelAr : getStatusDisplay(advance.status).label}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2">
-                          {advance.status === 'pending' && (
+                        <div className={`flex space-x-2 ${isRTL ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                          <button
+                            onClick={() => handleViewDetails(advance.id)}
+                            className="text-primary-600 hover:text-primary-800"
+                            title={isRTL ? 'عرض التفاصيل' : 'View Details'}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </button>
+                          {['pending', 'manager_approved', 'hr_approved'].includes(advance.status) && userRole?.role && ['hr', 'finance', 'super_admin', 'admin', 'manager'].includes(userRole.role) && (
                             <>
                               <button
                                 onClick={() => handleApprove(advance.id)}
                                 className="text-green-600 hover:text-green-800"
-                                title="Approve"
+                                title={isRTL ? 'موافقة' : 'Approve'}
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => handleReject(advance.id)}
                                 className="text-red-600 hover:text-red-800"
-                                title="Reject"
+                                title={isRTL ? 'رفض' : 'Reject'}
                               >
                                 <XCircle className="h-4 w-4" />
                               </button>
                             </>
                           )}
-                          <button
-                            onClick={() => handleEdit(advance)}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(advance.id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          {userRole?.role && ['hr', 'finance', 'super_admin', 'admin'].includes(userRole.role) && (
+                            <button
+                              onClick={() => handleEdit(advance)}
+                              className="text-blue-600 hover:text-blue-800"
+                              title={isRTL ? 'تعديل' : 'Edit'}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                          )}
+                          {userRole?.role === 'super_admin' && (
+                            <button
+                              onClick={() => handleDelete(advance.id)}
+                              className="text-red-600 hover:text-red-800"
+                              title={isRTL ? 'حذف' : 'Delete'}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -616,6 +660,20 @@ export function Advances() {
             </form>
           </div>
         </div>
+      )}
+
+      {showDetailModal && selectedAdvanceId && currentCompany && (
+        <RequestDetailModal
+          isOpen={showDetailModal}
+          onClose={() => {
+            setShowDetailModal(false);
+            setSelectedAdvanceId(null);
+          }}
+          requestType="advance"
+          requestId={selectedAdvanceId}
+          companyId={currentCompany.id}
+          onStatusChange={fetchAdvances}
+        />
       )}
     </div>
   );
