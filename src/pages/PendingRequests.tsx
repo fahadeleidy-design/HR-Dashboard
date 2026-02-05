@@ -4,25 +4,28 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { CheckCircle, XCircle, Clock, FileText, DollarSign, Calendar, Filter, Eye, X } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, FileText, DollarSign, Calendar, Filter, Eye, X, AlertTriangle, Plane, UserCheck, Receipt } from 'lucide-react';
 import { useToast } from '@/contexts/ToastContext';
 import { ApprovalTimeline } from '@/components/ApprovalTimeline';
 import { SLAIndicator } from '@/components/SLAIndicator';
 
+type RequestType = 'advance' | 'loan' | 'leave' | 'expense_claim' | 'penalty' | 'travel' | 'attendance_request';
+
 interface PendingRequest {
   id: string;
   company_id: string;
-  request_type: 'advance' | 'loan' | 'leave';
+  request_type: RequestType;
   employee_id: string;
   employee_number: string;
   employee_name: string;
-  department_id: string | null;
-  job_position_id: string | null;
+  department: string | null;
   manager_id: string | null;
-  request_amount: number;
+  amount_or_days: number | null;
+  unit: string | null;
   request_date: string;
+  request_subtype: string | null;
   status: string;
-  description: string;
+  description: string | null;
   pending_at_level: 'manager' | 'hr' | 'finance';
   manager_approved_by: string | null;
   manager_approved_at: string | null;
@@ -30,8 +33,11 @@ interface PendingRequest {
   hr_approved_at: string | null;
   finance_approved_by: string | null;
   finance_approved_at: string | null;
+  rejected_by: string | null;
+  rejected_at: string | null;
+  rejection_reason: string | null;
+  sla_deadline: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 interface SLAStatus {
@@ -81,7 +87,7 @@ export function PendingRequests() {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('pending_requests_unified')
+        .from('all_pending_requests_unified')
         .select('*')
         .eq('company_id', currentCompany.id)
         .order('created_at', { ascending: false });
@@ -162,11 +168,11 @@ export function PendingRequests() {
 
     setProcessing(true);
     try {
-      const { data, error } = await supabase.rpc('approve_request', {
-        p_request_type: request.request_type,
+      const { data, error } = await supabase.rpc('approve_request_v2', {
         p_request_id: request.id,
-        p_approver_employee_id: employeeProfile.id,
+        p_request_type: request.request_type,
         p_approval_level: request.pending_at_level,
+        p_approver_id: employeeProfile.id,
         p_comments: null
       });
 
@@ -198,11 +204,12 @@ export function PendingRequests() {
 
     setProcessing(true);
     try {
-      const { data, error } = await supabase.rpc('reject_request', {
-        p_request_type: rejectingRequest.request_type,
+      const { data, error } = await supabase.rpc('reject_request_v2', {
         p_request_id: rejectingRequest.id,
-        p_rejector_employee_id: employeeProfile.id,
-        p_rejection_reason: rejectionReason
+        p_request_type: rejectingRequest.request_type,
+        p_approval_level: rejectingRequest.pending_at_level,
+        p_rejector_id: employeeProfile.id,
+        p_reason: rejectionReason
       });
 
       if (error) throw error;
@@ -269,18 +276,43 @@ export function PendingRequests() {
         return <FileText className="h-5 w-5" />;
       case 'leave':
         return <Calendar className="h-5 w-5" />;
+      case 'expense_claim':
+        return <Receipt className="h-5 w-5" />;
+      case 'penalty':
+        return <AlertTriangle className="h-5 w-5" />;
+      case 'travel':
+        return <Plane className="h-5 w-5" />;
+      case 'attendance_request':
+        return <UserCheck className="h-5 w-5" />;
       default:
         return <FileText className="h-5 w-5" />;
     }
   };
 
   const getRequestTypeBadge = (type: string) => {
-    const colors = {
+    const colors: Record<string, string> = {
       advance: 'bg-blue-100 text-blue-800',
-      loan: 'bg-purple-100 text-purple-800',
-      leave: 'bg-green-100 text-green-800'
+      loan: 'bg-cyan-100 text-cyan-800',
+      leave: 'bg-green-100 text-green-800',
+      expense_claim: 'bg-amber-100 text-amber-800',
+      penalty: 'bg-red-100 text-red-800',
+      travel: 'bg-sky-100 text-sky-800',
+      attendance_request: 'bg-teal-100 text-teal-800'
     };
-    return colors[type as keyof typeof colors] || 'bg-gray-100 text-gray-800';
+    return colors[type] || 'bg-gray-100 text-gray-800';
+  };
+
+  const getRequestTypeLabel = (type: string) => {
+    const labels: Record<string, string> = {
+      advance: language === 'ar' ? 'سلفة' : 'Advance',
+      loan: language === 'ar' ? 'قرض' : 'Loan',
+      leave: language === 'ar' ? 'إجازة' : 'Leave',
+      expense_claim: language === 'ar' ? 'مصاريف' : 'Expense',
+      penalty: language === 'ar' ? 'جزاء' : 'Penalty',
+      travel: language === 'ar' ? 'سفر' : 'Travel',
+      attendance_request: language === 'ar' ? 'حضور' : 'Attendance'
+    };
+    return labels[type] || type;
   };
 
   const getLevelBadge = (level: string) => {
@@ -318,56 +350,108 @@ export function PendingRequests() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Pending Requests</h1>
-          <p className="text-gray-600 mt-1">Review and approve pending requests from employees</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            {language === 'ar' ? 'الطلبات المعلقة' : 'Pending Requests'}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {language === 'ar' ? 'مراجعة واعتماد الطلبات المعلقة من الموظفين' : 'Review and approve pending requests from employees'}
+          </p>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Total Pending</p>
-              <p className="text-2xl font-bold text-gray-900">{filteredRequests.length}</p>
+              <p className="text-xs text-gray-600">{language === 'ar' ? 'الإجمالي' : 'Total'}</p>
+              <p className="text-xl font-bold text-gray-900">{filteredRequests.length}</p>
             </div>
-            <Clock className="h-8 w-8 text-gray-400" />
+            <Clock className="h-6 w-6 text-gray-400" />
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-600">Advances</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {filteredRequests.filter(r => r.request_type === 'advance').length}
-              </p>
-            </div>
-            <DollarSign className="h-8 w-8 text-blue-400" />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Loans</p>
-              <p className="text-2xl font-bold text-purple-600">
-                {filteredRequests.filter(r => r.request_type === 'loan').length}
-              </p>
-            </div>
-            <FileText className="h-8 w-8 text-purple-400" />
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Leave Requests</p>
-              <p className="text-2xl font-bold text-green-600">
+              <p className="text-xs text-gray-600">{language === 'ar' ? 'إجازات' : 'Leave'}</p>
+              <p className="text-xl font-bold text-green-600">
                 {filteredRequests.filter(r => r.request_type === 'leave').length}
               </p>
             </div>
-            <Calendar className="h-8 w-8 text-green-400" />
+            <Calendar className="h-6 w-6 text-green-400" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-600">{language === 'ar' ? 'سلف' : 'Advances'}</p>
+              <p className="text-xl font-bold text-blue-600">
+                {filteredRequests.filter(r => r.request_type === 'advance').length}
+              </p>
+            </div>
+            <DollarSign className="h-6 w-6 text-blue-400" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-600">{language === 'ar' ? 'قروض' : 'Loans'}</p>
+              <p className="text-xl font-bold text-cyan-600">
+                {filteredRequests.filter(r => r.request_type === 'loan').length}
+              </p>
+            </div>
+            <FileText className="h-6 w-6 text-cyan-400" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-600">{language === 'ar' ? 'مصاريف' : 'Expenses'}</p>
+              <p className="text-xl font-bold text-amber-600">
+                {filteredRequests.filter(r => r.request_type === 'expense_claim').length}
+              </p>
+            </div>
+            <Receipt className="h-6 w-6 text-amber-400" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-600">{language === 'ar' ? 'جزاءات' : 'Penalties'}</p>
+              <p className="text-xl font-bold text-red-600">
+                {filteredRequests.filter(r => r.request_type === 'penalty').length}
+              </p>
+            </div>
+            <AlertTriangle className="h-6 w-6 text-red-400" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-600">{language === 'ar' ? 'سفر' : 'Travel'}</p>
+              <p className="text-xl font-bold text-sky-600">
+                {filteredRequests.filter(r => r.request_type === 'travel').length}
+              </p>
+            </div>
+            <Plane className="h-6 w-6 text-sky-400" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-600">{language === 'ar' ? 'حضور' : 'Attendance'}</p>
+              <p className="text-xl font-bold text-teal-600">
+                {filteredRequests.filter(r => r.request_type === 'attendance_request').length}
+              </p>
+            </div>
+            <UserCheck className="h-6 w-6 text-teal-400" />
           </div>
         </div>
       </div>
@@ -378,31 +462,39 @@ export function PendingRequests() {
           <Filter className="h-5 w-5 text-gray-400" />
           <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Request Type</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {language === 'ar' ? 'نوع الطلب' : 'Request Type'}
+              </label>
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="all">All Types</option>
-                <option value="advance">Advances</option>
-                <option value="loan">Loans</option>
-                <option value="leave">Leave Requests</option>
+                <option value="all">{language === 'ar' ? 'جميع الأنواع' : 'All Types'}</option>
+                <option value="leave">{language === 'ar' ? 'طلبات الإجازة' : 'Leave Requests'}</option>
+                <option value="advance">{language === 'ar' ? 'السلف' : 'Advances'}</option>
+                <option value="loan">{language === 'ar' ? 'القروض' : 'Loans'}</option>
+                <option value="expense_claim">{language === 'ar' ? 'المصاريف' : 'Expenses'}</option>
+                <option value="penalty">{language === 'ar' ? 'الجزاءات' : 'Penalties'}</option>
+                <option value="travel">{language === 'ar' ? 'طلبات السفر' : 'Travel Requests'}</option>
+                <option value="attendance_request">{language === 'ar' ? 'طلبات الحضور' : 'Attendance Requests'}</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Approval Level</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {language === 'ar' ? 'مستوى الموافقة' : 'Approval Level'}
+              </label>
               <select
                 value={selectedLevel}
                 onChange={(e) => setSelectedLevel(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="my_level">My Level Only</option>
-                <option value="all">All Levels</option>
-                <option value="manager">Manager Level</option>
-                <option value="hr">HR Level</option>
-                <option value="finance">Finance Level</option>
+                <option value="my_level">{language === 'ar' ? 'مستواي فقط' : 'My Level Only'}</option>
+                <option value="all">{language === 'ar' ? 'جميع المستويات' : 'All Levels'}</option>
+                <option value="manager">{language === 'ar' ? 'مستوى المدير' : 'Manager Level'}</option>
+                <option value="hr">{language === 'ar' ? 'مستوى الموارد البشرية' : 'HR Level'}</option>
+                <option value="finance">{language === 'ar' ? 'مستوى المالية' : 'Finance Level'}</option>
               </select>
             </div>
           </div>
@@ -459,7 +551,7 @@ export function PendingRequests() {
                           {getRequestTypeIcon(request.request_type)}
                         </div>
                         <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getRequestTypeBadge(request.request_type)}`}>
-                          {request.request_type}
+                          {getRequestTypeLabel(request.request_type)}
                         </span>
                       </div>
                     </td>
@@ -467,18 +559,26 @@ export function PendingRequests() {
                       <div>
                         <div className="text-sm font-medium text-gray-900">{request.employee_name}</div>
                         <div className="text-sm text-gray-500">{request.employee_number}</div>
+                        {request.department && (
+                          <div className="text-xs text-gray-400">{request.department}</div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900 max-w-xs truncate">
-                        {request.description}
+                        {request.request_subtype && (
+                          <span className="text-xs text-gray-500 mr-1">[{request.request_subtype}]</span>
+                        )}
+                        {request.description || '-'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {request.request_type === 'leave'
-                          ? `${request.request_amount} days`
-                          : formatCurrency(request.request_amount, language)
+                        {request.amount_or_days != null
+                          ? request.unit === 'days'
+                            ? `${request.amount_or_days} ${language === 'ar' ? 'أيام' : 'days'}`
+                            : formatCurrency(request.amount_or_days, language)
+                          : '-'
                         }
                       </div>
                     </td>
@@ -564,42 +664,78 @@ export function PendingRequests() {
               {/* Request Information */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-gray-50 rounded-lg">
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Employee</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    {language === 'ar' ? 'الموظف' : 'Employee'}
+                  </p>
                   <p className="text-base text-gray-900 mt-1">
                     {selectedRequest.employee_name} ({selectedRequest.employee_number})
                   </p>
+                  {selectedRequest.department && (
+                    <p className="text-sm text-gray-500">{selectedRequest.department}</p>
+                  )}
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Request Type</p>
-                  <p className="text-base text-gray-900 mt-1 capitalize">{selectedRequest.request_type}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Amount</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    {language === 'ar' ? 'نوع الطلب' : 'Request Type'}
+                  </p>
                   <p className="text-base text-gray-900 mt-1">
-                    {selectedRequest.request_type === 'leave'
-                      ? `${selectedRequest.request_amount} days`
-                      : formatCurrency(selectedRequest.request_amount, language)
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getRequestTypeBadge(selectedRequest.request_type)}`}>
+                      {getRequestTypeLabel(selectedRequest.request_type)}
+                    </span>
+                    {selectedRequest.request_subtype && (
+                      <span className="ml-2 text-sm text-gray-500">({selectedRequest.request_subtype})</span>
+                    )}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-500">
+                    {language === 'ar' ? 'القيمة' : 'Amount/Duration'}
+                  </p>
+                  <p className="text-base text-gray-900 mt-1">
+                    {selectedRequest.amount_or_days != null
+                      ? selectedRequest.unit === 'days'
+                        ? `${selectedRequest.amount_or_days} ${language === 'ar' ? 'أيام' : 'days'}`
+                        : formatCurrency(selectedRequest.amount_or_days, language)
+                      : '-'
                     }
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Request Date</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    {language === 'ar' ? 'تاريخ الطلب' : 'Request Date'}
+                  </p>
                   <p className="text-base text-gray-900 mt-1">
                     {formatDate(selectedRequest.request_date, language)}
                   </p>
                 </div>
                 <div className="col-span-2">
-                  <p className="text-sm font-medium text-gray-500">Description</p>
-                  <p className="text-base text-gray-900 mt-1">{selectedRequest.description}</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    {language === 'ar' ? 'الوصف' : 'Description'}
+                  </p>
+                  <p className="text-base text-gray-900 mt-1">{selectedRequest.description || '-'}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Current Status</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    {language === 'ar' ? 'الحالة الحالية' : 'Current Status'}
+                  </p>
                   <p className="text-base text-gray-900 mt-1 capitalize">{selectedRequest.status.replace('_', ' ')}</p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium text-gray-500">Pending At</p>
+                  <p className="text-sm font-medium text-gray-500">
+                    {language === 'ar' ? 'بانتظار' : 'Pending At'}
+                  </p>
                   <p className="text-base text-gray-900 mt-1 capitalize">{selectedRequest.pending_at_level} Level</p>
                 </div>
+                {selectedRequest.sla_deadline && (
+                  <div className="col-span-2">
+                    <p className="text-sm font-medium text-gray-500">
+                      {language === 'ar' ? 'الموعد النهائي' : 'SLA Deadline'}
+                    </p>
+                    <p className="text-base text-gray-900 mt-1">
+                      {formatDate(selectedRequest.sla_deadline, language)}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* SLA Tracking */}
