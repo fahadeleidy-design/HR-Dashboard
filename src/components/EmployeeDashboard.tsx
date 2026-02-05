@@ -4,11 +4,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, formatInteger } from '@/lib/formatters';
+import { format, differenceInDays, differenceInMonths, differenceInYears, parseISO } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
 import {
-  User, Calendar, Clock, TrendingUp, FileText, Award,
-  DollarSign, AlertCircle, CheckCircle, XCircle, Briefcase,
-  Target, GraduationCap, Activity
+  User, Calendar, Clock, FileText, Award, DollarSign, AlertCircle,
+  CheckCircle, Briefcase, GraduationCap, Activity, Building2,
+  CreditCard, Shield, FileCheck, Wallet, BadgeCheck, CalendarDays,
+  AlertTriangle, UserCircle, Contact, Plane, Heart
 } from 'lucide-react';
 
 interface EmployeeData {
@@ -16,50 +19,80 @@ interface EmployeeData {
   employee_number: string;
   first_name_en: string;
   last_name_en: string;
+  first_name_ar: string | null;
+  last_name_ar: string | null;
   email: string;
   position: string;
+  position_ar: string | null;
   hire_date: string;
   status: string;
   basic_salary: number;
   housing_allowance: number;
   transport_allowance: number;
   other_allowances: number;
-  department?: { name_en: string };
+  is_saudi: boolean;
+  national_id: string | null;
+  iqama_number: string | null;
+  iqama_expiry: string | null;
+  passport_number: string | null;
+  passport_expiry: string | null;
+  contract_type: string | null;
+  contract_start_date: string | null;
+  contract_end_date: string | null;
+  department_id: string | null;
+  department?: { name_en: string; name_ar: string | null };
+}
+
+interface LeaveBalance {
+  leave_type_id: string;
+  balance: number;
+  used: number;
+  leave_type?: { name_en: string; name_ar: string | null };
 }
 
 interface EmployeeStats {
-  leaveRequests: {
+  leaveBalances: LeaveBalance[];
+  totalLeaveAvailable: number;
+  totalLeaveUsed: number;
+  gosi: {
+    employeeShare: number;
+    employerShare: number;
+    totalContribution: number;
+  };
+  insurance: {
+    hasInsurance: boolean;
+    policyNumber: string | null;
+    provider: string | null;
+    class: string | null;
+    expiryDate: string | null;
+  };
+  contract: {
+    type: string;
+    startDate: string | null;
+    endDate: string | null;
+    durationMonths: number;
+    remainingDays: number;
+    status: string;
+  };
+  loans: {
+    active: number;
+    totalAmount: number;
+    pendingAmount: number;
+    monthlyDeduction: number;
+  };
+  advances: {
     pending: number;
     approved: number;
-    total: number;
-  };
-  attendance: {
-    present: number;
-    late: number;
-    absent: number;
-    thisMonth: number;
-  };
-  salary: {
-    basic: number;
-    allowances: number;
-    total: number;
+    totalAmount: number;
   };
   documents: {
     total: number;
     expiring: number;
   };
-  training: {
-    completed: number;
-    inProgress: number;
-    totalHours: number;
-  };
-  loans: {
-    active: number;
-    totalAmount: number;
-  };
-  advances: {
-    pending: number;
-    totalAmount: number;
+  attendance: {
+    present: number;
+    late: number;
+    absent: number;
   };
 }
 
@@ -70,15 +103,17 @@ export function EmployeeDashboard() {
   const navigate = useNavigate();
   const [employee, setEmployee] = useState<EmployeeData | null>(null);
   const [stats, setStats] = useState<EmployeeStats>({
-    leaveRequests: { pending: 0, approved: 0, total: 0 },
-    attendance: { present: 0, late: 0, absent: 0, thisMonth: 0 },
-    salary: { basic: 0, allowances: 0, total: 0 },
+    leaveBalances: [],
+    totalLeaveAvailable: 0,
+    totalLeaveUsed: 0,
+    gosi: { employeeShare: 0, employerShare: 0, totalContribution: 0 },
+    insurance: { hasInsurance: false, policyNumber: null, provider: null, class: null, expiryDate: null },
+    contract: { type: 'indefinite', startDate: null, endDate: null, durationMonths: 0, remainingDays: 0, status: 'active' },
+    loans: { active: 0, totalAmount: 0, pendingAmount: 0, monthlyDeduction: 0 },
+    advances: { pending: 0, approved: 0, totalAmount: 0 },
     documents: { total: 0, expiring: 0 },
-    training: { completed: 0, inProgress: 0, totalHours: 0 },
-    loans: { active: 0, totalAmount: 0 },
-    advances: { pending: 0, totalAmount: 0 }
+    attendance: { present: 0, late: 0, absent: 0 }
   });
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -88,7 +123,7 @@ export function EmployeeDashboard() {
   }, [user, currentCompany]);
 
   const loadEmployeeData = async () => {
-    if (!user?.email) return;
+    if (!user?.email || !currentCompany) return;
 
     setLoading(true);
     try {
@@ -96,7 +131,7 @@ export function EmployeeDashboard() {
         .from('employees')
         .select(`
           *,
-          department:departments(name_en)
+          department:departments(name_en, name_ar)
         `)
         .eq('email', user.email)
         .eq('company_id', currentCompany.id)
@@ -104,7 +139,6 @@ export function EmployeeDashboard() {
 
       if (empError) throw empError;
       if (!empData) {
-        console.error('No employee record found for this user');
         setLoading(false);
         return;
       }
@@ -112,53 +146,62 @@ export function EmployeeDashboard() {
       setEmployee(empData);
 
       const [
-        leaveData,
-        attendanceData,
-        documentsData,
-        trainingData,
+        leaveBalancesData,
         loansData,
-        advancesData
+        advancesData,
+        documentsData,
+        attendanceData,
+        insuranceData,
+        gosiRatesData
       ] = await Promise.all([
         supabase
-          .from('leave_requests')
-          .select('status')
+          .from('leave_balances')
+          .select('leave_type_id, balance, used, leave_type:leave_types(name_en, name_ar)')
+          .eq('employee_id', empData.id)
+          .eq('year', new Date().getFullYear()),
+        supabase
+          .from('loans')
+          .select('status, amount, balance, monthly_deduction')
           .eq('employee_id', empData.id),
-
+        supabase
+          .from('advances')
+          .select('status, amount')
+          .eq('employee_id', empData.id),
+        supabase
+          .from('employee_documents')
+          .select('id, expiry_date')
+          .eq('employee_id', empData.id),
         supabase
           .from('attendance')
           .select('status, date')
           .eq('employee_id', empData.id)
           .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-
         supabase
-          .from('employee_documents')
-          .select('id, expiry_date')
-          .eq('employee_id', empData.id),
-
-        supabase
-          .from('employee_training_records')
-          .select('completion_status, duration_hours')
-          .eq('employee_id', empData.id),
-
-        supabase
-          .from('loans')
-          .select('status, amount, balance')
+          .from('employee_insurance')
+          .select('policy_number, provider_name, insurance_class, end_date, status')
           .eq('employee_id', empData.id)
-          .eq('status', 'approved'),
-
+          .eq('status', 'active')
+          .maybeSingle(),
         supabase
-          .from('advances')
-          .select('status, amount')
-          .eq('employee_id', empData.id)
+          .from('gosi_rates_config')
+          .select('*')
+          .eq('company_id', currentCompany.id)
+          .maybeSingle()
       ]);
 
-      const leaves = leaveData.data || [];
-      const attendance = attendanceData.data || [];
-      const documents = documentsData.data || [];
-      const training = trainingData.data || [];
-      const loans = loansData.data || [];
-      const advances = advancesData.data || [];
+      const leaveBalances = (leaveBalancesData.data || []) as LeaveBalance[];
+      const totalLeaveAvailable = leaveBalances.reduce((sum, lb) => sum + (lb.balance || 0), 0);
+      const totalLeaveUsed = leaveBalances.reduce((sum, lb) => sum + (lb.used || 0), 0);
 
+      const loans = loansData.data || [];
+      const activeLoans = loans.filter(l => l.status === 'approved' || l.status === 'active');
+      const pendingLoans = loans.filter(l => l.status === 'pending');
+
+      const advances = advancesData.data || [];
+      const pendingAdvances = advances.filter(a => a.status === 'pending');
+      const approvedAdvances = advances.filter(a => a.status === 'approved');
+
+      const documents = documentsData.data || [];
       const thirtyDaysFromNow = new Date();
       thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
       const expiringDocs = documents.filter(doc =>
@@ -167,69 +210,91 @@ export function EmployeeDashboard() {
         new Date(doc.expiry_date) >= new Date()
       );
 
-      const totalSalary = (empData.basic_salary || 0) +
-                          (empData.housing_allowance || 0) +
-                          (empData.transport_allowance || 0) +
-                          (empData.other_allowances || 0);
+      const attendance = attendanceData.data || [];
+
+      const gosiRates = gosiRatesData.data;
+      const totalSalary = (empData.basic_salary || 0) + (empData.housing_allowance || 0);
+      let employeeGosiShare = 0;
+      let employerGosiShare = 0;
+
+      if (gosiRates) {
+        if (empData.is_saudi) {
+          employeeGosiShare = totalSalary * (gosiRates.saudi_employee_pension_rate || 0.0975);
+          employerGosiShare = totalSalary * ((gosiRates.saudi_employer_pension_rate || 0.0975) + (gosiRates.employer_oci_rate || 0.02));
+        } else {
+          employeeGosiShare = 0;
+          employerGosiShare = totalSalary * (gosiRates.employer_oci_rate || 0.02);
+        }
+      }
+
+      let contractDurationMonths = 0;
+      let remainingDays = 0;
+      let contractStatus = 'active';
+
+      if (empData.contract_start_date) {
+        const startDate = parseISO(empData.contract_start_date);
+        if (empData.contract_end_date) {
+          const endDate = parseISO(empData.contract_end_date);
+          contractDurationMonths = differenceInMonths(endDate, startDate);
+          remainingDays = differenceInDays(endDate, new Date());
+          if (remainingDays < 0) {
+            contractStatus = 'expired';
+            remainingDays = 0;
+          } else if (remainingDays <= 90) {
+            contractStatus = 'expiring_soon';
+          }
+        } else {
+          contractStatus = 'indefinite';
+        }
+      }
+
+      const insurance = insuranceData.data;
 
       setStats({
-        leaveRequests: {
-          pending: leaves.filter(l => l.status === 'pending').length,
-          approved: leaves.filter(l => l.status === 'approved').length,
-          total: leaves.length
+        leaveBalances,
+        totalLeaveAvailable,
+        totalLeaveUsed,
+        gosi: {
+          employeeShare: employeeGosiShare,
+          employerShare: employerGosiShare,
+          totalContribution: employeeGosiShare + employerGosiShare
         },
-        attendance: {
-          present: attendance.filter(a => a.status === 'present').length,
-          late: attendance.filter(a => a.status === 'late').length,
-          absent: attendance.filter(a => a.status === 'absent').length,
-          thisMonth: attendance.length
+        insurance: {
+          hasInsurance: !!insurance,
+          policyNumber: insurance?.policy_number || null,
+          provider: insurance?.provider_name || null,
+          class: insurance?.insurance_class || null,
+          expiryDate: insurance?.end_date || null
         },
-        salary: {
-          basic: empData.basic_salary || 0,
-          allowances: (empData.housing_allowance || 0) +
-                      (empData.transport_allowance || 0) +
-                      (empData.other_allowances || 0),
-          total: totalSalary
+        contract: {
+          type: empData.contract_type || 'indefinite',
+          startDate: empData.contract_start_date,
+          endDate: empData.contract_end_date,
+          durationMonths: contractDurationMonths,
+          remainingDays,
+          status: contractStatus
+        },
+        loans: {
+          active: activeLoans.length,
+          totalAmount: activeLoans.reduce((sum, l) => sum + (l.balance || 0), 0),
+          pendingAmount: pendingLoans.reduce((sum, l) => sum + (l.amount || 0), 0),
+          monthlyDeduction: activeLoans.reduce((sum, l) => sum + (l.monthly_deduction || 0), 0)
+        },
+        advances: {
+          pending: pendingAdvances.length,
+          approved: approvedAdvances.length,
+          totalAmount: approvedAdvances.reduce((sum, a) => sum + (a.amount || 0), 0)
         },
         documents: {
           total: documents.length,
           expiring: expiringDocs.length
         },
-        training: {
-          completed: training.filter(t => t.completion_status === 'completed').length,
-          inProgress: training.filter(t => t.completion_status === 'in_progress').length,
-          totalHours: training.reduce((sum, t) => sum + (t.duration_hours || 0), 0)
-        },
-        loans: {
-          active: loans.length,
-          totalAmount: loans.reduce((sum, l) => sum + (l.balance || 0), 0)
-        },
-        advances: {
-          pending: advances.filter(a => a.status === 'pending').length,
-          totalAmount: advances.reduce((sum, a) => sum + (a.amount || 0), 0)
+        attendance: {
+          present: attendance.filter(a => a.status === 'present').length,
+          late: attendance.filter(a => a.status === 'late').length,
+          absent: attendance.filter(a => a.status === 'absent').length
         }
       });
-
-      const activity = [];
-      if (leaves.length > 0) {
-        activity.push({
-          type: 'leave',
-          icon: Calendar,
-          color: 'blue',
-          title: `${leaves.length} leave request${leaves.length > 1 ? 's' : ''}`,
-          subtitle: `${leaves.filter(l => l.status === 'pending').length} pending`
-        });
-      }
-      if (attendance.length > 0) {
-        activity.push({
-          type: 'attendance',
-          icon: Clock,
-          color: 'green',
-          title: `${attendance.length} attendance records`,
-          subtitle: 'This month'
-        });
-      }
-      setRecentActivity(activity.slice(0, 5));
 
     } catch (error) {
       console.error('Error loading employee data:', error);
@@ -241,14 +306,46 @@ export function EmployeeDashboard() {
   const getTenure = (hireDate: string) => {
     const hire = new Date(hireDate);
     const now = new Date();
-    const years = now.getFullYear() - hire.getFullYear();
-    const months = now.getMonth() - hire.getMonth();
+    const years = differenceInYears(now, hire);
+    const months = differenceInMonths(now, hire) % 12;
 
     if (years === 0) {
-      return `${months} ${language === 'ar' ? 'شهر' : 'month'}${months !== 1 ? 's' : ''}`;
+      return isRTL ? `${months} شهر` : `${months} month${months !== 1 ? 's' : ''}`;
     }
-    return `${years} ${language === 'ar' ? 'سنة' : 'year'}${years !== 1 ? 's' : ''}`;
+    if (months === 0) {
+      return isRTL ? `${years} سنة` : `${years} year${years !== 1 ? 's' : ''}`;
+    }
+    return isRTL
+      ? `${years} سنة و ${months} شهر`
+      : `${years} year${years !== 1 ? 's' : ''}, ${months} month${months !== 1 ? 's' : ''}`;
   };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return format(parseISO(dateStr), 'dd MMM yyyy', { locale: isRTL ? ar : enUS });
+  };
+
+  const getExpiryStatus = (dateStr: string | null) => {
+    if (!dateStr) return { status: 'unknown', color: 'gray', label: isRTL ? 'غير محدد' : 'N/A' };
+    const date = parseISO(dateStr);
+    const daysLeft = differenceInDays(date, new Date());
+
+    if (daysLeft < 0) {
+      return { status: 'expired', color: 'red', label: isRTL ? 'منتهي' : 'Expired', days: 0 };
+    } else if (daysLeft <= 30) {
+      return { status: 'critical', color: 'red', label: isRTL ? 'حرج' : 'Critical', days: daysLeft };
+    } else if (daysLeft <= 90) {
+      return { status: 'warning', color: 'yellow', label: isRTL ? 'قريباً' : 'Soon', days: daysLeft };
+    }
+    return { status: 'valid', color: 'green', label: isRTL ? 'صالح' : 'Valid', days: daysLeft };
+  };
+
+  const totalSalary = employee
+    ? (employee.basic_salary || 0) + (employee.housing_allowance || 0) +
+      (employee.transport_allowance || 0) + (employee.other_allowances || 0)
+    : 0;
+
+  const netSalary = totalSalary - stats.gosi.employeeShare - stats.loans.monthlyDeduction;
 
   if (loading) {
     return (
@@ -263,21 +360,26 @@ export function EmployeeDashboard() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
         <User className="h-16 w-16 text-gray-400 mx-auto mb-4" />
         <p className="text-lg font-medium text-gray-900">
-          {language === 'ar' ? 'لم يتم العثور على بيانات الموظف' : 'No employee record found'}
+          {isRTL ? 'لم يتم العثور على بيانات الموظف' : 'No employee record found'}
         </p>
         <p className="text-sm text-gray-600 mt-2">
-          {language === 'ar' ? 'يرجى التواصل مع قسم الموارد البشرية' : 'Please contact HR department'}
+          {isRTL ? 'يرجى التواصل مع قسم الموارد البشرية' : 'Please contact HR department'}
         </p>
       </div>
     );
   }
 
+  const iqamaExpiry = getExpiryStatus(employee.iqama_expiry);
+  const passportExpiry = getExpiryStatus(employee.passport_expiry);
+  const contractExpiry = getExpiryStatus(employee.contract_end_date);
+  const insuranceExpiry = getExpiryStatus(stats.insurance.expiryDate);
+
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl shadow-lg overflow-hidden">
         <div className="px-8 py-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-6">
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={`flex items-center gap-6 ${isRTL ? 'flex-row-reverse' : ''}`}>
               <div className="relative">
                 <div className="h-24 w-24 rounded-full bg-white flex items-center justify-center">
                   <span className="text-3xl font-bold text-blue-600">
@@ -286,17 +388,19 @@ export function EmployeeDashboard() {
                 </div>
                 <div className="absolute bottom-0 right-0 h-6 w-6 bg-green-500 rounded-full border-2 border-white"></div>
               </div>
-              <div className="text-white">
+              <div className={`text-white ${isRTL ? 'text-right' : 'text-left'}`}>
                 <h1 className="text-3xl font-bold mb-1">
-                  {language === 'ar' ? 'مرحباً' : 'Welcome'}, {employee.first_name_en}
+                  {isRTL ? 'مرحباً' : 'Welcome'}, {isRTL ? (employee.first_name_ar || employee.first_name_en) : employee.first_name_en}
                 </h1>
-                <p className="text-lg opacity-90 mb-2">{employee.position}</p>
-                <div className="flex items-center gap-4 text-sm opacity-80">
+                <p className="text-lg opacity-90 mb-2">
+                  {isRTL ? (employee.position_ar || employee.position) : employee.position}
+                </p>
+                <div className={`flex items-center gap-4 text-sm opacity-80 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <span>{employee.employee_number}</span>
                   <span>•</span>
-                  <span>{employee.department?.name_en}</span>
+                  <span>{isRTL ? (employee.department?.name_ar || employee.department?.name_en) : employee.department?.name_en}</span>
                   <span>•</span>
-                  <span>{getTenure(employee.hire_date)} {language === 'ar' ? 'خبرة' : 'tenure'}</span>
+                  <span>{getTenure(employee.hire_date)} {isRTL ? 'خبرة' : 'tenure'}</span>
                 </div>
               </div>
             </div>
@@ -309,38 +413,18 @@ export function EmployeeDashboard() {
           onClick={() => navigate('/leave')}
           className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
         >
-          <div className="flex items-center justify-between">
-            <div>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm font-medium text-gray-600">
-                {language === 'ar' ? 'طلبات الإجازة' : 'Leave Requests'}
+                {isRTL ? 'رصيد الإجازات' : 'Leave Balance'}
               </p>
-              <p className="text-3xl font-bold text-blue-600 mt-1">{stats.leaveRequests.total}</p>
+              <p className="text-3xl font-bold text-green-600 mt-1">{formatInteger(stats.totalLeaveAvailable, language)}</p>
               <p className="text-xs text-gray-500 mt-1">
-                {stats.leaveRequests.pending} {language === 'ar' ? 'قيد الانتظار' : 'pending'}
-              </p>
-            </div>
-            <div className="p-3 bg-blue-50 rounded-full">
-              <Calendar className="h-8 w-8 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div
-          onClick={() => navigate('/attendance')}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">
-                {language === 'ar' ? 'الحضور هذا الشهر' : 'Attendance This Month'}
-              </p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{stats.attendance.present}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {stats.attendance.late} {language === 'ar' ? 'متأخر' : 'late'}, {stats.attendance.absent} {language === 'ar' ? 'غياب' : 'absent'}
+                {stats.totalLeaveUsed} {isRTL ? 'يوم مستخدم' : 'days used'}
               </p>
             </div>
             <div className="p-3 bg-green-50 rounded-full">
-              <Clock className="h-8 w-8 text-green-600" />
+              <CalendarDays className="h-8 w-8 text-green-600" />
             </div>
           </div>
         </div>
@@ -349,40 +433,254 @@ export function EmployeeDashboard() {
           onClick={() => navigate('/payroll')}
           className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
         >
-          <div className="flex items-center justify-between">
-            <div>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm font-medium text-gray-600">
-                {language === 'ar' ? 'إجمالي الراتب' : 'Total Salary'}
+                {isRTL ? 'صافي الراتب' : 'Net Salary'}
               </p>
-              <p className="text-2xl font-bold text-indigo-600 mt-1">
-                {formatCurrency(stats.salary.total, language)}
+              <p className="text-2xl font-bold text-blue-600 mt-1">
+                {formatCurrency(netSalary, language)}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {language === 'ar' ? 'شهرياً' : 'Monthly'}
+                {isRTL ? 'شهرياً' : 'Monthly'}
               </p>
             </div>
-            <div className="p-3 bg-indigo-50 rounded-full">
-              <DollarSign className="h-8 w-8 text-indigo-600" />
+            <div className="p-3 bg-blue-50 rounded-full">
+              <Wallet className="h-8 w-8 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div
-          onClick={() => navigate('/training')}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
-        >
-          <div className="flex items-center justify-between">
-            <div>
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
               <p className="text-sm font-medium text-gray-600">
-                {language === 'ar' ? 'ساعات التدريب' : 'Training Hours'}
+                {isRTL ? 'اشتراك التأمينات' : 'GOSI Contribution'}
               </p>
-              <p className="text-3xl font-bold text-purple-600 mt-1">{stats.training.totalHours}h</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">
+                {formatCurrency(stats.gosi.employeeShare, language)}
+              </p>
               <p className="text-xs text-gray-500 mt-1">
-                {stats.training.completed} {language === 'ar' ? 'مكتمل' : 'completed'}
+                {isRTL ? 'حصة الموظف' : 'Employee share'}
               </p>
             </div>
-            <div className="p-3 bg-purple-50 rounded-full">
-              <GraduationCap className="h-8 w-8 text-purple-600" />
+            <div className="p-3 bg-orange-50 rounded-full">
+              <Shield className="h-8 w-8 text-orange-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-sm font-medium text-gray-600">
+                {isRTL ? 'التأمين الطبي' : 'Medical Insurance'}
+              </p>
+              {stats.insurance.hasInsurance ? (
+                <>
+                  <p className="text-lg font-bold text-teal-600 mt-1">{stats.insurance.class || 'Active'}</p>
+                  <p className="text-xs text-gray-500 mt-1">{stats.insurance.provider}</p>
+                </>
+              ) : (
+                <p className="text-lg font-bold text-gray-400 mt-1">{isRTL ? 'غير متاح' : 'Not Available'}</p>
+              )}
+            </div>
+            <div className="p-3 bg-teal-50 rounded-full">
+              <Heart className="h-8 w-8 text-teal-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className={`text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Briefcase className="h-5 w-5 text-primary-600" />
+            {isRTL ? 'حالة العقد' : 'Contract Status'}
+          </h2>
+          <div className="space-y-4">
+            <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'نوع العقد' : 'Contract Type'}</span>
+              <span className="text-sm font-medium text-gray-900 capitalize">
+                {stats.contract.type === 'indefinite'
+                  ? (isRTL ? 'غير محدد المدة' : 'Indefinite')
+                  : stats.contract.type === 'fixed_term'
+                  ? (isRTL ? 'محدد المدة' : 'Fixed Term')
+                  : stats.contract.type
+                }
+              </span>
+            </div>
+            <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'تاريخ البداية' : 'Start Date'}</span>
+              <span className="text-sm font-medium text-gray-900">{formatDate(stats.contract.startDate)}</span>
+            </div>
+            {stats.contract.endDate && (
+              <>
+                <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <span className="text-sm text-gray-600">{isRTL ? 'تاريخ الانتهاء' : 'End Date'}</span>
+                  <span className="text-sm font-medium text-gray-900">{formatDate(stats.contract.endDate)}</span>
+                </div>
+                <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <span className="text-sm text-gray-600">{isRTL ? 'الأيام المتبقية' : 'Remaining Days'}</span>
+                  <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                    contractExpiry.color === 'red' ? 'bg-red-100 text-red-800' :
+                    contractExpiry.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {stats.contract.remainingDays} {isRTL ? 'يوم' : 'days'}
+                  </span>
+                </div>
+              </>
+            )}
+            <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'مدة العقد' : 'Duration'}</span>
+              <span className="text-sm font-medium text-gray-900">
+                {stats.contract.durationMonths > 0
+                  ? `${stats.contract.durationMonths} ${isRTL ? 'شهر' : 'months'}`
+                  : (isRTL ? 'غير محدد' : 'Indefinite')
+                }
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className={`text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Contact className="h-5 w-5 text-primary-600" />
+            {isRTL ? 'صلاحية الوثائق' : 'Document Validity'}
+          </h2>
+          <div className="space-y-4">
+            {!employee.is_saudi && (
+              <div className={`p-3 rounded-lg border ${
+                iqamaExpiry.color === 'red' ? 'bg-red-50 border-red-200' :
+                iqamaExpiry.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
+                'bg-green-50 border-green-200'
+              }`}>
+                <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <CreditCard className={`h-5 w-5 ${
+                      iqamaExpiry.color === 'red' ? 'text-red-600' :
+                      iqamaExpiry.color === 'yellow' ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`} />
+                    <span className="text-sm font-medium">{isRTL ? 'الإقامة' : 'Iqama'}</span>
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    iqamaExpiry.color === 'red' ? 'bg-red-100 text-red-800' :
+                    iqamaExpiry.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {iqamaExpiry.label}
+                  </span>
+                </div>
+                <p className={`text-sm text-gray-600 mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {isRTL ? 'ينتهي في:' : 'Expires:'} {formatDate(employee.iqama_expiry)}
+                </p>
+                {iqamaExpiry.days !== undefined && iqamaExpiry.days > 0 && (
+                  <p className={`text-xs text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {iqamaExpiry.days} {isRTL ? 'يوم متبقي' : 'days remaining'}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className={`p-3 rounded-lg border ${
+              passportExpiry.color === 'red' ? 'bg-red-50 border-red-200' :
+              passportExpiry.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
+              passportExpiry.color === 'gray' ? 'bg-gray-50 border-gray-200' :
+              'bg-green-50 border-green-200'
+            }`}>
+              <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <Plane className={`h-5 w-5 ${
+                    passportExpiry.color === 'red' ? 'text-red-600' :
+                    passportExpiry.color === 'yellow' ? 'text-yellow-600' :
+                    passportExpiry.color === 'gray' ? 'text-gray-400' :
+                    'text-green-600'
+                  }`} />
+                  <span className="text-sm font-medium">{isRTL ? 'جواز السفر' : 'Passport'}</span>
+                </div>
+                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                  passportExpiry.color === 'red' ? 'bg-red-100 text-red-800' :
+                  passportExpiry.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                  passportExpiry.color === 'gray' ? 'bg-gray-100 text-gray-600' :
+                  'bg-green-100 text-green-800'
+                }`}>
+                  {passportExpiry.label}
+                </span>
+              </div>
+              <p className={`text-sm text-gray-600 mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {isRTL ? 'ينتهي في:' : 'Expires:'} {formatDate(employee.passport_expiry)}
+              </p>
+              {passportExpiry.days !== undefined && passportExpiry.days > 0 && (
+                <p className={`text-xs text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {passportExpiry.days} {isRTL ? 'يوم متبقي' : 'days remaining'}
+                </p>
+              )}
+            </div>
+
+            {stats.insurance.hasInsurance && stats.insurance.expiryDate && (
+              <div className={`p-3 rounded-lg border ${
+                insuranceExpiry.color === 'red' ? 'bg-red-50 border-red-200' :
+                insuranceExpiry.color === 'yellow' ? 'bg-yellow-50 border-yellow-200' :
+                'bg-green-50 border-green-200'
+              }`}>
+                <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <Heart className={`h-5 w-5 ${
+                      insuranceExpiry.color === 'red' ? 'text-red-600' :
+                      insuranceExpiry.color === 'yellow' ? 'text-yellow-600' :
+                      'text-green-600'
+                    }`} />
+                    <span className="text-sm font-medium">{isRTL ? 'التأمين الطبي' : 'Insurance'}</span>
+                  </div>
+                  <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                    insuranceExpiry.color === 'red' ? 'bg-red-100 text-red-800' :
+                    insuranceExpiry.color === 'yellow' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {insuranceExpiry.label}
+                  </span>
+                </div>
+                <p className={`text-sm text-gray-600 mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {isRTL ? 'ينتهي في:' : 'Expires:'} {formatDate(stats.insurance.expiryDate)}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className={`text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Building2 className="h-5 w-5 text-primary-600" />
+            {isRTL ? 'معلومات الوظيفة' : 'Job Information'}
+          </h2>
+          <div className="space-y-3">
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'رقم الموظف' : 'Employee ID'}</span>
+              <span className="text-sm font-medium text-gray-900">{employee.employee_number}</span>
+            </div>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'القسم' : 'Department'}</span>
+              <span className="text-sm font-medium text-gray-900">
+                {isRTL ? (employee.department?.name_ar || employee.department?.name_en) : employee.department?.name_en || '-'}
+              </span>
+            </div>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'تاريخ التوظيف' : 'Hire Date'}</span>
+              <span className="text-sm font-medium text-gray-900">{formatDate(employee.hire_date)}</span>
+            </div>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'مدة الخدمة' : 'Service Period'}</span>
+              <span className="text-sm font-medium text-gray-900">{getTenure(employee.hire_date)}</span>
+            </div>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'الجنسية' : 'Nationality'}</span>
+              <span className={`text-sm font-medium px-2 py-1 rounded-full ${
+                employee.is_saudi ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+              }`}>
+                {employee.is_saudi ? (isRTL ? 'سعودي' : 'Saudi') : (isRTL ? 'غير سعودي' : 'Non-Saudi')}
+              </span>
             </div>
           </div>
         </div>
@@ -390,123 +688,177 @@ export function EmployeeDashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <User className="h-5 w-5 text-primary-600" />
-            {language === 'ar' ? 'المعلومات الشخصية' : 'Personal Information'}
+          <h2 className={`text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <DollarSign className="h-5 w-5 text-primary-600" />
+            {isRTL ? 'تفاصيل الراتب' : 'Salary Details'}
           </h2>
           <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">{language === 'ar' ? 'رقم الموظف' : 'Employee Number'}</span>
-              <span className="text-sm font-medium text-gray-900">{employee.employee_number}</span>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'الراتب الأساسي' : 'Basic Salary'}</span>
+              <span className="text-sm font-medium text-gray-900">{formatCurrency(employee.basic_salary || 0, language)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">{language === 'ar' ? 'البريد الإلكتروني' : 'Email'}</span>
-              <span className="text-sm font-medium text-gray-900">{employee.email}</span>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'بدل السكن' : 'Housing Allowance'}</span>
+              <span className="text-sm font-medium text-gray-900">{formatCurrency(employee.housing_allowance || 0, language)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">{language === 'ar' ? 'تاريخ التوظيف' : 'Hire Date'}</span>
-              <span className="text-sm font-medium text-gray-900">
-                {new Date(employee.hire_date).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US')}
-              </span>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'بدل المواصلات' : 'Transport Allowance'}</span>
+              <span className="text-sm font-medium text-gray-900">{formatCurrency(employee.transport_allowance || 0, language)}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-gray-600">{language === 'ar' ? 'الحالة' : 'Status'}</span>
-              <span className={`text-sm font-medium ${
-                employee.status === 'active' ? 'text-green-600' : 'text-gray-600'
-              }`}>
-                {employee.status === 'active' ? (language === 'ar' ? 'نشط' : 'Active') : employee.status}
-              </span>
+            <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm text-gray-600">{isRTL ? 'بدلات أخرى' : 'Other Allowances'}</span>
+              <span className="text-sm font-medium text-gray-900">{formatCurrency(employee.other_allowances || 0, language)}</span>
+            </div>
+            <div className="border-t border-gray-200 pt-3 mt-3">
+              <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-sm font-medium text-gray-700">{isRTL ? 'إجمالي الراتب' : 'Gross Salary'}</span>
+                <span className="text-sm font-bold text-gray-900">{formatCurrency(totalSalary, language)}</span>
+              </div>
+            </div>
+            <div className={`flex justify-between text-red-600 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <span className="text-sm">{isRTL ? 'خصم التأمينات' : 'GOSI Deduction'}</span>
+              <span className="text-sm font-medium">-{formatCurrency(stats.gosi.employeeShare, language)}</span>
+            </div>
+            {stats.loans.monthlyDeduction > 0 && (
+              <div className={`flex justify-between text-red-600 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-sm">{isRTL ? 'قسط القرض' : 'Loan Deduction'}</span>
+                <span className="text-sm font-medium">-{formatCurrency(stats.loans.monthlyDeduction, language)}</span>
+              </div>
+            )}
+            <div className="border-t border-gray-200 pt-3">
+              <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-base font-bold text-gray-900">{isRTL ? 'صافي الراتب' : 'Net Salary'}</span>
+                <span className="text-base font-bold text-green-600">{formatCurrency(netSalary, language)}</span>
+              </div>
             </div>
           </div>
         </div>
 
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-orange-600" />
-            {language === 'ar' ? 'التنبيهات' : 'Alerts'}
+          <h2 className={`text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Wallet className="h-5 w-5 text-primary-600" />
+            {isRTL ? 'القروض والسلف' : 'Loans & Advances'}
           </h2>
-          <div className="space-y-3">
-            {stats.documents.expiring > 0 && (
-              <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-red-600" />
-                  <span className="text-sm font-medium text-red-900">
-                    {language === 'ar' ? 'مستندات تنتهي قريباً' : 'Documents Expiring Soon'}
-                  </span>
-                </div>
-                <span className="text-lg font-bold text-red-700">{stats.documents.expiring}</span>
+          <div className="space-y-4">
+            <div
+              onClick={() => navigate('/loans')}
+              className={`p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors`}
+            >
+              <div className={`flex justify-between items-center mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-sm font-medium text-gray-700">{isRTL ? 'القروض النشطة' : 'Active Loans'}</span>
+                <span className="text-lg font-bold text-gray-900">{stats.loans.active}</span>
               </div>
-            )}
-            {stats.loans.active > 0 && (
-              <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                <div className="flex items-center space-x-3">
-                  <DollarSign className="h-5 w-5 text-yellow-600" />
-                  <span className="text-sm font-medium text-yellow-900">
-                    {language === 'ar' ? 'قروض نشطة' : 'Active Loans'}
-                  </span>
-                </div>
-                <span className="text-lg font-bold text-yellow-700">{formatCurrency(stats.loans.totalAmount, language)}</span>
+              {stats.loans.totalAmount > 0 && (
+                <>
+                  <div className={`flex justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <span className="text-gray-500">{isRTL ? 'الرصيد المتبقي' : 'Remaining Balance'}</span>
+                    <span className="font-medium text-red-600">{formatCurrency(stats.loans.totalAmount, language)}</span>
+                  </div>
+                  <div className={`flex justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <span className="text-gray-500">{isRTL ? 'القسط الشهري' : 'Monthly Deduction'}</span>
+                    <span className="font-medium">{formatCurrency(stats.loans.monthlyDeduction, language)}</span>
+                  </div>
+                </>
+              )}
+            </div>
+
+            <div
+              onClick={() => navigate('/advances')}
+              className={`p-4 bg-gray-50 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-100 transition-colors`}
+            >
+              <div className={`flex justify-between items-center mb-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <span className="text-sm font-medium text-gray-700">{isRTL ? 'السلف' : 'Advances'}</span>
+                <span className="text-lg font-bold text-gray-900">{stats.advances.pending + stats.advances.approved}</span>
               </div>
-            )}
-            {stats.leaveRequests.pending > 0 && (
-              <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center space-x-3">
-                  <Calendar className="h-5 w-5 text-blue-600" />
-                  <span className="text-sm font-medium text-blue-900">
-                    {language === 'ar' ? 'طلبات إجازة معلقة' : 'Pending Leave Requests'}
-                  </span>
+              {stats.advances.pending > 0 && (
+                <div className={`flex justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <span className="text-gray-500">{isRTL ? 'قيد الانتظار' : 'Pending'}</span>
+                  <span className="font-medium text-yellow-600">{stats.advances.pending}</span>
                 </div>
-                <span className="text-lg font-bold text-blue-700">{stats.leaveRequests.pending}</span>
-              </div>
-            )}
-            {stats.documents.expiring === 0 && stats.loans.active === 0 && stats.leaveRequests.pending === 0 && (
-              <div className="flex items-center justify-center p-6 bg-green-50 rounded-lg">
-                <div className="text-center">
-                  <CheckCircle className="h-8 w-8 text-green-600 mx-auto mb-2" />
-                  <p className="text-sm font-medium text-green-900">
-                    {language === 'ar' ? 'لا توجد تنبيهات' : 'No alerts'}
-                  </p>
+              )}
+              {stats.advances.totalAmount > 0 && (
+                <div className={`flex justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <span className="text-gray-500">{isRTL ? 'إجمالي السلف' : 'Total Amount'}</span>
+                  <span className="font-medium">{formatCurrency(stats.advances.totalAmount, language)}</span>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </div>
       </div>
 
+      {stats.leaveBalances.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className={`text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <Calendar className="h-5 w-5 text-primary-600" />
+            {isRTL ? 'رصيد الإجازات التفصيلي' : 'Leave Balance Details'}
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {stats.leaveBalances.map((lb) => (
+              <div key={lb.leave_type_id} className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <p className={`text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {isRTL ? (lb.leave_type?.name_ar || lb.leave_type?.name_en) : lb.leave_type?.name_en}
+                </p>
+                <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                  <div className={isRTL ? 'text-right' : 'text-left'}>
+                    <p className="text-2xl font-bold text-green-600">{lb.balance}</p>
+                    <p className="text-xs text-gray-500">{isRTL ? 'متاح' : 'Available'}</p>
+                  </div>
+                  <div className={isRTL ? 'text-left' : 'text-right'}>
+                    <p className="text-lg font-medium text-gray-600">{lb.used}</p>
+                    <p className="text-xs text-gray-500">{isRTL ? 'مستخدم' : 'Used'}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <h2 className={`text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <Activity className="h-5 w-5 text-primary-600" />
-          {language === 'ar' ? 'إجراءات سريعة' : 'Quick Actions'}
+          {isRTL ? 'إجراءات سريعة' : 'Quick Actions'}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <button
             onClick={() => navigate('/leave')}
-            className="flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+            className={`flex items-center gap-3 p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <Calendar className="h-6 w-6 text-blue-600" />
-            <div className="text-left">
-              <p className="font-medium text-blue-900">{language === 'ar' ? 'طلب إجازة' : 'Request Leave'}</p>
-              <p className="text-xs text-blue-600">{language === 'ar' ? 'إنشاء طلب جديد' : 'Create new request'}</p>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="font-medium text-blue-900">{isRTL ? 'طلب إجازة' : 'Request Leave'}</p>
+              <p className="text-xs text-blue-600">{isRTL ? 'إنشاء طلب جديد' : 'Create new request'}</p>
             </div>
           </button>
           <button
             onClick={() => navigate('/payroll')}
-            className="flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+            className={`flex items-center gap-3 p-4 bg-green-50 hover:bg-green-100 rounded-lg transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
           >
             <FileText className="h-6 w-6 text-green-600" />
-            <div className="text-left">
-              <p className="font-medium text-green-900">{language === 'ar' ? 'عرض قسيمة الراتب' : 'View Payslip'}</p>
-              <p className="text-xs text-green-600">{language === 'ar' ? 'تفاصيل الراتب' : 'Salary details'}</p>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="font-medium text-green-900">{isRTL ? 'قسيمة الراتب' : 'View Payslip'}</p>
+              <p className="text-xs text-green-600">{isRTL ? 'تفاصيل الراتب' : 'Salary details'}</p>
             </div>
           </button>
           <button
-            onClick={() => navigate('/documents')}
-            className="flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors"
+            onClick={() => navigate('/loans')}
+            className={`flex items-center gap-3 p-4 bg-orange-50 hover:bg-orange-100 rounded-lg transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
           >
-            <FileText className="h-6 w-6 text-purple-600" />
-            <div className="text-left">
-              <p className="font-medium text-purple-900">{language === 'ar' ? 'المستندات' : 'My Documents'}</p>
-              <p className="text-xs text-purple-600">{language === 'ar' ? 'عرض المستندات' : 'View documents'}</p>
+            <Wallet className="h-6 w-6 text-orange-600" />
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="font-medium text-orange-900">{isRTL ? 'طلب قرض' : 'Request Loan'}</p>
+              <p className="text-xs text-orange-600">{isRTL ? 'قرض جديد' : 'New loan'}</p>
+            </div>
+          </button>
+          <button
+            onClick={() => navigate('/advances')}
+            className={`flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
+            <DollarSign className="h-6 w-6 text-purple-600" />
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="font-medium text-purple-900">{isRTL ? 'طلب سلفة' : 'Request Advance'}</p>
+              <p className="text-xs text-purple-600">{isRTL ? 'سلفة جديدة' : 'New advance'}</p>
             </div>
           </button>
         </div>
