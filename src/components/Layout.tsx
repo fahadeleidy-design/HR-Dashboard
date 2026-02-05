@@ -34,6 +34,7 @@ import {
   Languages,
   UserCheck,
   CheckCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationCenter } from './NotificationCenter';
@@ -89,6 +90,7 @@ export function Layout({ children }: LayoutProps) {
         { path: '/advances', icon: Receipt, label: t.nav.advances },
         { path: '/expenses', icon: Receipt, label: t.nav.expenses },
         ...(!isEmployee ? [
+          { path: '/penalties', icon: AlertTriangle, label: language === 'ar' ? 'الجزاءات' : 'Penalties' },
           { path: '/end-of-service', icon: Calculator, label: t.nav.endOfService },
         ] : []),
       ]

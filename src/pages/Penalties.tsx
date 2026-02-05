@@ -1,0 +1,882 @@
+import { useState, useEffect } from 'react';
+import { useCompany } from '@/contexts/CompanyContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/lib/supabase';
+import { format } from 'date-fns';
+import {
+  AlertTriangle,
+  Plus,
+  Search,
+  Filter,
+  Check,
+  X,
+  Clock,
+  DollarSign,
+  FileText,
+  User,
+  Calendar,
+  ChevronDown,
+  Loader2,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+} from 'lucide-react';
+
+interface PenaltyType {
+  id: string;
+  name_en: string;
+  name_ar: string | null;
+  description: string | null;
+  default_amount: number | null;
+  is_percentage: boolean;
+  is_active: boolean;
+}
+
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  employee_number: string;
+  department: string | null;
+}
+
+interface Penalty {
+  id: string;
+  employee_id: string;
+  penalty_type_id: string | null;
+  amount: number;
+  reason: string;
+  incident_date: string;
+  evidence_url: string | null;
+  status: string;
+  apply_to_payroll_month: string;
+  finance_rejection_reason: string | null;
+  created_at: string;
+  sla_deadline: string | null;
+  employees: Employee;
+  penalty_types: PenaltyType | null;
+}
+
+const DEFAULT_PENALTY_TYPES = [
+  { name_en: 'Work Errors', name_ar: 'أخطاء العمل' },
+  { name_en: 'Attendance Issues', name_ar: 'مشاكل الحضور' },
+  { name_en: 'Policy Violation', name_ar: 'مخالفة السياسات' },
+  { name_en: 'Safety Violation', name_ar: 'مخالفة السلامة' },
+  { name_en: 'Dress Code Violation', name_ar: 'مخالفة الزي' },
+  { name_en: 'Unauthorized Absence', name_ar: 'غياب غير مبرر' },
+  { name_en: 'Equipment Damage', name_ar: 'إتلاف المعدات' },
+  { name_en: 'Misconduct', name_ar: 'سوء السلوك' },
+  { name_en: 'Performance Issues', name_ar: 'مشاكل الأداء' },
+  { name_en: 'Other', name_ar: 'أخرى' },
+];
+
+export default function Penalties() {
+  const { currentCompany } = useCompany();
+  const { user, userRole } = useAuth();
+  const { language, t, isRTL } = useLanguage();
+
+  const [penalties, setPenalties] = useState<Penalty[]>([]);
+  const [penaltyTypes, setPenaltyTypes] = useState<PenaltyType[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [showTypeManager, setShowTypeManager] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [submitting, setSubmitting] = useState(false);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const [formData, setFormData] = useState({
+    employee_id: '',
+    penalty_type_id: '',
+    custom_type: '',
+    amount: '',
+    incident_date: format(new Date(), 'yyyy-MM-dd'),
+    apply_to_payroll_month: format(new Date(), 'yyyy-MM-01'),
+    reason: '',
+  });
+
+  const [newPenaltyType, setNewPenaltyType] = useState({
+    name_en: '',
+    name_ar: '',
+    description: '',
+    default_amount: '',
+    is_percentage: false,
+  });
+
+  const isHR = ['hr', 'admin', 'super_admin'].includes(userRole?.role || '');
+  const isFinance = ['finance', 'admin', 'super_admin'].includes(userRole?.role || '');
+  const canCreate = isHR;
+  const canApprove = isFinance;
+
+  useEffect(() => {
+    if (currentCompany) {
+      fetchData();
+    }
+  }, [currentCompany]);
+
+  async function fetchData() {
+    setLoading(true);
+    try {
+      await Promise.all([fetchPenalties(), fetchPenaltyTypes(), fetchEmployees()]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function fetchPenalties() {
+    const { data, error } = await supabase
+      .from('employee_penalties')
+      .select(`
+        *,
+        employees:employee_id (id, first_name, last_name, employee_number, department),
+        penalty_types:penalty_type_id (id, name_en, name_ar, description, default_amount, is_percentage, is_active)
+      `)
+      .eq('company_id', currentCompany?.id)
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setPenalties(data as Penalty[]);
+    }
+  }
+
+  async function fetchPenaltyTypes() {
+    const { data, error } = await supabase
+      .from('penalty_types')
+      .select('*')
+      .eq('company_id', currentCompany?.id)
+      .eq('is_active', true)
+      .order('name_en');
+
+    if (!error && data) {
+      setPenaltyTypes(data);
+    }
+  }
+
+  async function fetchEmployees() {
+    const { data, error } = await supabase
+      .from('employees')
+      .select('id, first_name, last_name, employee_number, department')
+      .eq('company_id', currentCompany?.id)
+      .eq('status', 'active')
+      .order('first_name');
+
+    if (!error && data) {
+      setEmployees(data);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!currentCompany || !user) return;
+
+    setSubmitting(true);
+    try {
+      const slaDeadline = new Date();
+      slaDeadline.setDate(slaDeadline.getDate() + 3);
+
+      const { error } = await supabase.from('employee_penalties').insert({
+        company_id: currentCompany.id,
+        employee_id: formData.employee_id,
+        penalty_type_id: formData.penalty_type_id || null,
+        amount: parseFloat(formData.amount),
+        incident_date: formData.incident_date,
+        apply_to_payroll_month: formData.apply_to_payroll_month,
+        reason: formData.reason,
+        requested_by: user.id,
+        status: 'pending_finance',
+        sla_deadline: slaDeadline.toISOString(),
+      });
+
+      if (error) throw error;
+
+      setShowForm(false);
+      setFormData({
+        employee_id: '',
+        penalty_type_id: '',
+        custom_type: '',
+        amount: '',
+        incident_date: format(new Date(), 'yyyy-MM-dd'),
+        apply_to_payroll_month: format(new Date(), 'yyyy-MM-01'),
+        reason: '',
+      });
+      fetchPenalties();
+    } catch (error) {
+      console.error('Error creating penalty:', error);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleApprove(penaltyId: string) {
+    if (!user) return;
+    setActionLoading(penaltyId);
+    try {
+      const { error } = await supabase
+        .from('employee_penalties')
+        .update({
+          status: 'approved',
+          finance_approved_by: user.id,
+          finance_approved_at: new Date().toISOString(),
+        })
+        .eq('id', penaltyId);
+
+      if (error) throw error;
+      fetchPenalties();
+    } catch (error) {
+      console.error('Error approving penalty:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleReject(penaltyId: string, reason: string) {
+    if (!user || !reason.trim()) return;
+    setActionLoading(penaltyId);
+    try {
+      const { error } = await supabase
+        .from('employee_penalties')
+        .update({
+          status: 'rejected',
+          finance_approved_by: user.id,
+          finance_approved_at: new Date().toISOString(),
+          finance_rejection_reason: reason,
+        })
+        .eq('id', penaltyId);
+
+      if (error) throw error;
+      fetchPenalties();
+    } catch (error) {
+      console.error('Error rejecting penalty:', error);
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleAddPenaltyType(e: React.FormEvent) {
+    e.preventDefault();
+    if (!currentCompany) return;
+
+    try {
+      const { error } = await supabase.from('penalty_types').insert({
+        company_id: currentCompany.id,
+        name_en: newPenaltyType.name_en,
+        name_ar: newPenaltyType.name_ar || null,
+        description: newPenaltyType.description || null,
+        default_amount: newPenaltyType.default_amount ? parseFloat(newPenaltyType.default_amount) : null,
+        is_percentage: newPenaltyType.is_percentage,
+        is_active: true,
+      });
+
+      if (error) throw error;
+
+      setNewPenaltyType({
+        name_en: '',
+        name_ar: '',
+        description: '',
+        default_amount: '',
+        is_percentage: false,
+      });
+      fetchPenaltyTypes();
+    } catch (error) {
+      console.error('Error adding penalty type:', error);
+    }
+  }
+
+  async function seedDefaultTypes() {
+    if (!currentCompany) return;
+
+    try {
+      const typesToInsert = DEFAULT_PENALTY_TYPES.map((pt) => ({
+        company_id: currentCompany.id,
+        name_en: pt.name_en,
+        name_ar: pt.name_ar,
+        is_active: true,
+      }));
+
+      const { error } = await supabase.from('penalty_types').insert(typesToInsert);
+      if (error) throw error;
+      fetchPenaltyTypes();
+    } catch (error) {
+      console.error('Error seeding penalty types:', error);
+    }
+  }
+
+  const filteredPenalties = penalties.filter((p) => {
+    const matchesSearch =
+      p.employees?.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.employees?.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.employees?.employee_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.reason?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesStatus = statusFilter === 'all' || p.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  const getStatusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      pending_finance: 'bg-amber-100 text-amber-800 border-amber-200',
+      approved: 'bg-green-100 text-green-800 border-green-200',
+      rejected: 'bg-red-100 text-red-800 border-red-200',
+      deducted: 'bg-blue-100 text-blue-800 border-blue-200',
+    };
+    const labels: Record<string, string> = {
+      pending_finance: language === 'ar' ? 'بانتظار المالية' : 'Pending Finance',
+      approved: language === 'ar' ? 'معتمد' : 'Approved',
+      rejected: language === 'ar' ? 'مرفوض' : 'Rejected',
+      deducted: language === 'ar' ? 'تم الخصم' : 'Deducted',
+    };
+    return (
+      <span className={`px-2.5 py-1 rounded-full text-xs font-medium border ${styles[status] || 'bg-gray-100 text-gray-800'}`}>
+        {labels[status] || status}
+      </span>
+    );
+  };
+
+  const getSLAIndicator = (deadline: string | null, status: string) => {
+    if (!deadline || !['pending_finance'].includes(status)) return null;
+    const now = new Date();
+    const sla = new Date(deadline);
+    const hoursLeft = (sla.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursLeft < 0) {
+      return <span className="text-red-600 text-xs font-medium flex items-center gap-1"><AlertCircle className="h-3 w-3" /> Overdue</span>;
+    } else if (hoursLeft < 24) {
+      return <span className="text-amber-600 text-xs font-medium flex items-center gap-1"><Clock className="h-3 w-3" /> {Math.round(hoursLeft)}h left</span>;
+    }
+    return <span className="text-green-600 text-xs font-medium flex items-center gap-1"><Clock className="h-3 w-3" /> {Math.round(hoursLeft / 24)}d left</span>;
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className={`space-y-6 ${isRTL ? 'text-right' : ''}`} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <AlertTriangle className="h-7 w-7 text-amber-600" />
+            {language === 'ar' ? 'الجزاءات والخصومات' : 'Penalties & Deductions'}
+          </h1>
+          <p className="text-gray-600 mt-1">
+            {language === 'ar'
+              ? 'إدارة جزاءات الموظفين وطلبات الخصم من الراتب'
+              : 'Manage employee penalties and salary deduction requests'}
+          </p>
+        </div>
+        <div className="flex gap-2">
+          {isHR && (
+            <button
+              onClick={() => setShowTypeManager(!showTypeManager)}
+              className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              {language === 'ar' ? 'إدارة الأنواع' : 'Manage Types'}
+            </button>
+          )}
+          {canCreate && (
+            <button
+              onClick={() => setShowForm(true)}
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              {language === 'ar' ? 'إضافة جزاء' : 'Add Penalty'}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {showTypeManager && isHR && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+            <FileText className="h-5 w-5 text-primary-600" />
+            {language === 'ar' ? 'أنواع الجزاءات' : 'Penalty Types'}
+          </h3>
+
+          {penaltyTypes.length === 0 && (
+            <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              <p className="text-amber-800 mb-2">
+                {language === 'ar' ? 'لم يتم إعداد أنواع الجزاءات بعد.' : 'No penalty types configured yet.'}
+              </p>
+              <button
+                onClick={seedDefaultTypes}
+                className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-sm hover:bg-amber-700 transition-colors"
+              >
+                {language === 'ar' ? 'إضافة الأنواع الافتراضية' : 'Add Default Types'}
+              </button>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 mb-4">
+            {penaltyTypes.map((pt) => (
+              <div key={pt.id} className="px-3 py-2 bg-gray-50 rounded-lg border text-sm">
+                {language === 'ar' && pt.name_ar ? pt.name_ar : pt.name_en}
+                {pt.default_amount && (
+                  <span className="text-gray-500 text-xs ml-1">
+                    ({pt.default_amount}{pt.is_percentage ? '%' : ' SAR'})
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <form onSubmit={handleAddPenaltyType} className="flex flex-wrap gap-2 items-end">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">{language === 'ar' ? 'الاسم (إنجليزي)' : 'Name (EN)'}</label>
+              <input
+                type="text"
+                value={newPenaltyType.name_en}
+                onChange={(e) => setNewPenaltyType({ ...newPenaltyType, name_en: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">{language === 'ar' ? 'الاسم (عربي)' : 'Name (AR)'}</label>
+              <input
+                type="text"
+                value={newPenaltyType.name_ar}
+                onChange={(e) => setNewPenaltyType({ ...newPenaltyType, name_ar: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">{language === 'ar' ? 'المبلغ الافتراضي' : 'Default Amount'}</label>
+              <input
+                type="number"
+                value={newPenaltyType.default_amount}
+                onChange={(e) => setNewPenaltyType({ ...newPenaltyType, default_amount: e.target.value })}
+                className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-24"
+              />
+            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm hover:bg-primary-700 transition-colors"
+            >
+              {language === 'ar' ? 'إضافة' : 'Add'}
+            </button>
+          </form>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
+          <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400`} />
+          <input
+            type="text"
+            placeholder={language === 'ar' ? 'بحث...' : 'Search...'}
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className={`w-full ${isRTL ? 'pr-10 pl-4' : 'pl-10 pr-4'} py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500`}
+          />
+        </div>
+        <div className="relative">
+          <Filter className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400`} />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className={`${isRTL ? 'pr-10 pl-8' : 'pl-10 pr-8'} py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none bg-white`}
+          >
+            <option value="all">{language === 'ar' ? 'جميع الحالات' : 'All Status'}</option>
+            <option value="pending_finance">{language === 'ar' ? 'بانتظار المالية' : 'Pending Finance'}</option>
+            <option value="approved">{language === 'ar' ? 'معتمد' : 'Approved'}</option>
+            <option value="rejected">{language === 'ar' ? 'مرفوض' : 'Rejected'}</option>
+            <option value="deducted">{language === 'ar' ? 'تم الخصم' : 'Deducted'}</option>
+          </select>
+          <ChevronDown className={`absolute ${isRTL ? 'left-3' : 'right-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none`} />
+        </div>
+      </div>
+
+      <div className="grid gap-4">
+        {filteredPenalties.length === 0 ? (
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <AlertTriangle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {language === 'ar' ? 'لا توجد جزاءات' : 'No Penalties Found'}
+            </h3>
+            <p className="text-gray-500">
+              {language === 'ar' ? 'لم يتم تسجيل أي جزاءات بعد' : 'No penalties have been recorded yet'}
+            </p>
+          </div>
+        ) : (
+          filteredPenalties.map((penalty) => (
+            <PenaltyCard
+              key={penalty.id}
+              penalty={penalty}
+              language={language}
+              isRTL={isRTL}
+              canApprove={canApprove}
+              actionLoading={actionLoading}
+              onApprove={handleApprove}
+              onReject={handleReject}
+              getStatusBadge={getStatusBadge}
+              getSLAIndicator={getSLAIndicator}
+            />
+          ))
+        )}
+      </div>
+
+      {showForm && (
+        <PenaltyFormModal
+          formData={formData}
+          setFormData={setFormData}
+          employees={employees}
+          penaltyTypes={penaltyTypes}
+          language={language}
+          isRTL={isRTL}
+          submitting={submitting}
+          onSubmit={handleSubmit}
+          onClose={() => setShowForm(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+interface PenaltyCardProps {
+  penalty: Penalty;
+  language: string;
+  isRTL: boolean;
+  canApprove: boolean;
+  actionLoading: string | null;
+  onApprove: (id: string) => void;
+  onReject: (id: string, reason: string) => void;
+  getStatusBadge: (status: string) => JSX.Element;
+  getSLAIndicator: (deadline: string | null, status: string) => JSX.Element | null;
+}
+
+function PenaltyCard({
+  penalty,
+  language,
+  isRTL,
+  canApprove,
+  actionLoading,
+  onApprove,
+  onReject,
+  getStatusBadge,
+  getSLAIndicator,
+}: PenaltyCardProps) {
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+
+  const handleReject = () => {
+    if (rejectReason.trim()) {
+      onReject(penalty.id, rejectReason);
+      setShowRejectModal(false);
+      setRejectReason('');
+    }
+  };
+
+  return (
+    <>
+      <div className="bg-white rounded-xl border border-gray-200 p-5 hover:shadow-md transition-shadow">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="flex-1">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                  <User className="h-4 w-4 text-gray-400" />
+                  {penalty.employees?.first_name} {penalty.employees?.last_name}
+                  <span className="text-sm text-gray-500 font-normal">
+                    ({penalty.employees?.employee_number})
+                  </span>
+                </h3>
+                {penalty.employees?.department && (
+                  <p className="text-sm text-gray-500 mt-0.5">{penalty.employees.department}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {getSLAIndicator(penalty.sla_deadline, penalty.status)}
+                {getStatusBadge(penalty.status)}
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+              <div className="flex items-center gap-2 text-gray-600">
+                <FileText className="h-4 w-4 text-gray-400" />
+                <span className="font-medium">
+                  {penalty.penalty_types
+                    ? (language === 'ar' && penalty.penalty_types.name_ar
+                        ? penalty.penalty_types.name_ar
+                        : penalty.penalty_types.name_en)
+                    : (language === 'ar' ? 'نوع مخصص' : 'Custom')}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <DollarSign className="h-4 w-4 text-gray-400" />
+                <span className="font-semibold text-red-600">{penalty.amount.toLocaleString()} SAR</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Calendar className="h-4 w-4 text-gray-400" />
+                <span>{language === 'ar' ? 'تاريخ الحادثة:' : 'Incident:'} {format(new Date(penalty.incident_date), 'dd/MM/yyyy')}</span>
+              </div>
+              <div className="flex items-center gap-2 text-gray-600">
+                <Calendar className="h-4 w-4 text-gray-400" />
+                <span>{language === 'ar' ? 'شهر الخصم:' : 'Deduct in:'} {format(new Date(penalty.apply_to_payroll_month), 'MMM yyyy')}</span>
+              </div>
+            </div>
+
+            <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-700">
+                <span className="font-medium">{language === 'ar' ? 'السبب:' : 'Reason:'}</span> {penalty.reason}
+              </p>
+            </div>
+
+            {penalty.status === 'rejected' && penalty.finance_rejection_reason && (
+              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-700">
+                  <span className="font-medium">{language === 'ar' ? 'سبب الرفض:' : 'Rejection Reason:'}</span>{' '}
+                  {penalty.finance_rejection_reason}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {canApprove && penalty.status === 'pending_finance' && (
+            <div className={`flex ${isRTL ? 'flex-row-reverse' : ''} gap-2 lg:flex-col`}>
+              <button
+                onClick={() => onApprove(penalty.id)}
+                disabled={actionLoading === penalty.id}
+                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              >
+                {actionLoading === penalty.id ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CheckCircle className="h-4 w-4" />
+                )}
+                {language === 'ar' ? 'اعتماد' : 'Approve'}
+              </button>
+              <button
+                onClick={() => setShowRejectModal(true)}
+                disabled={actionLoading === penalty.id}
+                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                <XCircle className="h-4 w-4" />
+                {language === 'ar' ? 'رفض' : 'Reject'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {showRejectModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4">
+              {language === 'ar' ? 'سبب الرفض' : 'Rejection Reason'}
+            </h3>
+            <textarea
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              rows={3}
+              placeholder={language === 'ar' ? 'أدخل سبب الرفض...' : 'Enter rejection reason...'}
+              required
+            />
+            <div className="flex justify-end gap-2 mt-4">
+              <button
+                onClick={() => setShowRejectModal(false)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={!rejectReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {language === 'ar' ? 'تأكيد الرفض' : 'Confirm Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+interface PenaltyFormModalProps {
+  formData: {
+    employee_id: string;
+    penalty_type_id: string;
+    custom_type: string;
+    amount: string;
+    incident_date: string;
+    apply_to_payroll_month: string;
+    reason: string;
+  };
+  setFormData: (data: typeof formData) => void;
+  employees: Employee[];
+  penaltyTypes: PenaltyType[];
+  language: string;
+  isRTL: boolean;
+  submitting: boolean;
+  onSubmit: (e: React.FormEvent) => void;
+  onClose: () => void;
+}
+
+function PenaltyFormModal({
+  formData,
+  setFormData,
+  employees,
+  penaltyTypes,
+  language,
+  isRTL,
+  submitting,
+  onSubmit,
+  onClose,
+}: PenaltyFormModalProps) {
+  const selectedType = penaltyTypes.find((pt) => pt.id === formData.penalty_type_id);
+
+  useEffect(() => {
+    if (selectedType?.default_amount && !formData.amount) {
+      setFormData({ ...formData, amount: selectedType.default_amount.toString() });
+    }
+  }, [formData.penalty_type_id]);
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            {language === 'ar' ? 'إضافة جزاء جديد' : 'Add New Penalty'}
+          </h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {language === 'ar' ? 'الموظف' : 'Employee'} *
+            </label>
+            <select
+              value={formData.employee_id}
+              onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              required
+            >
+              <option value="">{language === 'ar' ? 'اختر موظف...' : 'Select employee...'}</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.first_name} {emp.last_name} ({emp.employee_number})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {language === 'ar' ? 'نوع الجزاء' : 'Penalty Type'} *
+            </label>
+            <select
+              value={formData.penalty_type_id}
+              onChange={(e) => setFormData({ ...formData, penalty_type_id: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              required
+            >
+              <option value="">{language === 'ar' ? 'اختر نوع...' : 'Select type...'}</option>
+              {penaltyTypes.map((pt) => (
+                <option key={pt.id} value={pt.id}>
+                  {language === 'ar' && pt.name_ar ? pt.name_ar : pt.name_en}
+                  {pt.default_amount && ` (${pt.default_amount} SAR)`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {language === 'ar' ? 'المبلغ (ر.س)' : 'Amount (SAR)'} *
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0.01"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {language === 'ar' ? 'تاريخ الحادثة' : 'Incident Date'} *
+              </label>
+              <input
+                type="date"
+                value={formData.incident_date}
+                onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                {language === 'ar' ? 'شهر الخصم' : 'Deduction Month'} *
+              </label>
+              <input
+                type="month"
+                value={formData.apply_to_payroll_month.substring(0, 7)}
+                onChange={(e) => setFormData({ ...formData, apply_to_payroll_month: e.target.value + '-01' })}
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+                required
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {language === 'ar' ? 'السبب / التفاصيل' : 'Reason / Details'} *
+            </label>
+            <textarea
+              value={formData.reason}
+              onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
+              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500"
+              rows={3}
+              required
+              placeholder={language === 'ar' ? 'اكتب تفاصيل الجزاء...' : 'Describe the penalty details...'}
+            />
+          </div>
+
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <p className="text-sm text-blue-800">
+              {language === 'ar'
+                ? 'سيتم إرسال هذا الجزاء إلى الإدارة المالية للاعتماد قبل خصمه من الراتب.'
+                : 'This penalty will be sent to Finance for approval before being deducted from salary.'}
+            </p>
+          </div>
+
+          <div className={`flex ${isRTL ? 'flex-row-reverse' : ''} gap-3 pt-4`}>
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              {language === 'ar' ? 'إلغاء' : 'Cancel'}
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex-1 px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {language === 'ar' ? 'إرسال للمالية' : 'Submit to Finance'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

@@ -46,6 +46,7 @@ import PermissionsManagement from './pages/PermissionsManagement';
 import WorkflowManagement from './pages/WorkflowManagement';
 import GlobalHR from './pages/GlobalHR';
 import SkillsManagement from './pages/SkillsManagement';
+import Penalties from './pages/Penalties';
 
 function App() {
   return (
@@ -212,6 +213,7 @@ function App() {
             <Route path="/workflow" element={<ProtectedRoute allowedRoles={['super_admin', 'admin', 'hr_manager']}><Layout><WorkflowManagement /></Layout></ProtectedRoute>} />
             <Route path="/global-hr" element={<ProtectedRoute allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager']}><Layout><GlobalHR /></Layout></ProtectedRoute>} />
             <Route path="/skills" element={<ProtectedRoute><Layout><SkillsManagement /></Layout></ProtectedRoute>} />
+            <Route path="/penalties" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'admin', 'super_admin']}><Layout><Penalties /></Layout></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
