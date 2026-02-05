@@ -9,7 +9,6 @@ import {
   Plus,
   Search,
   Filter,
-  Check,
   X,
   Clock,
   DollarSign,
@@ -21,7 +20,14 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  TrendingUp,
+  TrendingDown,
+  Download,
+  BarChart3,
+  History,
+  Eye,
 } from 'lucide-react';
+import * as XLSX from 'xlsx';
 
 interface PenaltyType {
   id: string;
@@ -35,10 +41,13 @@ interface PenaltyType {
 
 interface Employee {
   id: string;
-  first_name: string;
-  last_name: string;
+  first_name_en: string;
+  last_name_en: string;
+  first_name_ar: string | null;
+  last_name_ar: string | null;
   employee_number: string;
-  department: string | null;
+  department_id: string | null;
+  departments?: { name_en: string; name_ar: string | null } | null;
 }
 
 interface Penalty {
@@ -54,6 +63,9 @@ interface Penalty {
   finance_rejection_reason: string | null;
   created_at: string;
   sla_deadline: string | null;
+  payroll_applied: boolean;
+  payroll_applied_at: string | null;
+  requested_by: string;
   employees: Employee;
   penalty_types: PenaltyType | null;
 }
@@ -105,10 +117,90 @@ export default function Penalties() {
     is_percentage: false,
   });
 
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [selectedEmployeeHistory, setSelectedEmployeeHistory] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'list' | 'analytics'>('list');
+
   const isHR = ['hr', 'admin', 'super_admin'].includes(userRole?.role || '');
   const isFinance = ['finance', 'admin', 'super_admin'].includes(userRole?.role || '');
   const canCreate = isHR;
   const canApprove = isFinance;
+
+  const stats = {
+    total: penalties.length,
+    pending: penalties.filter(p => p.status === 'pending_finance').length,
+    approved: penalties.filter(p => p.status === 'approved').length,
+    rejected: penalties.filter(p => p.status === 'rejected').length,
+    deducted: penalties.filter(p => p.status === 'deducted' || p.payroll_applied).length,
+    totalAmount: penalties.reduce((sum, p) => sum + (p.amount || 0), 0),
+    approvedAmount: penalties.filter(p => p.status === 'approved' || p.status === 'deducted').reduce((sum, p) => sum + (p.amount || 0), 0),
+    thisMonth: penalties.filter(p => {
+      const d = new Date(p.created_at);
+      const now = new Date();
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length,
+    lastMonth: penalties.filter(p => {
+      const d = new Date(p.created_at);
+      const now = new Date();
+      const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1);
+      return d.getMonth() === lastMonth.getMonth() && d.getFullYear() === lastMonth.getFullYear();
+    }).length,
+  };
+
+  const penaltiesByType = penaltyTypes.map(pt => ({
+    type: language === 'ar' && pt.name_ar ? pt.name_ar : pt.name_en,
+    count: penalties.filter(p => p.penalty_type_id === pt.id).length,
+    amount: penalties.filter(p => p.penalty_type_id === pt.id).reduce((sum, p) => sum + (p.amount || 0), 0),
+  })).filter(t => t.count > 0).sort((a, b) => b.count - a.count);
+
+  const employeePenaltyCounts = penalties.reduce((acc, p) => {
+    const empId = p.employee_id;
+    if (!acc[empId]) {
+      acc[empId] = {
+        employee: p.employees,
+        count: 0,
+        totalAmount: 0,
+      };
+    }
+    acc[empId].count++;
+    acc[empId].totalAmount += p.amount || 0;
+    return acc;
+  }, {} as Record<string, { employee: Employee; count: number; totalAmount: number }>);
+
+  const repeatOffenders = Object.values(employeePenaltyCounts)
+    .filter(e => e.count >= 2)
+    .sort((a, b) => b.count - a.count);
+
+  const getEmployeeName = (emp: Employee | null | undefined) => {
+    if (!emp) return '';
+    return language === 'ar' && emp.first_name_ar
+      ? `${emp.first_name_ar} ${emp.last_name_ar || ''}`
+      : `${emp.first_name_en || ''} ${emp.last_name_en || ''}`;
+  };
+
+  const exportToExcel = () => {
+    const exportData = filteredPenalties.map(p => ({
+      [language === 'ar' ? 'رقم الموظف' : 'Employee #']: p.employees?.employee_number || '',
+      [language === 'ar' ? 'اسم الموظف' : 'Employee Name']: getEmployeeName(p.employees),
+      [language === 'ar' ? 'نوع الجزاء' : 'Penalty Type']: p.penalty_types
+        ? (language === 'ar' && p.penalty_types.name_ar ? p.penalty_types.name_ar : p.penalty_types.name_en)
+        : '-',
+      [language === 'ar' ? 'المبلغ' : 'Amount']: p.amount,
+      [language === 'ar' ? 'تاريخ الحادثة' : 'Incident Date']: format(new Date(p.incident_date), 'yyyy-MM-dd'),
+      [language === 'ar' ? 'شهر الخصم' : 'Deduction Month']: p.apply_to_payroll_month,
+      [language === 'ar' ? 'الحالة' : 'Status']: p.status,
+      [language === 'ar' ? 'السبب' : 'Reason']: p.reason,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, language === 'ar' ? 'الجزاءات' : 'Penalties');
+    XLSX.writeFile(wb, `penalties_${format(new Date(), 'yyyy-MM-dd')}.xlsx`);
+  };
+
+  const employeeHistoryPenalties = selectedEmployeeHistory
+    ? penalties.filter(p => p.employee_id === selectedEmployeeHistory)
+    : [];
 
   useEffect(() => {
     if (currentCompany) {
@@ -130,7 +222,7 @@ export default function Penalties() {
       .from('employee_penalties')
       .select(`
         *,
-        employees:employee_id (id, first_name, last_name, employee_number, department),
+        employees:employee_id (id, first_name_en, last_name_en, first_name_ar, last_name_ar, employee_number, department_id, departments:department_id (name_en, name_ar)),
         penalty_types:penalty_type_id (id, name_en, name_ar, description, default_amount, is_percentage, is_active)
       `)
       .eq('company_id', currentCompany?.id)
@@ -157,13 +249,13 @@ export default function Penalties() {
   async function fetchEmployees() {
     const { data, error } = await supabase
       .from('employees')
-      .select('id, first_name, last_name, employee_number, department')
+      .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, employee_number, department_id, departments:department_id (name_en, name_ar)')
       .eq('company_id', currentCompany?.id)
       .eq('status', 'active')
-      .order('first_name');
+      .order('first_name_en');
 
     if (!error && data) {
-      setEmployees(data);
+      setEmployees(data as Employee[]);
     }
   }
 
@@ -304,9 +396,12 @@ export default function Penalties() {
   }
 
   const filteredPenalties = penalties.filter((p) => {
+    const empName = language === 'ar'
+      ? `${p.employees?.first_name_ar || ''} ${p.employees?.last_name_ar || ''}`
+      : `${p.employees?.first_name_en || ''} ${p.employees?.last_name_en || ''}`;
+
     const matchesSearch =
-      p.employees?.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.employees?.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      empName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.employees?.employee_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.reason?.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -372,6 +467,13 @@ export default function Penalties() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            onClick={exportToExcel}
+            className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
+          >
+            <Download className="h-4 w-4" />
+            {language === 'ar' ? 'تصدير' : 'Export'}
+          </button>
           {isHR && (
             <button
               onClick={() => setShowTypeManager(!showTypeManager)}
@@ -393,6 +495,200 @@ export default function Penalties() {
         </div>
       </div>
 
+      {/* Summary Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">{language === 'ar' ? 'الإجمالي' : 'Total'}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+            </div>
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-gray-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">{language === 'ar' ? 'بانتظار الموافقة' : 'Pending'}</p>
+              <p className="text-2xl font-bold text-amber-600">{stats.pending}</p>
+            </div>
+            <div className="p-2 bg-amber-100 rounded-lg">
+              <Clock className="h-5 w-5 text-amber-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">{language === 'ar' ? 'معتمد' : 'Approved'}</p>
+              <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
+            </div>
+            <div className="p-2 bg-green-100 rounded-lg">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">{language === 'ar' ? 'مرفوض' : 'Rejected'}</p>
+              <p className="text-2xl font-bold text-red-600">{stats.rejected}</p>
+            </div>
+            <div className="p-2 bg-red-100 rounded-lg">
+              <XCircle className="h-5 w-5 text-red-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">{language === 'ar' ? 'إجمالي المبالغ' : 'Total Amount'}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.totalAmount.toLocaleString()}</p>
+              <p className="text-xs text-gray-500">SAR</p>
+            </div>
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <DollarSign className="h-5 w-5 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-gray-200 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs text-gray-500 font-medium">{language === 'ar' ? 'هذا الشهر' : 'This Month'}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats.thisMonth}</p>
+              {stats.thisMonth > stats.lastMonth ? (
+                <p className="text-xs text-red-500 flex items-center gap-1">
+                  <TrendingUp className="h-3 w-3" /> +{stats.thisMonth - stats.lastMonth}
+                </p>
+              ) : stats.thisMonth < stats.lastMonth ? (
+                <p className="text-xs text-green-500 flex items-center gap-1">
+                  <TrendingDown className="h-3 w-3" /> {stats.thisMonth - stats.lastMonth}
+                </p>
+              ) : null}
+            </div>
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <Calendar className="h-5 w-5 text-gray-600" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            <button
+              onClick={() => setActiveTab('list')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'list'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              {language === 'ar' ? 'قائمة الجزاءات' : 'Penalties List'}
+            </button>
+            <button
+              onClick={() => setActiveTab('analytics')}
+              className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === 'analytics'
+                  ? 'border-primary-600 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <BarChart3 className="h-4 w-4" />
+              {language === 'ar' ? 'التحليلات' : 'Analytics'}
+            </button>
+          </nav>
+        </div>
+
+        {activeTab === 'analytics' && (
+          <div className="p-6 space-y-6">
+            {/* Analytics by Type */}
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <BarChart3 className="h-5 w-5 text-primary-600" />
+                  {language === 'ar' ? 'حسب النوع' : 'By Type'}
+                </h3>
+                <div className="space-y-3">
+                  {penaltiesByType.length === 0 ? (
+                    <p className="text-gray-500 text-sm">{language === 'ar' ? 'لا توجد بيانات' : 'No data available'}</p>
+                  ) : (
+                    penaltiesByType.slice(0, 6).map((item, idx) => (
+                      <div key={idx} className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex justify-between text-sm mb-1">
+                            <span className="font-medium">{item.type}</span>
+                            <span className="text-gray-500">{item.count} ({item.amount.toLocaleString()} SAR)</span>
+                          </div>
+                          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary-600 rounded-full"
+                              style={{ width: `${(item.count / stats.total) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Repeat Offenders */}
+              <div>
+                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  {language === 'ar' ? 'تكرار المخالفات' : 'Repeat Offenders'}
+                </h3>
+                {repeatOffenders.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <CheckCircle className="h-8 w-8 mx-auto mb-2 text-green-500" />
+                    <p>{language === 'ar' ? 'لا يوجد موظفون بمخالفات متكررة' : 'No repeat offenders'}</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {repeatOffenders.slice(0, 5).map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 bg-red-50 border border-red-100 rounded-lg cursor-pointer hover:bg-red-100 transition-colors"
+                        onClick={() => setSelectedEmployeeHistory(item.employee?.id || null)}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                            item.count >= 5 ? 'bg-red-600' : item.count >= 3 ? 'bg-amber-500' : 'bg-amber-400'
+                          }`}>
+                            {item.count}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{getEmployeeName(item.employee)}</p>
+                            <p className="text-xs text-gray-500">{item.employee?.employee_number}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold text-red-600">{item.totalAmount.toLocaleString()} SAR</p>
+                          <p className="text-xs text-gray-500">
+                            {language === 'ar' ? 'إجمالي الخصومات' : 'Total deductions'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {activeTab === 'list' && (
+        <>
       {showTypeManager && isHR && (
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
@@ -518,10 +814,93 @@ export default function Penalties() {
               onReject={handleReject}
               getStatusBadge={getStatusBadge}
               getSLAIndicator={getSLAIndicator}
+              onViewHistory={() => setSelectedEmployeeHistory(penalty.employee_id)}
             />
           ))
         )}
       </div>
+        </>
+      )}
+
+      {/* Employee History Modal */}
+      {selectedEmployeeHistory && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <History className="h-5 w-5 text-primary-600" />
+                {language === 'ar' ? 'سجل جزاءات الموظف' : 'Employee Penalty History'}
+              </h2>
+              <button onClick={() => setSelectedEmployeeHistory(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6">
+              {employeeHistoryPenalties.length > 0 && (
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-white text-lg font-bold ${
+                      employeeHistoryPenalties.length >= 5 ? 'bg-red-600' : employeeHistoryPenalties.length >= 3 ? 'bg-amber-500' : 'bg-gray-500'
+                    }`}>
+                      {employeeHistoryPenalties.length}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-lg">{getEmployeeName(employeeHistoryPenalties[0]?.employees)}</p>
+                      <p className="text-gray-500">{employeeHistoryPenalties[0]?.employees?.employee_number}</p>
+                    </div>
+                    <div className="ml-auto text-right">
+                      <p className="text-2xl font-bold text-red-600">
+                        {employeeHistoryPenalties.reduce((sum, p) => sum + (p.amount || 0), 0).toLocaleString()} SAR
+                      </p>
+                      <p className="text-sm text-gray-500">{language === 'ar' ? 'إجمالي الخصومات' : 'Total Deductions'}</p>
+                    </div>
+                  </div>
+                  {employeeHistoryPenalties.length >= 3 && (
+                    <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                      <p className="text-sm text-red-700 font-medium flex items-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        {language === 'ar'
+                          ? 'تحذير: هذا الموظف لديه سجل جزاءات متكررة. يُنصح بمراجعة الأداء.'
+                          : 'Warning: This employee has repeated penalties. Performance review recommended.'}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="space-y-3">
+                {employeeHistoryPenalties.map((p, idx) => (
+                  <div key={p.id} className="flex items-start gap-4 p-4 bg-white border border-gray-200 rounded-lg">
+                    <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-sm font-medium text-gray-600">
+                      {employeeHistoryPenalties.length - idx}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-medium">
+                          {p.penalty_types
+                            ? (language === 'ar' && p.penalty_types.name_ar ? p.penalty_types.name_ar : p.penalty_types.name_en)
+                            : (language === 'ar' ? 'نوع مخصص' : 'Custom')}
+                        </span>
+                        {getStatusBadge(p.status)}
+                      </div>
+                      <p className="text-sm text-gray-600 mb-2">{p.reason}</p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {format(new Date(p.incident_date), 'dd/MM/yyyy')}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
+                          {p.amount.toLocaleString()} SAR
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showForm && (
         <PenaltyFormModal
@@ -550,6 +929,7 @@ interface PenaltyCardProps {
   onReject: (id: string, reason: string) => void;
   getStatusBadge: (status: string) => JSX.Element;
   getSLAIndicator: (deadline: string | null, status: string) => JSX.Element | null;
+  onViewHistory: () => void;
 }
 
 function PenaltyCard({
@@ -562,6 +942,7 @@ function PenaltyCard({
   onReject,
   getStatusBadge,
   getSLAIndicator,
+  onViewHistory,
 }: PenaltyCardProps) {
   const [showRejectModal, setShowRejectModal] = useState(false);
   const [rejectReason, setRejectReason] = useState('');
@@ -583,13 +964,19 @@ function PenaltyCard({
               <div>
                 <h3 className="font-semibold text-gray-900 flex items-center gap-2">
                   <User className="h-4 w-4 text-gray-400" />
-                  {penalty.employees?.first_name} {penalty.employees?.last_name}
+                  {language === 'ar' && penalty.employees?.first_name_ar
+                    ? `${penalty.employees.first_name_ar} ${penalty.employees.last_name_ar || ''}`
+                    : `${penalty.employees?.first_name_en || ''} ${penalty.employees?.last_name_en || ''}`}
                   <span className="text-sm text-gray-500 font-normal">
                     ({penalty.employees?.employee_number})
                   </span>
                 </h3>
-                {penalty.employees?.department && (
-                  <p className="text-sm text-gray-500 mt-0.5">{penalty.employees.department}</p>
+                {penalty.employees?.departments && (
+                  <p className="text-sm text-gray-500 mt-0.5">
+                    {language === 'ar' && penalty.employees.departments.name_ar
+                      ? penalty.employees.departments.name_ar
+                      : penalty.employees.departments.name_en}
+                  </p>
                 )}
               </div>
               <div className="flex items-center gap-2">
@@ -639,30 +1026,39 @@ function PenaltyCard({
             )}
           </div>
 
-          {canApprove && penalty.status === 'pending_finance' && (
-            <div className={`flex ${isRTL ? 'flex-row-reverse' : ''} gap-2 lg:flex-col`}>
-              <button
-                onClick={() => onApprove(penalty.id)}
-                disabled={actionLoading === penalty.id}
-                className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-              >
-                {actionLoading === penalty.id ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CheckCircle className="h-4 w-4" />
-                )}
-                {language === 'ar' ? 'اعتماد' : 'Approve'}
-              </button>
-              <button
-                onClick={() => setShowRejectModal(true)}
-                disabled={actionLoading === penalty.id}
-                className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-              >
-                <XCircle className="h-4 w-4" />
-                {language === 'ar' ? 'رفض' : 'Reject'}
-              </button>
-            </div>
-          )}
+          <div className={`flex ${isRTL ? 'flex-row-reverse' : ''} gap-2 lg:flex-col`}>
+            <button
+              onClick={onViewHistory}
+              className="flex items-center gap-1.5 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+            >
+              <History className="h-4 w-4" />
+              {language === 'ar' ? 'السجل' : 'History'}
+            </button>
+            {canApprove && penalty.status === 'pending_finance' && (
+              <>
+                <button
+                  onClick={() => onApprove(penalty.id)}
+                  disabled={actionLoading === penalty.id}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                >
+                  {actionLoading === penalty.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4" />
+                  )}
+                  {language === 'ar' ? 'اعتماد' : 'Approve'}
+                </button>
+                <button
+                  onClick={() => setShowRejectModal(true)}
+                  disabled={actionLoading === penalty.id}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                >
+                  <XCircle className="h-4 w-4" />
+                  {language === 'ar' ? 'رفض' : 'Reject'}
+                </button>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
@@ -768,7 +1164,9 @@ function PenaltyFormModal({
               <option value="">{language === 'ar' ? 'اختر موظف...' : 'Select employee...'}</option>
               {employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>
-                  {emp.first_name} {emp.last_name} ({emp.employee_number})
+                  {language === 'ar' && emp.first_name_ar
+                    ? `${emp.first_name_ar} ${emp.last_name_ar || ''}`
+                    : `${emp.first_name_en} ${emp.last_name_en}`} ({emp.employee_number})
                 </option>
               ))}
             </select>
