@@ -909,8 +909,8 @@ export function Travel() {
               <div className="p-6 max-h-[calc(100vh-240px)] overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Employee <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.employees.employee} <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
@@ -918,7 +918,7 @@ export function Travel() {
                     onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="">Select Employee</option>
+                    <option value="">{t.travel.selectEmployee}</option>
                     {employees.map((emp) => (
                       <option key={emp.id} value={emp.id}>
                         {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
@@ -928,8 +928,8 @@ export function Travel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Destination City <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.destinationCity} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -937,13 +937,12 @@ export function Travel() {
                     value={formData.destination}
                     onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="e.g., Dubai, London"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Destination Country <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.destinationCountry} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -951,13 +950,12 @@ export function Travel() {
                     value={formData.destination_country}
                     onChange={(e) => setFormData({ ...formData, destination_country: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="e.g., United Arab Emirates"
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Purpose <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.purpose} <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     required
@@ -965,13 +963,13 @@ export function Travel() {
                     onChange={(e) => setFormData({ ...formData, purpose: e.target.value })}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Purpose of travel..."
+                    placeholder={t.travel.purposePlaceholder}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Departure Date <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.departureDate} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -983,8 +981,8 @@ export function Travel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Return Date <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.returnDate} <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -996,8 +994,8 @@ export function Travel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Estimated Cost (SAR) <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.estimatedCost} ({t.numbers.currency}) <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="number"
@@ -1011,8 +1009,8 @@ export function Travel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Per Diem Rate (SAR/day)
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.perDiemRate} ({t.numbers.currency}/{t.common.day})
                   </label>
                   <input
                     type="number"
@@ -1025,8 +1023,8 @@ export function Travel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Project Code
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.projectCode}
                   </label>
                   <input
                     type="text"
@@ -1037,8 +1035,8 @@ export function Travel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Cost Center
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.costCenter}
                   </label>
                   <input
                     type="text"
@@ -1049,62 +1047,62 @@ export function Travel() {
                 </div>
 
                 <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Travel Details</h3>
+                  <h3 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.travel.travelDetailsSection}</h3>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Transportation Method
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.transportationMethod}
                   </label>
                   <select
                     value={formData.transportation_method}
                     onChange={(e) => setFormData({ ...formData, transportation_method: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="flight">Flight</option>
-                    <option value="car">Car</option>
-                    <option value="train">Train</option>
-                    <option value="bus">Bus</option>
+                    <option value="flight">{t.travel.transportMethods.flight}</option>
+                    <option value="car">{t.travel.transportMethods.car}</option>
+                    <option value="train">{t.travel.transportMethods.train}</option>
+                    <option value="bus">{t.travel.transportMethods.bus}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Booking Status
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.bookingStatus}
                   </label>
                   <select
                     value={formData.booking_status}
                     onChange={(e) => setFormData({ ...formData, booking_status: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="not_booked">Not Booked</option>
-                    <option value="booked">Booked</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="not_booked">{t.travel.bookingStatuses.not_booked}</option>
+                    <option value="booked">{t.travel.bookingStatuses.booked}</option>
+                    <option value="cancelled">{t.travel.bookingStatuses.cancelled}</option>
                   </select>
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Flight Details
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.flightDetails}
                   </label>
                   <input
                     type="text"
                     value={formData.flight_details}
                     onChange={(e) => setFormData({ ...formData, flight_details: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Flight number, airline, departure time..."
+                    placeholder={t.travel.flightDetailsPlaceholder}
                   />
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="flex items-center space-x-2 cursor-pointer mb-3">
+                  <label className={`flex items-center ${isRTL ? 'flex-row-reverse space-x-reverse' : ''} space-x-2 cursor-pointer mb-3`}>
                     <input
                       type="checkbox"
                       checked={formData.accommodation_needed}
                       onChange={(e) => setFormData({ ...formData, accommodation_needed: e.target.checked })}
                       className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">Accommodation Needed</span>
+                    <span className="text-sm font-medium text-gray-700">{t.travel.accommodationNeeded}</span>
                   </label>
 
                   {formData.accommodation_needed && (
@@ -1113,20 +1111,20 @@ export function Travel() {
                       value={formData.hotel_details}
                       onChange={(e) => setFormData({ ...formData, hotel_details: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Hotel name, address, booking reference..."
+                      placeholder={t.travel.hotelDetailsPlaceholder}
                     />
                   )}
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="flex items-center space-x-2 cursor-pointer mb-3">
+                  <label className={`flex items-center ${isRTL ? 'flex-row-reverse space-x-reverse' : ''} space-x-2 cursor-pointer mb-3`}>
                     <input
                       type="checkbox"
                       checked={formData.rental_car_needed}
                       onChange={(e) => setFormData({ ...formData, rental_car_needed: e.target.checked })}
                       className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">Rental Car Needed</span>
+                    <span className="text-sm font-medium text-gray-700">{t.travel.rentalCarNeeded}</span>
                   </label>
 
                   {formData.rental_car_needed && (
@@ -1135,18 +1133,18 @@ export function Travel() {
                       value={formData.rental_car_details}
                       onChange={(e) => setFormData({ ...formData, rental_car_details: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Rental company, car type, pickup location..."
+                      placeholder={t.travel.rentalCarPlaceholder}
                     />
                   )}
                 </div>
 
                 <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Financial & Emergency Information</h3>
+                  <h3 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.travel.financialEmergencyInfo}</h3>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Advance Payment (SAR)
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.advancePayment} ({t.numbers.currency})
                   </label>
                   <input
                     type="number"
@@ -1156,38 +1154,37 @@ export function Travel() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     placeholder="0.00"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Amount to be paid in advance</p>
+                  <p className={`text-xs text-gray-500 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.travel.advancePaymentNote}</p>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Travel Insurance
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.travelInsurance}
                   </label>
                   <input
                     type="text"
                     value={formData.insurance_coverage}
                     onChange={(e) => setFormData({ ...formData, insurance_coverage: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Insurance policy number"
+                    placeholder={t.travel.insurancePlaceholder}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Emergency Contact Name
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.emergencyContactName}
                   </label>
                   <input
                     type="text"
                     value={formData.emergency_contact_name}
                     onChange={(e) => setFormData({ ...formData, emergency_contact_name: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Name"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Emergency Contact Phone
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.emergencyContactPhone}
                   </label>
                   <input
                     type="tel"
@@ -1199,67 +1196,66 @@ export function Travel() {
                 </div>
 
                 <div className="md:col-span-2 border-t border-gray-200 pt-6 mt-4">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Compliance & Permissions</h3>
+                  <h3 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>{t.travel.compliancePermissions}</h3>
                 </div>
 
                 <div className="md:col-span-2">
-                  <div className="flex items-start space-x-6">
-                    <label className="flex items-center space-x-2 cursor-pointer">
+                  <div className={`flex items-start ${isRTL ? 'flex-row-reverse space-x-reverse' : ''} space-x-6`}>
+                    <label className={`flex items-center ${isRTL ? 'flex-row-reverse space-x-reverse' : ''} space-x-2 cursor-pointer`}>
                       <input
                         type="checkbox"
                         checked={formData.requires_exit_reentry}
                         onChange={(e) => setFormData({ ...formData, requires_exit_reentry: e.target.checked })}
                         className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                       />
-                      <span className="text-sm text-gray-700">Requires Exit-Reentry Permit (Expats)</span>
+                      <span className="text-sm text-gray-700">{t.travel.requiresExitReentry}</span>
                     </label>
 
-                    <label className="flex items-center space-x-2 cursor-pointer">
+                    <label className={`flex items-center ${isRTL ? 'flex-row-reverse space-x-reverse' : ''} space-x-2 cursor-pointer`}>
                       <input
                         type="checkbox"
                         checked={formData.visa_required}
                         onChange={(e) => setFormData({ ...formData, visa_required: e.target.checked })}
                         className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                       />
-                      <span className="text-sm text-gray-700">Destination Visa Required</span>
+                      <span className="text-sm text-gray-700">{t.travel.visaRequired}</span>
                     </label>
                   </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    Exit-reentry permits required for expat employees leaving Saudi Arabia
+                  <p className={`text-xs text-gray-500 mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.travel.exitReentryNote}
                   </p>
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.common.notes}
                   </label>
                   <textarea
                     value={formData.notes}
                     onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                    placeholder="Additional notes..."
                   />
                 </div>
                 </div>
               </div>
 
               <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <div className="flex justify-end space-x-3">
+                <div className={`flex justify-end ${isRTL ? 'flex-row-reverse space-x-reverse' : ''} space-x-3`}>
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
                     disabled={submitting}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Cancel
+                    {t.common.cancel}
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
                     className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
                   >
-                    {submitting ? 'Creating...' : 'Create Travel Request'}
+                    {submitting ? t.travel.creating : t.travel.createRequest}
                   </button>
                 </div>
               </div>
