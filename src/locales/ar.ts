@@ -940,6 +940,20 @@ export const arTranslations = {
     maintenanceType: 'نوع الصيانة',
     maintenanceCost: 'تكلفة الصيانة',
     serviceProvider: 'مزود الخدمة',
+    types: {
+      sedan: 'سيدان',
+      suv: 'دفع رباعي',
+      truck: 'شاحنة',
+      van: 'فان',
+      bus: 'حافلة',
+      motorcycle: 'دراجة نارية',
+      other: 'أخرى',
+    },
+    statuses: {
+      active: 'نشط',
+      maintenance: 'تحت الصيانة',
+      inactive: 'غير نشط',
+    },
   },
 
   realEstate: {

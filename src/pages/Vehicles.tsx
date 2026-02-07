@@ -270,8 +270,8 @@ export function Vehicles() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {vehicle.make} {vehicle.model} ({vehicle.year})
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                      {vehicle.vehicle_type.replace('_', ' ')}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {t.vehicles.types[vehicle.vehicle_type as keyof typeof t.vehicles.types] || vehicle.vehicle_type}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatNumber(vehicle.current_mileage, language)} {t.common.km}
@@ -284,7 +284,7 @@ export function Vehicles() {
                           ? 'bg-yellow-100 text-yellow-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {vehicle.status}
+                        {t.vehicles.statuses[vehicle.status as keyof typeof t.vehicles.statuses] || vehicle.status}
                       </span>
                     </td>
                   </tr>
@@ -426,13 +426,13 @@ export function Vehicles() {
                     onChange={(e) => setFormData({ ...formData, vehicle_type: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="sedan">Sedan</option>
-                    <option value="suv">SUV</option>
-                    <option value="truck">Truck</option>
-                    <option value="van">Van</option>
-                    <option value="bus">Bus</option>
-                    <option value="motorcycle">Motorcycle</option>
-                    <option value="other">Other</option>
+                    <option value="sedan">{t.vehicles.types.sedan}</option>
+                    <option value="suv">{t.vehicles.types.suv}</option>
+                    <option value="truck">{t.vehicles.types.truck}</option>
+                    <option value="van">{t.vehicles.types.van}</option>
+                    <option value="bus">{t.vehicles.types.bus}</option>
+                    <option value="motorcycle">{t.vehicles.types.motorcycle}</option>
+                    <option value="other">{t.vehicles.types.other}</option>
                   </select>
                 </div>
 
@@ -460,9 +460,9 @@ export function Vehicles() {
                     onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="active">Active</option>
-                    <option value="maintenance">Maintenance</option>
-                    <option value="inactive">Inactive</option>
+                    <option value="active">{t.vehicles.statuses.active}</option>
+                    <option value="maintenance">{t.vehicles.statuses.maintenance}</option>
+                    <option value="inactive">{t.vehicles.statuses.inactive}</option>
                   </select>
                 </div>
 

@@ -859,6 +859,20 @@ export const enTranslations = {
     maintenanceType: 'Maintenance Type',
     maintenanceCost: 'Maintenance Cost',
     serviceProvider: 'Service Provider',
+    types: {
+      sedan: 'Sedan',
+      suv: 'SUV',
+      truck: 'Truck',
+      van: 'Van',
+      bus: 'Bus',
+      motorcycle: 'Motorcycle',
+      other: 'Other',
+    },
+    statuses: {
+      active: 'Active',
+      maintenance: 'Maintenance',
+      inactive: 'Inactive',
+    },
   },
 
   realEstate: {
