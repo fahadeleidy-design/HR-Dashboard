@@ -240,7 +240,7 @@ export function Visas() {
       await fetchData();
     } catch (error) {
       console.error('Error creating visa request:', error);
-      alert('Failed to create visa request. Please try again.');
+      alert(t.visas.failedToCreate);
     } finally {
       setSubmitting(false);
     }
@@ -735,11 +735,11 @@ export function Visas() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8" dir={isRTL ? 'rtl' : 'ltr'}>
             <div className="p-6 border-b border-gray-200">
-              <div className="flex justify-between items-start">
+              <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{t.visas.newRequestTitle}</h2>
+                  <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{t.visas.newRequestTitle}</h2>
                   <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.visas.newRequestDescription}</p>
                 </div>
                 <button
@@ -755,8 +755,8 @@ export function Visas() {
               <div className="p-6 max-h-[calc(100vh-240px)] overflow-y-auto">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Request Type <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.requestType} <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
@@ -764,19 +764,19 @@ export function Visas() {
                       onChange={(e) => setFormData({ ...formData, request_type: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                      <option value="new_visa">New Work Visa</option>
-                      <option value="iqama_issuance">Iqama Issuance</option>
-                      <option value="iqama_renewal">Iqama Renewal</option>
-                      <option value="iqama_transfer">Iqama Transfer</option>
-                      <option value="profession_change">Profession Change</option>
-                      <option value="dependent_visa">Dependent Visa</option>
+                      <option value="new_visa">{t.visas.newWorkVisa}</option>
+                      <option value="iqama_issuance">{t.visas.iqamaIssuance}</option>
+                      <option value="iqama_renewal">{t.visas.iqamaRenewal}</option>
+                      <option value="iqama_transfer">{t.visas.iqamaTransfer}</option>
+                      <option value="profession_change">{t.visas.professionChange}</option>
+                      <option value="dependent_visa">{t.visas.dependentVisa}</option>
                     </select>
                   </div>
 
                   {formData.request_type === 'iqama_renewal' || formData.request_type === 'profession_change' ? (
                     <div className="md:col-span-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Select Employee <span className="text-red-500">*</span>
+                      <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        {t.visas.selectEmployee} <span className="text-red-500">*</span>
                       </label>
                       <select
                         required
@@ -784,7 +784,7 @@ export function Visas() {
                         onChange={(e) => handleEmployeeChange(e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                       >
-                        <option value="">Select Employee</option>
+                        <option value="">{t.visas.selectEmployee}</option>
                         {employees.map((emp) => (
                           <option key={emp.id} value={emp.id}>
                             {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
@@ -794,8 +794,8 @@ export function Visas() {
                     </div>
                   ) : (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Employee/Candidate Name <span className="text-red-500">*</span>
+                      <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        {t.visas.employeeCandidateName} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -803,14 +803,14 @@ export function Visas() {
                         value={formData.employee_name}
                         onChange={(e) => setFormData({ ...formData, employee_name: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        placeholder="Full name as per passport"
+                        placeholder={t.visas.fullNameAsPerPassport}
                       />
                     </div>
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nationality <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.nationality} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -818,13 +818,13 @@ export function Visas() {
                       value={formData.nationality}
                       onChange={(e) => setFormData({ ...formData, nationality: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="e.g., India, Pakistan, Egypt"
+                      placeholder={t.visas.nationalityPlaceholder}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Passport Number
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.passportNumber}
                     </label>
                     <input
                       type="text"
@@ -835,8 +835,8 @@ export function Visas() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Passport Expiry Date
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.passportExpiryDate}
                     </label>
                     <input
                       type="date"
@@ -847,29 +847,29 @@ export function Visas() {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Saudi MOL Profession Code <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.molProfessionCode} <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
                       onChange={(e) => handleProfessionChange(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                      <option value="">Select Profession</option>
+                      <option value="">{t.visas.selectProfession}</option>
                       {professionCodes.map((prof) => (
                         <option key={prof.id} value={prof.id}>
                           {prof.profession_code} - {prof.profession_name_en} ({prof.profession_name_ar})
                         </option>
                       ))}
                     </select>
-                    <p className="text-xs text-gray-500 mt-1">
-                      Select official MOL profession code for visa/iqama
+                    <p className={`text-xs text-gray-500 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.molProfessionNote}
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Job Title <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.jobTitle} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -881,8 +881,8 @@ export function Visas() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Proposed Salary (SAR) <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.proposedSalarySar} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -891,76 +891,76 @@ export function Visas() {
                       value={formData.proposed_salary}
                       onChange={(e) => setFormData({ ...formData, proposed_salary: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Minimum as per MOL requirements"
+                      placeholder={t.visas.minimumAsPerMol}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Education Level
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.educationLevel}
                     </label>
                     <select
                       value={formData.education}
                       onChange={(e) => setFormData({ ...formData, education: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                      <option value="">Select</option>
-                      <option value="high_school">High School</option>
-                      <option value="diploma">Diploma</option>
-                      <option value="bachelor">Bachelor's Degree</option>
-                      <option value="master">Master's Degree</option>
-                      <option value="phd">PhD</option>
+                      <option value="">{t.visas.select}</option>
+                      <option value="high_school">{t.visas.highSchool}</option>
+                      <option value="diploma">{t.visas.diploma}</option>
+                      <option value="bachelor">{t.visas.bachelor}</option>
+                      <option value="master">{t.visas.master}</option>
+                      <option value="phd">{t.visas.phd}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Experience (Years)
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.experienceYears}
                     </label>
                     <input
                       type="number"
                       value={formData.experience_years}
                       onChange={(e) => setFormData({ ...formData, experience_years: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Years of experience"
+                      placeholder={t.visas.yearsOfExperience}
                     />
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Visa Type
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.visaType}
                     </label>
                     <select
                       value={formData.visa_type}
                       onChange={(e) => setFormData({ ...formData, visa_type: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                      <option value="employment">Employment Visa</option>
-                      <option value="business">Business Visa</option>
-                      <option value="dependent">Dependent Visa</option>
-                      <option value="visit">Visit Visa</option>
+                      <option value="employment">{t.visas.employmentVisa}</option>
+                      <option value="business">{t.visas.businessVisa}</option>
+                      <option value="dependent">{t.visas.dependentVisa}</option>
+                      <option value="visit">{t.visas.visitVisa}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Priority
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.priority}
                     </label>
                     <select
                       value={formData.priority}
                       onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                      <option value="low">Low</option>
-                      <option value="normal">Normal</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
+                      <option value="low">{t.visas.low}</option>
+                      <option value="normal">{t.visas.normal}</option>
+                      <option value="high">{t.visas.high}</option>
+                      <option value="urgent">{t.visas.urgent}</option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Expected Arrival Date
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.expectedArrivalDate}
                     </label>
                     <input
                       type="date"
@@ -971,8 +971,8 @@ export function Visas() {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Sponsor Name
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.sponsorName}
                     </label>
                     <input
                       type="text"
@@ -984,29 +984,28 @@ export function Visas() {
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Notes
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.visas.notes}
                     </label>
                     <textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Additional notes..."
+                      placeholder={t.visas.additionalNotes}
                     />
                   </div>
 
                   <div className="md:col-span-2 bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start space-x-3">
+                    <div className={`flex items-start gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                       <AlertTriangle className="h-5 w-5 text-blue-600 mt-0.5" />
                       <div>
-                        <h3 className="text-sm font-semibold text-blue-900">MOL & Quota Information</h3>
-                        <p className="text-sm text-blue-800 mt-1">
-                          Ensure the profession code matches MOL requirements and check available quota before submission.
-                          Visa processing typically takes 3-5 business days after MOL approval.
+                        <h3 className={`text-sm font-semibold text-blue-900 ${isRTL ? 'text-right' : 'text-left'}`}>{t.visas.molQuotaInfo}</h3>
+                        <p className={`text-sm text-blue-800 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          {t.visas.molQuotaNote}
                         </p>
-                        <p className="text-sm text-blue-800 mt-2">
-                          <strong>Available Quota:</strong> {availableQuota} positions
+                        <p className={`text-sm text-blue-800 mt-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                          <strong>{t.visas.availableQuota}:</strong> {availableQuota} {t.visas.positions}
                         </p>
                       </div>
                     </div>
@@ -1015,21 +1014,21 @@ export function Visas() {
               </div>
 
               <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <div className="flex justify-end space-x-3">
+                <div className={`flex justify-end gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
                     disabled={submitting}
                     className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Cancel
+                    {t.visas.cancel}
                   </button>
                   <button
                     type="submit"
                     disabled={submitting}
                     className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50"
                   >
-                    {submitting ? 'Creating...' : 'Create Visa Request'}
+                    {submitting ? t.visas.creating : t.visas.createVisaRequest}
                   </button>
                 </div>
               </div>

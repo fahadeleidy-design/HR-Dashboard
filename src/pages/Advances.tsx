@@ -151,17 +151,17 @@ export function Advances() {
     if (!currentCompany) return;
 
     if (!formData.employee_id) {
-      alert('Please select an employee');
+      alert(t.advances.pleaseSelectEmployee);
       return;
     }
 
     if (advanceEligibility && formData.amount > advanceEligibility.max_advance_amount) {
-      alert(`Advance amount (${formatCurrency(formData.amount, language)}) exceeds monthly salary (${formatCurrency(advanceEligibility.max_advance_amount, language)})`);
+      alert(`${t.advances.advanceExceedsSalary}: ${formatCurrency(formData.amount, language)} > ${formatCurrency(advanceEligibility.max_advance_amount, language)}`);
       return;
     }
 
     if (advanceEligibility && !advanceEligibility.is_eligible) {
-      alert(`Cannot create advance: ${advanceEligibility.eligibility_status}`);
+      alert(`${t.advances.cannotCreateAdvance}: ${advanceEligibility.eligibility_status}`);
       return;
     }
 
@@ -182,21 +182,21 @@ export function Advances() {
           .eq('id', editingAdvance.id);
 
         if (error) throw error;
-        alert('Advance updated successfully!');
+        alert(t.advances.advanceUpdatedSuccess);
       } else {
         const { error } = await supabase
           .from('advances')
           .insert([advanceData]);
 
         if (error) throw error;
-        alert('Advance request created successfully!');
+        alert(t.advances.advanceCreatedSuccess);
       }
 
       resetForm();
       fetchAdvances();
     } catch (error: any) {
       console.error('Error saving advance:', error);
-      alert('Failed to save advance: ' + error.message);
+      alert(`${t.advances.failedToSave}: ${error.message}`);
     }
   };
 
@@ -212,7 +212,7 @@ export function Advances() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this advance?')) return;
+    if (!confirm(t.advances.advanceDeleteConfirm)) return;
 
     try {
       const { error } = await supabase
@@ -221,11 +221,11 @@ export function Advances() {
         .eq('id', id);
 
       if (error) throw error;
-      alert('Advance deleted successfully!');
+      alert(t.advances.advanceDeletedSuccess);
       fetchAdvances();
     } catch (error: any) {
       console.error('Error deleting advance:', error);
-      alert('Failed to delete advance: ' + error.message);
+      alert(`${t.advances.failedToDelete}: ${error.message}`);
     }
   };
 
@@ -240,11 +240,11 @@ export function Advances() {
         .eq('id', id);
 
       if (error) throw error;
-      alert('Advance approved successfully!');
+      alert(t.advances.advanceApprovedSuccess);
       fetchAdvances();
     } catch (error: any) {
       console.error('Error approving advance:', error);
-      alert('Failed to approve advance: ' + error.message);
+      alert(`${t.advances.failedToApprove}: ${error.message}`);
     }
   };
 
@@ -256,11 +256,11 @@ export function Advances() {
         .eq('id', id);
 
       if (error) throw error;
-      alert('Advance rejected!');
+      alert(t.advances.advanceRejectedSuccess);
       fetchAdvances();
     } catch (error: any) {
       console.error('Error rejecting advance:', error);
-      alert('Failed to reject advance: ' + error.message);
+      alert(`${t.advances.failedToReject}: ${error.message}`);
     }
   };
 
@@ -525,31 +525,31 @@ export function Advances() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" dir={isRTL ? 'rtl' : 'ltr'}>
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {editingAdvance ? 'Edit Advance' : 'New Advance Request'}
+              <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {editingAdvance ? t.advances.editAdvance : t.advances.newAdvance}
               </h2>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-2">Advance Policy</h3>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Maximum advance: Full monthly salary</li>
-                  <li>• Deduction: Full amount from next month's salary</li>
-                  <li>• Only one active advance allowed at a time</li>
-                  <li>• Cannot request advance while an active loan exists</li>
+                <h3 className={`text-sm font-semibold text-blue-900 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>{t.advances.advancePolicy}</h3>
+                <ul className={`text-sm text-blue-800 space-y-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  <li>• {t.advances.policyMaxAdvance}</li>
+                  <li>• {t.advances.policyDeduction}</li>
+                  <li>• {t.advances.policyOneActive}</li>
+                  <li>• {t.advances.policyNoLoan}</li>
                 </ul>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Employee *
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.common.employee} *
                 </label>
                 <SearchableSelect
                   options={[
-                    { value: '', label: 'Select Employee' },
+                    { value: '', label: t.employees.selectEmployee },
                     ...employees.map(emp => ({
                       value: emp.id,
                       label: `${emp.employee_number} - ${emp.first_name_en} ${emp.last_name_en}`,
@@ -569,22 +569,22 @@ export function Advances() {
                   <h3 className={`text-sm font-semibold mb-2 ${
                     advanceEligibility.is_eligible ? 'text-green-900' : 'text-red-900'
                   }`}>
-                    Advance Eligibility
+                    {t.advances.eligibilityTitle}
                   </h3>
                   <div className={`text-sm space-y-1 ${
                     advanceEligibility.is_eligible ? 'text-green-800' : 'text-red-800'
                   }`}>
-                    <p>Monthly Salary: {formatCurrency(advanceEligibility.max_advance_amount, language)}</p>
-                    <p>Outstanding Advances: {formatCurrency(advanceEligibility.outstanding_advances, language)}</p>
-                    <p>Outstanding Loans: {formatCurrency(advanceEligibility.outstanding_loans, language)}</p>
-                    <p className="font-semibold">Status: {advanceEligibility.eligibility_status}</p>
+                    <p>{t.advances.monthlySalary}: {formatCurrency(advanceEligibility.max_advance_amount, language)}</p>
+                    <p>{t.advances.outstandingAdvances}: {formatCurrency(advanceEligibility.outstanding_advances, language)}</p>
+                    <p>{t.advances.outstandingLoans}: {formatCurrency(advanceEligibility.outstanding_loans, language)}</p>
+                    <p className="font-semibold">{t.advances.eligibilityStatus}: {advanceEligibility.eligibility_status}</p>
                   </div>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Advance Amount (SAR) *
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.advances.advanceAmountSar} *
                 </label>
                 <input
                   type="number"
@@ -598,17 +598,17 @@ export function Advances() {
                 />
                 {advanceEligibility && formData.amount > advanceEligibility.max_advance_amount && (
                   <p className="text-xs text-red-600 mt-1">
-                    Exceeds monthly salary
+                    {t.advances.advanceExceedsSalary}
                   </p>
                 )}
                 <p className="text-xs text-gray-500 mt-1">
-                  Maximum: {advanceEligibility ? formatCurrency(advanceEligibility.max_advance_amount, language) : 'Select employee first'}
+                  {t.advances.maximum}: {advanceEligibility ? formatCurrency(advanceEligibility.max_advance_amount, language) : t.advances.selectEmployeeFirst}
                 </p>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Request Date *
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.advances.requestDate} *
                 </label>
                 <input
                   type="date"
@@ -622,17 +622,17 @@ export function Advances() {
               {formData.amount > 0 && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <p className="text-sm text-gray-800 font-semibold">
-                    Deduction Amount: {formatCurrency(formData.amount, language)}
+                    {t.advances.deductionAmount}: {formatCurrency(formData.amount, language)}
                   </p>
                   <p className="text-sm text-gray-700 mt-1">
-                    Full amount will be deducted from next month's salary
+                    {t.advances.deductionNote}
                   </p>
                 </div>
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.advances.notes}
                 </label>
                 <textarea
                   value={formData.notes}
@@ -642,19 +642,19 @@ export function Advances() {
                 />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <div className={`flex justify-end gap-3 pt-4 border-t border-gray-200 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <button
                   type="button"
                   onClick={resetForm}
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
                 >
-                  Cancel
+                  {t.advances.cancel}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
                 >
-                  {editingAdvance ? 'Update Advance' : 'Create Advance'}
+                  {editingAdvance ? t.advances.updateAdvance : t.advances.createAdvance}
                 </button>
               </div>
             </form>

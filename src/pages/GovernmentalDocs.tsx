@@ -103,7 +103,7 @@ export function GovernmentalDocs() {
       fetchDocuments();
     } catch (error: any) {
       console.error('Error saving document:', error);
-      alert('Failed to save document: ' + error.message);
+      alert(t.governmentalDocs.failedToSave + ': ' + error.message);
     }
   };
 
@@ -126,7 +126,7 @@ export function GovernmentalDocs() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this document?')) return;
+    if (!confirm(t.governmentalDocs.documentDeleteConfirm)) return;
 
     try {
       const { error } = await supabase
@@ -135,11 +135,11 @@ export function GovernmentalDocs() {
         .eq('id', id);
 
       if (error) throw error;
-      alert('Document deleted successfully!');
+      alert(t.governmentalDocs.documentDeletedSuccess);
       fetchDocuments();
     } catch (error: any) {
       console.error('Error deleting document:', error);
-      alert('Failed to delete document: ' + error.message);
+      alert(t.governmentalDocs.failedToDelete + ': ' + error.message);
     }
   };
 
@@ -345,10 +345,10 @@ export function GovernmentalDocs() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {editingDoc ? 'Edit Document' : 'Add New Document'}
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" dir={isRTL ? 'rtl' : 'ltr'}>
+            <div className={`p-6 border-b border-gray-200 flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {editingDoc ? t.governmentalDocs.editDocument : t.governmentalDocs.addNewDocument}
               </h2>
               <button
                 onClick={() => {
@@ -365,8 +365,8 @@ export function GovernmentalDocs() {
             <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Document Type *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.documentType} *
                   </label>
                   <select
                     required
@@ -374,23 +374,23 @@ export function GovernmentalDocs() {
                     onChange={(e) => setFormData({ ...formData, document_type: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="commercial_registration">Commercial Registration</option>
-                    <option value="business_license">Business License</option>
-                    <option value="municipal_license">Municipal License</option>
-                    <option value="chamber_membership">Chamber of Commerce Membership</option>
-                    <option value="tax_registration">Tax Registration</option>
-                    <option value="environmental_permit">Environmental Permit</option>
-                    <option value="health_permit">Health Permit</option>
-                    <option value="safety_certificate">Safety Certificate</option>
-                    <option value="labor_office_registration">Labor Office Registration</option>
-                    <option value="gosi_registration">GOSI Registration</option>
-                    <option value="other">Other</option>
+                    <option value="commercial_registration">{t.governmentalDocs.commercialRegistration}</option>
+                    <option value="business_license">{t.governmentalDocs.businessLicense}</option>
+                    <option value="municipal_license">{t.governmentalDocs.municipalityLicense}</option>
+                    <option value="chamber_membership">{t.governmentalDocs.chamberOfCommerce}</option>
+                    <option value="tax_registration">{t.governmentalDocs.taxRegistration}</option>
+                    <option value="environmental_permit">{t.governmentalDocs.environmentalPermit}</option>
+                    <option value="health_permit">{t.governmentalDocs.healthPermit}</option>
+                    <option value="safety_certificate">{t.governmentalDocs.safetyCertificate}</option>
+                    <option value="labor_office_registration">{t.governmentalDocs.laborOfficeRegistration}</option>
+                    <option value="gosi_registration">{t.governmentalDocs.gosiRegistration}</option>
+                    <option value="other">{t.governmentalDocs.other}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Document Number *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.documentNumber} *
                   </label>
                   <input
                     type="text"
@@ -402,8 +402,8 @@ export function GovernmentalDocs() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Document Name (English) *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.documentNameEn} *
                   </label>
                   <input
                     type="text"
@@ -415,8 +415,8 @@ export function GovernmentalDocs() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Document Name (Arabic)
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.documentNameAr}
                   </label>
                   <input
                     type="text"
@@ -427,8 +427,8 @@ export function GovernmentalDocs() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Issuing Authority *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.issuingAuthority} *
                   </label>
                   <input
                     type="text"
@@ -440,8 +440,8 @@ export function GovernmentalDocs() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Issue Date *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.issueDate} *
                   </label>
                   <input
                     type="date"
@@ -453,8 +453,8 @@ export function GovernmentalDocs() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Expiry Date
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.expiryDate}
                   </label>
                   <input
                     type="date"
@@ -465,8 +465,8 @@ export function GovernmentalDocs() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Annual Cost (SAR)
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.annualCostSar}
                   </label>
                   <input
                     type="number"
@@ -479,8 +479,8 @@ export function GovernmentalDocs() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Renewal Period (Months)
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.renewalPeriodMonths}
                   </label>
                   <input
                     type="number"
@@ -492,20 +492,20 @@ export function GovernmentalDocs() {
                 </div>
 
                 <div className="flex items-center">
-                  <label className="flex items-center space-x-2 cursor-pointer">
+                  <label className={`flex items-center gap-2 cursor-pointer ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <input
                       type="checkbox"
                       checked={formData.auto_renew}
                       onChange={(e) => setFormData({ ...formData, auto_renew: e.target.checked })}
                       className="w-4 h-4 text-primary-600 border-gray-300 rounded focus:ring-primary-500"
                     />
-                    <span className="text-sm text-gray-700">Auto Renew</span>
+                    <span className="text-sm text-gray-700">{t.governmentalDocs.autoRenew}</span>
                   </label>
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.governmentalDocs.notes}
                   </label>
                   <textarea
                     value={formData.notes}
@@ -516,7 +516,7 @@ export function GovernmentalDocs() {
                 </div>
               </div>
 
-              <div className="mt-6 flex justify-end space-x-3">
+              <div className={`mt-6 flex justify-end gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <button
                   type="button"
                   onClick={() => {
@@ -526,13 +526,13 @@ export function GovernmentalDocs() {
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
                 >
-                  Cancel
+                  {t.governmentalDocs.cancel}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
                 >
-                  {editingDoc ? 'Update Document' : 'Add Document'}
+                  {editingDoc ? t.governmentalDocs.updateDocument : t.governmentalDocs.addDocument}
                 </button>
               </div>
             </form>
