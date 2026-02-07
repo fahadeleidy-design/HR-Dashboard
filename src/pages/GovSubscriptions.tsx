@@ -32,7 +32,7 @@ const commonPlatforms = [
   { name_en: 'Muqeem', name_ar: 'مقيم', description: 'Immigration Services (Iqama, Work Permits)' },
   { name_en: 'GOSI', name_ar: 'التأمينات الاجتماعية', description: 'General Organization for Social Insurance' },
   { name_en: 'Absher', name_ar: 'أبشر', description: 'Ministry of Interior Services' },
-  { name_en: 'Zajil', name_ar: 'زاجل', description: 'Chamber of Commerce Portal' },
+  { name_en: 'Subul', name_ar: 'سبل', description: 'Chamber of Commerce Portal' },
   { name_en: 'ZATCA', name_ar: 'هيئة الزكاة والضريبة والجمارك', description: 'Zakat, Tax and Customs Authority' },
   { name_en: 'Balady', name_ar: 'بلدي', description: 'Municipal Services' },
   { name_en: 'Elm', name_ar: 'علم', description: 'Credit Information Services' },
@@ -135,7 +135,7 @@ export function GovSubscriptions() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this subscription?')) return;
+    if (!confirm(t.govSubscriptions.confirmDelete)) return;
 
     try {
       const { error } = await supabase
@@ -478,25 +478,25 @@ export function GovSubscriptions() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
           <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {editingSubscription ? 'Edit Subscription' : 'Add New Subscription'}
+              <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {editingSubscription ? t.govSubscriptions.editSubscription : t.govSubscriptions.addSubscription}
               </h2>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6">
               {!editingSubscription && (
                 <div className="mb-6">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Quick Select Common Platforms:</p>
+                  <p className={`text-sm font-medium text-gray-700 mb-3 ${isRTL ? 'text-right' : 'text-left'}`}>{t.govSubscriptions.quickSelectPlatforms}</p>
                   <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                     {commonPlatforms.map((platform) => (
                       <button
                         key={platform.name_en}
                         type="button"
                         onClick={() => selectPlatform(platform)}
-                        className="px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-primary-50 hover:border-primary-500 transition-colors text-left"
+                        className={`px-3 py-2 text-sm border border-gray-300 rounded-md hover:bg-primary-50 hover:border-primary-500 transition-colors ${isRTL ? 'text-right' : 'text-left'}`}
                       >
-                        <p className="font-medium text-gray-900">{platform.name_en}</p>
-                        <p className="text-xs text-gray-500" dir="rtl">{platform.name_ar}</p>
+                        <p className="font-medium text-gray-900">{isRTL ? platform.name_ar : platform.name_en}</p>
+                        <p className="text-xs text-gray-500" dir={isRTL ? 'ltr' : 'rtl'}>{isRTL ? platform.name_en : platform.name_ar}</p>
                       </button>
                     ))}
                   </div>
@@ -505,8 +505,8 @@ export function GovSubscriptions() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Platform Name (English) *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.platformNameEn} *
                   </label>
                   <input
                     type="text"
@@ -518,8 +518,8 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Platform Name (Arabic)
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.platformNameAr}
                   </label>
                   <input
                     type="text"
@@ -531,12 +531,12 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subscription Type
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.subscriptionType}
                   </label>
                   <input
                     type="text"
-                    placeholder="Basic, Premium, Enterprise, etc."
+                    placeholder={t.govSubscriptions.subscriptionTypePlaceholder}
                     value={formData.subscription_type}
                     onChange={(e) => setFormData({ ...formData, subscription_type: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -544,8 +544,8 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Account Number
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.accountNumber}
                   </label>
                   <input
                     type="text"
@@ -556,8 +556,8 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Username
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.username}
                   </label>
                   <input
                     type="text"
@@ -568,8 +568,8 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Status *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.common.status} *
                   </label>
                   <select
                     required
@@ -577,16 +577,16 @@ export function GovSubscriptions() {
                     onChange={(e) => setFormData({ ...formData, subscription_status: e.target.value as any })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="active">Active</option>
-                    <option value="expired">Expired</option>
-                    <option value="suspended">Suspended</option>
-                    <option value="cancelled">Cancelled</option>
+                    <option value="active">{t.common.active}</option>
+                    <option value="expired">{t.common.expired}</option>
+                    <option value="suspended">{t.govSubscriptions.suspended}</option>
+                    <option value="cancelled">{t.govSubscriptions.cancelled}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.startDate}
                   </label>
                   <input
                     type="date"
@@ -597,8 +597,8 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Expiry Date
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.expiryDate}
                   </label>
                   <input
                     type="date"
@@ -609,8 +609,8 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Annual Cost (SAR)
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.annualCost} ({t.numbers.currency})
                   </label>
                   <input
                     type="number"
@@ -623,24 +623,24 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Payment Frequency
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.paymentFrequency}
                   </label>
                   <select
                     value={formData.payment_frequency}
                     onChange={(e) => setFormData({ ...formData, payment_frequency: e.target.value as any })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   >
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                    <option value="annual">Annual</option>
-                    <option value="one_time">One Time</option>
+                    <option value="monthly">{t.govSubscriptions.monthly}</option>
+                    <option value="quarterly">{t.govSubscriptions.quarterly}</option>
+                    <option value="annual">{t.govSubscriptions.annual}</option>
+                    <option value="one_time">{t.govSubscriptions.oneTime}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Person
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.contactPerson}
                   </label>
                   <input
                     type="text"
@@ -651,8 +651,8 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Phone
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.contactPhone}
                   </label>
                   <input
                     type="tel"
@@ -663,8 +663,8 @@ export function GovSubscriptions() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Contact Email
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.govSubscriptions.contactEmail}
                   </label>
                   <input
                     type="email"
@@ -675,8 +675,8 @@ export function GovSubscriptions() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.common.notes}
                   </label>
                   <textarea
                     rows={3}
@@ -687,19 +687,19 @@ export function GovSubscriptions() {
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className={`flex justify-end ${isRTL ? 'flex-row-reverse space-x-reverse' : ''} space-x-3 mt-6`}>
                 <button
                   type="button"
                   onClick={handleCloseForm}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                 >
-                  Cancel
+                  {t.common.cancel}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700"
                 >
-                  {editingSubscription ? 'Update' : 'Create'} Subscription
+                  {editingSubscription ? t.govSubscriptions.updateSubscription : t.govSubscriptions.createSubscription}
                 </button>
               </div>
             </form>
