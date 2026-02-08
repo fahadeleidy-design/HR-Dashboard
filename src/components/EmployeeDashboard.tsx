@@ -107,7 +107,7 @@ interface EmployeeStats {
 }
 
 export function EmployeeDashboard() {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const navigate = useNavigate();
@@ -134,19 +134,28 @@ export function EmployeeDashboard() {
   }, [user, currentCompany]);
 
   const loadEmployeeData = async () => {
-    if (!user?.email || !currentCompany) return;
+    if (!user || !currentCompany) return;
 
     setLoading(true);
     try {
-      const { data: empData, error: empError } = await supabase
+      let query = supabase
         .from('employees')
         .select(`
           *,
           department:departments(name_en, name_ar)
         `)
-        .eq('email', user.email)
-        .eq('company_id', currentCompany.id)
-        .maybeSingle();
+        .eq('company_id', currentCompany.id);
+
+      if (userRole?.employee_id) {
+        query = query.eq('id', userRole.employee_id);
+      } else if (user.email) {
+        query = query.eq('email', user.email);
+      } else {
+        setLoading(false);
+        return;
+      }
+
+      const { data: empData, error: empError } = await query.maybeSingle();
 
       if (empError) throw empError;
       if (!empData) {
