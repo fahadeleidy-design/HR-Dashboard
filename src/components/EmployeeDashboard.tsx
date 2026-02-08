@@ -145,7 +145,7 @@ export function EmployeeDashboard() {
           .from('employees')
           .select(`
             *,
-            department:departments(name_en, name_ar)
+            department:departments!department_id(name_en, name_ar)
           `)
           .eq('id', employeeId)
           .maybeSingle();
