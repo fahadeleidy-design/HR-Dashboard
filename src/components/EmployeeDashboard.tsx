@@ -54,8 +54,9 @@ interface EmployeeData {
 
 interface LeaveBalance {
   leave_type_id: string;
-  balance: number;
-  used: number;
+  remaining_days: number;
+  used_days: number;
+  total_entitlement: number;
   leave_type?: { name_en: string; name_ar: string | null };
 }
 
@@ -175,7 +176,7 @@ export function EmployeeDashboard() {
       ] = await Promise.all([
         supabase
           .from('leave_balances')
-          .select('leave_type_id, balance, used, leave_type:leave_types(name_en, name_ar)')
+          .select('leave_type_id, remaining_days, used_days, total_entitlement, leave_type:leave_types(name_en, name_ar)')
           .eq('employee_id', empData.id)
           .eq('year', new Date().getFullYear()),
         supabase
@@ -209,8 +210,8 @@ export function EmployeeDashboard() {
       ]);
 
       const leaveBalances = (leaveBalancesData.data || []) as LeaveBalance[];
-      const totalLeaveAvailable = leaveBalances.reduce((sum, lb) => sum + (lb.balance || 0), 0);
-      const totalLeaveUsed = leaveBalances.reduce((sum, lb) => sum + (lb.used || 0), 0);
+      const totalLeaveAvailable = leaveBalances.reduce((sum, lb) => sum + (lb.remaining_days || 0), 0);
+      const totalLeaveUsed = leaveBalances.reduce((sum, lb) => sum + (lb.used_days || 0), 0);
 
       const loans = loansData.data || [];
       const activeLoans = loans.filter(l => l.status === 'approved' || l.status === 'active');
@@ -918,11 +919,11 @@ export function EmployeeDashboard() {
                 </p>
                 <div className={`flex items-end justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <div className={isRTL ? 'text-right' : 'text-left'}>
-                    <p className="text-2xl font-bold text-green-600">{lb.balance}</p>
+                    <p className="text-2xl font-bold text-green-600">{lb.remaining_days}</p>
                     <p className="text-xs text-gray-500">{isRTL ? 'متاح' : 'Available'}</p>
                   </div>
                   <div className={isRTL ? 'text-left' : 'text-right'}>
-                    <p className="text-lg font-medium text-gray-600">{lb.used}</p>
+                    <p className="text-lg font-medium text-gray-600">{lb.used_days}</p>
                     <p className="text-xs text-gray-500">{isRTL ? 'مستخدم' : 'Used'}</p>
                   </div>
                 </div>
