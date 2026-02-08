@@ -209,6 +209,7 @@ export function EmployeeDashboard() {
             .from('gosi_rates_config')
             .select('*')
             .eq('company_id', empData.company_id)
+            .eq('contributor_type', empData.is_saudi ? 'saudi' : 'non_saudi')
             .maybeSingle()
         ]);
 
@@ -243,13 +244,8 @@ export function EmployeeDashboard() {
         let employerGosiShare = 0;
 
         if (gosiRates) {
-          if (empData.is_saudi) {
-            employeeGosiShare = totalSalary * (gosiRates.saudi_employee_pension_rate || 0.0975);
-            employerGosiShare = totalSalary * ((gosiRates.saudi_employer_pension_rate || 0.0975) + (gosiRates.employer_oci_rate || 0.02));
-          } else {
-            employeeGosiShare = 0;
-            employerGosiShare = totalSalary * (gosiRates.employer_oci_rate || 0.02);
-          }
+          employeeGosiShare = totalSalary * (parseFloat(gosiRates.employee_rate) || 0);
+          employerGosiShare = totalSalary * (parseFloat(gosiRates.employer_rate) || 0);
         }
 
         let contractDurationMonths = 0;
