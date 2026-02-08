@@ -54,12 +54,12 @@ export default function TenantConfiguration() {
           .from('tenant_configurations')
           .select('*')
           .eq('company_id', currentCompany.id)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('tenant_branding')
           .select('*')
           .eq('company_id', currentCompany.id)
-          .single()
+          .maybeSingle()
       ]);
 
       if (configRes.data) setConfig(configRes.data);
@@ -83,7 +83,7 @@ export default function TenantConfiguration() {
       .from('tenant_configurations')
       .insert([{ company_id: currentCompany?.id }])
       .select()
-      .single();
+      .maybeSingle();
     if (data) setConfig(data);
   };
 
@@ -92,7 +92,7 @@ export default function TenantConfiguration() {
       .from('tenant_branding')
       .insert([{ company_id: currentCompany?.id }])
       .select()
-      .single();
+      .maybeSingle();
     if (data) setBranding(data);
   };
 

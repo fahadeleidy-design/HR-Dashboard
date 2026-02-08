@@ -244,7 +244,7 @@ export function UserRoleManagement() {
         })
         .eq('id', editingRole.id)
         .select()
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 

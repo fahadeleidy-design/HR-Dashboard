@@ -134,12 +134,14 @@ export function GoalsManagement() {
         .from('user_roles')
         .select('role, employee_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      setUserRole(data.role);
-      if (data.employee_id) {
-        setEmployeeId(data.employee_id);
+      if (data) {
+        setUserRole(data.role);
+        if (data.employee_id) {
+          setEmployeeId(data.employee_id);
+        }
       }
     } catch (error: any) {
       console.error('Error fetching user role:', error);

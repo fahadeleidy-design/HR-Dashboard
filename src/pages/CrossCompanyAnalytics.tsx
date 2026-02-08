@@ -73,7 +73,7 @@ export default function CrossCompanyAnalytics() {
           .from('v_cross_company_analytics')
           .select('*')
           .eq('tenant_group_id', groupId)
-          .single(),
+          .maybeSingle(),
         supabase
           .from('companies')
           .select('id, name_en, tenant_status')

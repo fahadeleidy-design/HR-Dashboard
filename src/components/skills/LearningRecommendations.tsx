@@ -37,7 +37,7 @@ export default function LearningRecommendations() {
         .from('employees')
         .select('id')
         .eq('user_id', user!.id)
-        .single();
+        .maybeSingle();
 
       if (!employeeData) return;
 
@@ -64,7 +64,7 @@ export default function LearningRecommendations() {
         .from('employees')
         .select('id')
         .eq('user_id', user!.id)
-        .single();
+        .maybeSingle();
 
       if (!employeeData) return;
 

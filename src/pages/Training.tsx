@@ -60,10 +60,10 @@ export function Training() {
         .from('user_roles')
         .select('role, employee_id')
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
-      setUserRole(data);
+      if (data) setUserRole(data);
     } catch (error) {
       console.error('Error fetching user role:', error);
     }

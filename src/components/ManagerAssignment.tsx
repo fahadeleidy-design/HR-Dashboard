@@ -64,7 +64,7 @@ export default function ManagerAssignment() {
         .from('user_roles')
         .select('role, company_id')
         .eq('user_id', user?.id)
-        .single();
+        .maybeSingle();
 
       console.log('User role:', userRoleData);
 
