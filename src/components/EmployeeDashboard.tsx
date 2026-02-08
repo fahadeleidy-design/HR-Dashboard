@@ -143,13 +143,12 @@ export function EmployeeDashboard() {
         .select(`
           *,
           department:departments(name_en, name_ar)
-        `)
-        .eq('company_id', currentCompany.id);
+        `);
 
       if (userRole?.employee_id) {
         query = query.eq('id', userRole.employee_id);
       } else if (user.email) {
-        query = query.eq('email', user.email);
+        query = query.eq('company_id', currentCompany.id).eq('email', user.email);
       } else {
         setLoading(false);
         return;
