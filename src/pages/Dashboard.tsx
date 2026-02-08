@@ -9,7 +9,8 @@ import { buildCompanyFilter } from '@/lib/queryHelpers';
 import {
   Users, UserCheck, UserX, TrendingUp, Calendar, AlertCircle,
   DollarSign, Clock, FileText, Car, Home, Shield, Plane,
-  CreditCard, Briefcase, Award, UserCog, TrendingDown, Building2
+  CreditCard, Briefcase, Award, UserCog, TrendingDown, Building2,
+  User
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 import { EmployeeDashboard } from '@/components/EmployeeDashboard';
@@ -81,8 +82,35 @@ export function Dashboard() {
   const [monthlyHiresData, setMonthlyHiresData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  if (userRole?.role === 'employee') {
+  const isEmployeeOnly = userRole?.role === 'employee';
+  const hasEmployeeProfile = !!userRole?.employee_id;
+  const [dashboardView, setDashboardView] = useState<'company' | 'personal'>(isEmployeeOnly ? 'personal' : 'company');
+
+  if (isEmployeeOnly) {
     return <EmployeeDashboard />;
+  }
+
+  if (dashboardView === 'personal' && hasEmployeeProfile) {
+    return (
+      <div className={`space-y-4 ${isRTL ? 'rtl' : 'ltr'}`}>
+        <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <button
+            onClick={() => setDashboardView('company')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 transition-colors"
+          >
+            <Building2 className="h-4 w-4" />
+            {language === 'ar' ? 'لوحة الشركة' : 'Company Dashboard'}
+          </button>
+          <button
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary-600 shadow-sm"
+          >
+            <User className="h-4 w-4" />
+            {language === 'ar' ? 'لوحتي' : 'My Dashboard'}
+          </button>
+        </div>
+        <EmployeeDashboard />
+      </div>
+    );
   }
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
@@ -406,11 +434,22 @@ export function Dashboard() {
 
   return (
     <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
-      <div className={isRTL ? 'text-right' : 'text-left'}>
-        <h1 className="text-3xl font-bold text-gray-900">{t.dashboard.title}</h1>
-        <p className="text-gray-600 mt-1">
-          {t.common.welcome} {isRTL ? (currentCompany?.name_ar || currentCompany?.name_en) : (currentCompany?.name_en)}
-        </p>
+      <div className={`flex items-start justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.dashboard.title}</h1>
+          <p className="text-gray-600 mt-1">
+            {t.common.welcome} {isRTL ? (currentCompany?.name_ar || currentCompany?.name_en) : (currentCompany?.name_en)}
+          </p>
+        </div>
+        {hasEmployeeProfile && (
+          <button
+            onClick={() => setDashboardView('personal')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 hover:bg-primary-100 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
+            <User className="h-4 w-4" />
+            {language === 'ar' ? 'لوحتي' : 'My Dashboard'}
+          </button>
+        )}
       </div>
 
       <div>

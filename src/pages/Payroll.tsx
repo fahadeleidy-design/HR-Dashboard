@@ -110,7 +110,9 @@ export function Payroll() {
   const [searchParams] = useSearchParams();
   const employeeIdParam = searchParams.get('employee_id');
   const isEmployee = userRole?.role === 'employee';
+  const hasEmployeeProfile = !!userRole?.employee_id;
   const [view, setView] = useState<View>(isEmployee ? 'items' : 'batches');
+  const [viewingMyPayslip, setViewingMyPayslip] = useState(false);
   const [batches, setBatches] = useState<PayrollBatch[]>([]);
   const [selectedBatch, setSelectedBatch] = useState<PayrollBatch | null>(null);
   const [payrollItems, setPayrollItems] = useState<PayrollItem[]>([]);
@@ -160,13 +162,13 @@ export function Payroll() {
     if (employeeIdParam && payrollItems.length > 0) {
       const filtered = payrollItems.filter(item => item.employee_id === employeeIdParam);
       setFilteredPayrollItems(filtered);
-    } else if (isEmployee && userRole?.employee_id && payrollItems.length > 0) {
+    } else if ((isEmployee || viewingMyPayslip) && userRole?.employee_id && payrollItems.length > 0) {
       const filtered = payrollItems.filter(item => item.employee_id === userRole.employee_id);
       setFilteredPayrollItems(filtered);
     } else {
       setFilteredPayrollItems(payrollItems);
     }
-  }, [employeeIdParam, payrollItems, isEmployee, userRole]);
+  }, [employeeIdParam, payrollItems, isEmployee, userRole, viewingMyPayslip]);
 
   const fetchBatches = async () => {
     if (!currentCompany) return;
@@ -561,18 +563,35 @@ export function Payroll() {
           </p>
         </div>
         {!isEmployee && (
-          <div className={`flex ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-3`}>
+          <div className={`flex flex-wrap ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} gap-2`}>
             <button
-              onClick={() => setView('batches')}
+              onClick={() => { setView('batches'); setViewingMyPayslip(false); }}
               className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2 px-4 py-2 rounded-md transition-colors ${
-                view === 'batches' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                view === 'batches' && !viewingMyPayslip ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
               <FileText className="h-4 w-4" />
               <span>{t.payroll.payrollBatch}</span>
             </button>
+            {hasEmployeeProfile && (
+              <button
+                onClick={() => {
+                  setViewingMyPayslip(true);
+                  setView('items');
+                  if (batches.length > 0) {
+                    setSelectedBatch(batches[0]);
+                  }
+                }}
+                className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2 px-4 py-2 rounded-md transition-colors ${
+                  viewingMyPayslip ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <DollarSign className="h-4 w-4" />
+                <span>{language === 'ar' ? 'كشف راتبي' : 'My Payslip'}</span>
+              </button>
+            )}
             <button
-              onClick={() => setView('analytics')}
+              onClick={() => { setView('analytics'); setViewingMyPayslip(false); }}
               className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2 px-4 py-2 rounded-md transition-colors ${
                 view === 'analytics' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
@@ -581,7 +600,7 @@ export function Payroll() {
               <span>{t.payroll.payrollAnalytics}</span>
             </button>
             <button
-              onClick={() => setView('create')}
+              onClick={() => { setView('create'); setViewingMyPayslip(false); }}
               className={`flex items-center ${isRTL ? 'space-x-reverse flex-row-reverse' : ''} space-x-2 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors`}
             >
               <Plus className="h-4 w-4" />
@@ -591,7 +610,7 @@ export function Payroll() {
         )}
       </div>
 
-      {!isEmployee && view === 'batches' && (
+      {!isEmployee && !viewingMyPayslip && view === 'batches' && (
         <div className="space-y-6">
           {batches.length > 0 && (
             <div className={`bg-blue-50 border border-blue-200 rounded-lg p-4 ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -797,7 +816,7 @@ export function Payroll() {
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              {!isEmployee && (
+              {!isEmployee && !viewingMyPayslip && (
                 <button
                   onClick={() => {
                     setView('batches');
@@ -809,9 +828,9 @@ export function Payroll() {
                 </button>
               )}
               <h2 className="text-2xl font-bold text-gray-900">
-                {isEmployee ? `My Payslip - ${selectedBatch.month}` : `Payroll Items - ${selectedBatch.month}`}
+                {(isEmployee || viewingMyPayslip) ? `${language === 'ar' ? 'كشف راتبي' : 'My Payslip'} - ${selectedBatch.month}` : `Payroll Items - ${selectedBatch.month}`}
               </h2>
-              {!isEmployee && (
+              {!isEmployee && !viewingMyPayslip && (
                 <p className="text-gray-600">
                   {selectedBatch.total_employees} employees | Status: {getStatusLabel(selectedBatch.status)}
                 </p>
@@ -834,7 +853,7 @@ export function Payroll() {
             </div>
           </div>
 
-          {!isEmployee && (
+          {!isEmployee && !viewingMyPayslip && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white rounded-lg shadow p-6">
                 <div className="flex items-center justify-between">
