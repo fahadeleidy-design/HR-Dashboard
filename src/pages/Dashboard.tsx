@@ -48,9 +48,6 @@ export function Dashboard() {
   const { t, language, isRTL } = useLanguage();
   const navigate = useNavigate();
 
-  if (userRole?.role === 'employee') {
-    return <EmployeeDashboard />;
-  }
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
     activeEmployees: 0,
@@ -83,6 +80,10 @@ export function Dashboard() {
   const [employmentTypeData, setEmploymentTypeData] = useState<any[]>([]);
   const [monthlyHiresData, setMonthlyHiresData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  if (userRole?.role === 'employee') {
+    return <EmployeeDashboard />;
+  }
 
   const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899', '#06B6D4', '#84CC16'];
 
@@ -329,39 +330,41 @@ export function Dashboard() {
         }))
       );
 
-      const { data: deptData } = await supabase
-        .from('employees')
-        .select('department_id, departments!employees_department_id_fkey(name_en)')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'active');
+      if (currentCompany) {
+        const { data: deptData } = await supabase
+          .from('employees')
+          .select('department_id, departments!employees_department_id_fkey(name_en)')
+          .eq('company_id', currentCompany.id)
+          .eq('status', 'active');
 
-      const deptCounts = (deptData || []).reduce((acc: any, emp: any) => {
-        const deptName = emp.departments?.name_en || 'Unassigned';
-        acc[deptName] = (acc[deptName] || 0) + 1;
-        return acc;
-      }, {});
+        const deptCounts = (deptData || []).reduce((acc: any, emp: any) => {
+          const deptName = emp.departments?.name_en || 'Unassigned';
+          acc[deptName] = (acc[deptName] || 0) + 1;
+          return acc;
+        }, {});
 
-      setDepartmentData(
-        Object.entries(deptCounts).map(([name, value]) => ({ name, value }))
-      );
+        setDepartmentData(
+          Object.entries(deptCounts).map(([name, value]) => ({ name, value }))
+        );
 
-      const { data: hireData } = await supabase
-        .from('employees')
-        .select('hire_date')
-        .eq('company_id', currentCompany.id);
+        const { data: hireData } = await supabase
+          .from('employees')
+          .select('hire_date')
+          .eq('company_id', currentCompany.id);
 
-      const last6Months = Array.from({ length: 6 }, (_, i) => {
-        const d = new Date();
-        d.setMonth(d.getMonth() - (5 - i));
-        return d.toISOString().slice(0, 7);
-      });
+        const last6Months = Array.from({ length: 6 }, (_, i) => {
+          const d = new Date();
+          d.setMonth(d.getMonth() - (5 - i));
+          return d.toISOString().slice(0, 7);
+        });
 
-      const hireCounts = last6Months.map(month => ({
-        month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
-        hires: (hireData || []).filter((emp: any) => emp.hire_date?.startsWith(month)).length,
-      }));
+        const hireCounts = last6Months.map(month => ({
+          month: new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          hires: (hireData || []).filter((emp: any) => emp.hire_date?.startsWith(month)).length,
+        }));
 
-      setMonthlyHiresData(hireCounts);
+        setMonthlyHiresData(hireCounts);
+      }
     } catch (error) {
       console.error('Error fetching dashboard stats:', error);
     } finally {
