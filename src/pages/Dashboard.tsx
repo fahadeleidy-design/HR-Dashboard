@@ -86,6 +86,12 @@ export function Dashboard() {
   const hasEmployeeProfile = !!userRole?.employee_id;
   const [dashboardView, setDashboardView] = useState<'company' | 'personal'>(isEmployeeOnly ? 'personal' : 'company');
 
+  useEffect(() => {
+    if (currentCompany || (isConsolidatedView && companies.length > 0)) {
+      fetchDashboardStats();
+    }
+  }, [currentCompany, isConsolidatedView, companies]);
+
   if (isEmployeeOnly) {
     return <EmployeeDashboard />;
   }
@@ -152,13 +158,7 @@ export function Dashboard() {
     );
   };
 
-  useEffect(() => {
-    if (currentCompany || (isConsolidatedView && companies.length > 0)) {
-      fetchDashboardStats();
-    }
-  }, [currentCompany, isConsolidatedView, companies]);
-
-  const fetchDashboardStats = async () => {
+  async function fetchDashboardStats() {
     if (!currentCompany && !isConsolidatedView) return;
 
     setLoading(true);
@@ -398,7 +398,7 @@ export function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const getNitaqatColorClass = (color: string) => {
     switch (color) {
