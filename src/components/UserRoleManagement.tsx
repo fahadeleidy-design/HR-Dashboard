@@ -236,20 +236,34 @@ export function UserRoleManagement() {
     setMessage(null);
 
     try {
-      const { data, error } = await supabase
-        .from('user_roles')
-        .update({
-          employee_id: editForm.employee_id || null,
-          role: editForm.role
-        })
-        .eq('id', editingRole.id)
-        .select()
-        .maybeSingle();
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
+      }
 
-      if (error) throw error;
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/user-management`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'Content-Type': 'application/json',
+            'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+          },
+          body: JSON.stringify({
+            action: 'update_role',
+            roleId: editingRole.id,
+            employeeId: editForm.employee_id || null,
+            role: editForm.role,
+          }),
+        }
+      );
 
-      if (!data) {
-        throw new Error('Failed to verify update');
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to update user role');
       }
 
       setEditingRole(null);

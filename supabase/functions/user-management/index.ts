@@ -10,12 +10,13 @@ const corsHeaders = {
 };
 
 interface RequestBody {
-  action: 'list_users' | 'create_user' | 'get_user_email' | 'bulk_create_employee_accounts';
+  action: 'list_users' | 'create_user' | 'get_user_email' | 'bulk_create_employee_accounts' | 'update_role';
   email?: string;
   companyId?: string;
   userIds?: string[];
   employeeId?: string | null;
   role?: 'super_admin' | 'hr' | 'finance' | 'manager' | 'employee';
+  roleId?: string;
 }
 
 Deno.serve(async (req: Request) => {
@@ -439,6 +440,53 @@ Deno.serve(async (req: Request) => {
               failed: results.failed.length
             }
           }),
+          {
+            headers: {
+              ...corsHeaders,
+              'Content-Type': 'application/json',
+            },
+          }
+        );
+      }
+
+      case 'update_role': {
+        if (!body.roleId || !body.role) {
+          throw new Error('Role ID and new role are required');
+        }
+
+        if (!hasSuperAdminRole && body.role === 'super_admin') {
+          throw new Error('Only Super Admins can assign the Super Admin role');
+        }
+
+        if (hasHrRole && !hasSuperAdminRole && !['employee', 'hr', 'manager'].includes(body.role)) {
+          throw new Error('HR users can only assign Employee, HR, or Manager roles');
+        }
+
+        const { data: existingRole, error: fetchError } = await supabaseAdmin
+          .from('user_roles')
+          .select('id, role')
+          .eq('id', body.roleId)
+          .maybeSingle();
+
+        if (fetchError) throw fetchError;
+        if (!existingRole) throw new Error('Role not found');
+
+        if (existingRole.role === 'super_admin' && !hasSuperAdminRole) {
+          throw new Error('Only Super Admins can modify Super Admin roles');
+        }
+
+        const { error: updateError } = await supabaseAdmin
+          .from('user_roles')
+          .update({
+            employee_id: body.employeeId !== undefined ? (body.employeeId || null) : undefined,
+            role: body.role,
+          })
+          .eq('id', body.roleId);
+
+        if (updateError) throw updateError;
+
+        return new Response(
+          JSON.stringify({ success: true }),
           {
             headers: {
               ...corsHeaders,
