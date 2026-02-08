@@ -46,17 +46,17 @@ interface EOSCalculation {
   created_at: string;
 }
 
-const TERMINATION_REASONS = {
-  retirement: { label: 'Retirement', fullBenefit: true, description: 'Employee reached retirement age (60+)' },
-  death: { label: 'Death', fullBenefit: true, description: 'Employee deceased' },
-  disability: { label: 'Disability', fullBenefit: true, description: 'Employee became disabled' },
-  employer_termination: { label: 'Employer Termination', fullBenefit: true, description: 'Terminated by employer without cause' },
-  mutual_agreement: { label: 'Mutual Agreement', fullBenefit: true, description: 'Both parties agreed to terminate' },
-  female_marriage: { label: 'Female Marriage', fullBenefit: true, description: 'Female employee married (within 6 months)' },
-  contract_completion: { label: 'Contract Completion', fullBenefit: true, description: 'Limited term contract completed' },
-  employee_resignation: { label: 'Employee Resignation', fullBenefit: false, description: 'Employee voluntarily resigned' },
-  termination_for_cause: { label: 'Termination for Cause', fullBenefit: false, description: 'Terminated for disciplinary reasons (No benefits)' },
-  probation_period: { label: 'Probation Period', fullBenefit: false, description: 'Terminated during probation (No benefits)' }
+const TERMINATION_REASONS_DATA = {
+  retirement: { labelKey: 'retirementReason', descKey: 'retirementDesc', fullBenefit: true },
+  death: { labelKey: 'deathReason', descKey: 'deathDesc', fullBenefit: true },
+  disability: { labelKey: 'disabilityReason', descKey: 'disabilityDesc', fullBenefit: true },
+  employer_termination: { labelKey: 'employerTermination', descKey: 'employerTerminationDesc', fullBenefit: true },
+  mutual_agreement: { labelKey: 'mutualAgreement', descKey: 'mutualAgreementDesc', fullBenefit: true },
+  female_marriage: { labelKey: 'femaleMarriage', descKey: 'femaleMarriageDesc', fullBenefit: true },
+  contract_completion: { labelKey: 'contractCompletion', descKey: 'contractCompletionDesc', fullBenefit: true },
+  employee_resignation: { labelKey: 'employeeResignation', descKey: 'employeeResignationDesc', fullBenefit: false },
+  termination_for_cause: { labelKey: 'terminationForCause', descKey: 'terminationForCauseDesc', fullBenefit: false },
+  probation_period: { labelKey: 'probationPeriod', descKey: 'probationPeriodDesc', fullBenefit: false }
 };
 
 export function EndOfService() {
@@ -161,7 +161,7 @@ export function EndOfService() {
 
   const calculateEOS = async () => {
     if (!selectedEmployee || !terminationDate || !terminationReason || !currentCompany) {
-      alert('Please fill all required fields');
+      alert(t.endOfService.fillAllRequired);
       return;
     }
 
@@ -196,7 +196,7 @@ export function EndOfService() {
         grossBenefit = (totalYears + totalMonths / 12) * basicSalary;
       }
     } else {
-      const reasonInfo = TERMINATION_REASONS[terminationReason as keyof typeof TERMINATION_REASONS];
+      const reasonInfo = TERMINATION_REASONS_DATA[terminationReason as keyof typeof TERMINATION_REASONS_DATA];
       eligibleForFull = reasonInfo?.fullBenefit || false;
 
       if (totalYears < 2) {
@@ -348,7 +348,7 @@ export function EndOfService() {
           .insert(detailsToInsert);
       }
 
-      alert('Calculation saved successfully!');
+      alert(t.endOfService.calculationSavedSuccess);
       setShowCalculator(false);
       setCalculationResult(null);
       setSelectedEmployee('');
@@ -356,7 +356,7 @@ export function EndOfService() {
       setTerminationReason('');
       loadCalculations();
     } else {
-      alert('Error saving calculation');
+      alert(t.endOfService.errorSavingCalculation);
     }
   };
 
@@ -367,11 +367,11 @@ export function EndOfService() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
-        return <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> Draft</span>;
+        return <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-700 rounded-full flex items-center gap-1"><Clock className="h-3 w-3" /> {t.endOfService.draft}</span>;
       case 'approved':
-        return <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> Approved</span>;
+        return <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full flex items-center gap-1"><CheckCircle className="h-3 w-3" /> {t.endOfService.approved}</span>;
       case 'paid':
-        return <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full flex items-center gap-1"><DollarSign className="h-3 w-3" /> Paid</span>;
+        return <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full flex items-center gap-1"><DollarSign className="h-3 w-3" /> {t.endOfService.paid}</span>;
       default:
         return null;
     }
@@ -397,7 +397,7 @@ export function EndOfService() {
       </div>
 
       {showCalculator && (
-        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200" dir={isRTL ? 'rtl' : 'ltr'}>
           <h2 className={`text-xl font-semibold mb-4 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <Calculator className="h-6 w-6 text-primary-600" />
             {t.endOfService.calculateTitle}
@@ -444,23 +444,23 @@ export function EndOfService() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               >
                 <option value="">{t.endOfService.chooseReason}</option>
-                {Object.entries(TERMINATION_REASONS).map(([key, info]) => (
+                {Object.entries(TERMINATION_REASONS_DATA).map(([key, info]) => (
                   <option key={key} value={key}>
-                    {info.label} - {info.description}
+                    {(t.endOfService as any)[info.labelKey]} - {(t.endOfService as any)[info.descKey]}
                   </option>
                 ))}
               </select>
             </div>
           </div>
 
-          <div className="flex gap-3">
+          <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
             <button
               onClick={calculateEOS}
               disabled={calculating || !selectedEmployee || !terminationDate || !terminationReason}
               className="flex items-center gap-2 px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               <Calculator className="h-5 w-5" />
-              {calculating ? 'Calculating...' : 'Calculate'}
+              {calculating ? t.endOfService.calculating : t.endOfService.calculate}
             </button>
             <button
               onClick={() => {
@@ -472,60 +472,60 @@ export function EndOfService() {
               }}
               className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t.endOfService.cancel}
             </button>
           </div>
 
           {calculationResult && (
             <div className="mt-6 border-t pt-6">
-              <h3 className="text-lg font-semibold mb-4 text-primary-600">Calculation Results</h3>
+              <h3 className={`text-lg font-semibold mb-4 text-primary-600 ${isRTL ? 'text-right' : 'text-left'}`}>{t.endOfService.calculationResults}</h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <h4 className={`font-medium text-gray-700 mb-3 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <User className="h-5 w-5 text-primary-600" />
-                    Employee Information
+                    {t.endOfService.employeeInformation}
                   </h4>
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Name:</span> {calculationResult.employee.first_name_en} {calculationResult.employee.last_name_en}</p>
-                    <p><span className="font-medium">Code:</span> {calculationResult.employee.employee_number}</p>
-                    <p><span className="font-medium">Basic Salary:</span> {calculationResult.basicSalary.toLocaleString()} SAR</p>
-                    <p><span className="font-medium">Contract Type:</span> {calculationResult.contractType === 'limited' ? 'Fixed Term' : 'Indefinite'}</p>
+                    <p><span className="font-medium">{t.endOfService.name}:</span> {calculationResult.employee.first_name_en} {calculationResult.employee.last_name_en}</p>
+                    <p><span className="font-medium">{t.endOfService.code}:</span> {calculationResult.employee.employee_number}</p>
+                    <p><span className="font-medium">{t.endOfService.basicSalary}:</span> {calculationResult.basicSalary.toLocaleString()} SAR</p>
+                    <p><span className="font-medium">{t.endOfService.contractType}:</span> {calculationResult.contractType === 'limited' ? t.endOfService.fixedTerm : t.endOfService.indefinite}</p>
                   </div>
                 </div>
 
                 <div className="bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                  <h4 className={`font-medium text-gray-700 mb-3 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <Calendar className="h-5 w-5 text-primary-600" />
-                    Service Duration
+                    {t.endOfService.serviceDuration}
                   </h4>
                   <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Hire Date:</span> {format(new Date(calculationResult.hireDate), 'dd/MM/yyyy')}</p>
-                    <p><span className="font-medium">Termination Date:</span> {format(new Date(calculationResult.terminationDate), 'dd/MM/yyyy')}</p>
-                    <p><span className="font-medium">Total Service:</span> {calculationResult.serviceYears} years, {calculationResult.serviceMonths} months</p>
-                    <p><span className="font-medium">Benefit Type:</span> {calculationResult.eligibleForFull ? 'Full Benefits' : 'Half Benefits'}</p>
+                    <p><span className="font-medium">{t.endOfService.hireDate}:</span> {format(new Date(calculationResult.hireDate), 'dd/MM/yyyy')}</p>
+                    <p><span className="font-medium">{t.endOfService.terminationDate}:</span> {format(new Date(calculationResult.terminationDate), 'dd/MM/yyyy')}</p>
+                    <p><span className="font-medium">{t.endOfService.totalService}:</span> {calculationResult.serviceYears} {t.endOfService.years}, {calculationResult.serviceMonths} {t.endOfService.months}</p>
+                    <p><span className="font-medium">{t.endOfService.benefitType}:</span> {calculationResult.eligibleForFull ? t.endOfService.fullBenefits : t.endOfService.halfBenefits}</p>
                   </div>
                 </div>
               </div>
 
               {calculationResult.yearlyBreakdown.length > 0 && (
                 <div className="mb-6 bg-gray-50 rounded-lg p-4">
-                  <h4 className="font-medium text-gray-700 mb-3">Yearly Breakdown</h4>
+                  <h4 className="font-medium text-gray-700 mb-3">{t.endOfService.yearlyBreakdown}</h4>
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead>
                         <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Year</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Rate</th>
-                          <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                          <th className={`px-4 py-2 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.endOfService.year}</th>
+                          <th className={`px-4 py-2 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.endOfService.rate}</th>
+                          <th className={`px-4 py-2 ${isRTL ? 'text-left' : 'text-right'} text-xs font-medium text-gray-500 uppercase`}>{t.endOfService.amount}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
                         {calculationResult.yearlyBreakdown.map((year: any) => (
                           <tr key={year.year}>
-                            <td className="px-4 py-2 text-sm">Year {year.year}</td>
-                            <td className="px-4 py-2 text-sm">{year.rate === 1 ? 'Full month' : 'Half month'}</td>
-                            <td className="px-4 py-2 text-sm text-right">{year.amount.toLocaleString()} SAR</td>
+                            <td className="px-4 py-2 text-sm">{t.endOfService.year} {year.year}</td>
+                            <td className="px-4 py-2 text-sm">{year.rate === 1 ? t.endOfService.fullMonth : t.endOfService.halfMonth}</td>
+                            <td className={`px-4 py-2 text-sm ${isRTL ? 'text-left' : 'text-right'}`}>{year.amount.toLocaleString()} SAR</td>
                           </tr>
                         ))}
                       </tbody>
@@ -536,11 +536,11 @@ export function EndOfService() {
 
               {calculationResult.grossBenefit === 0 && calculationResult.contractType === 'unlimited' && calculationResult.serviceYears < 2 && (
                 <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex gap-3">
+                  <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-yellow-800">
-                      <p className="font-medium mb-1">No End of Service Benefits - Service Period Less Than 2 Years</p>
-                      <p>According to Saudi Labor Law Article 84, employees with <strong>indefinite (unlimited) contracts</strong> must complete at least <strong>2 full years of service</strong> to be eligible for end-of-service benefits. This employee has only served {calculationResult.serviceYears} year(s) and {calculationResult.serviceMonths} month(s).</p>
+                    <div className={`text-sm text-yellow-800 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      <p className="font-medium mb-1">{t.endOfService.noEosLessThan2Years}</p>
+                      <p>{t.endOfService.noEosLessThan2YearsDesc}</p>
                     </div>
                   </div>
                 </div>
@@ -548,54 +548,54 @@ export function EndOfService() {
 
               {calculationResult.grossBenefit === 0 && (terminationReason === 'termination_for_cause' || terminationReason === 'probation_period') && (
                 <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex gap-3">
+                  <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                    <div className="text-sm text-yellow-800">
-                      <p className="font-medium mb-1">No End of Service Benefits</p>
-                      <p>According to Saudi Labor Law, employees terminated <strong>for cause</strong> or during <strong>probation period</strong> are not entitled to end-of-service benefits.</p>
+                    <div className={`text-sm text-yellow-800 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      <p className="font-medium mb-1">{t.endOfService.noEosBenefitsTitle}</p>
+                      <p>{t.endOfService.noEosForCause}</p>
                     </div>
                   </div>
                 </div>
               )}
 
               <div className="bg-primary-50 rounded-lg p-4 border border-primary-200">
-                <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
+                <h4 className={`font-medium text-gray-700 mb-3 flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <DollarSign className="h-5 w-5 text-primary-600" />
-                  Financial Summary
+                  {t.endOfService.financialSummary}
                 </h4>
                 <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="font-medium">Gross Benefit:</span>
+                  <div className={`flex justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <span className="font-medium">{t.endOfService.grossBenefit}:</span>
                     <span className={`font-semibold ${calculationResult.grossBenefit > 0 ? 'text-green-600' : 'text-gray-600'}`}>{calculationResult.grossBenefit.toLocaleString()} SAR</span>
                   </div>
                   {calculationResult.loansDeduction > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">Outstanding Loans:</span>
+                    <div className={`flex justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <span className="font-medium">{t.endOfService.outstandingLoans}:</span>
                       <span className="text-red-600">-{calculationResult.loansDeduction.toLocaleString()} SAR</span>
                     </div>
                   )}
                   {calculationResult.advancesDeduction > 0 && (
-                    <div className="flex justify-between text-sm">
-                      <span className="font-medium">Outstanding Advances:</span>
+                    <div className={`flex justify-between text-sm ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <span className="font-medium">{t.endOfService.outstandingAdvances}:</span>
                       <span className="text-red-600">-{calculationResult.advancesDeduction.toLocaleString()} SAR</span>
                     </div>
                   )}
                   <div className="border-t border-primary-300 pt-2 mt-2">
-                    <div className="flex justify-between">
-                      <span className="font-bold text-lg">Net Benefit:</span>
+                    <div className={`flex justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <span className="font-bold text-lg">{t.endOfService.netBenefit}:</span>
                       <span className={`font-bold text-lg ${calculationResult.netBenefit > 0 ? 'text-primary-600' : 'text-gray-600'}`}>{calculationResult.netBenefit.toLocaleString()} SAR</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-4 flex gap-3">
+              <div className={`mt-4 flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <button
                   onClick={saveCalculation}
                   className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   <CheckCircle className="h-5 w-5" />
-                  Save Calculation
+                  {t.endOfService.saveCalculation}
                 </button>
               </div>
             </div>
@@ -603,33 +603,33 @@ export function EndOfService() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md border border-gray-200">
+      <div className="bg-white rounded-lg shadow-md border border-gray-200" dir={isRTL ? 'rtl' : 'ltr'}>
         <div className="p-4 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h2 className="text-lg font-semibold">Previous Calculations</h2>
+          <h2 className="text-lg font-semibold">{t.endOfService.previousCalculations}</h2>
           <div className="flex gap-2">
             <button
               onClick={() => setFilterStatus('all')}
               className={`px-3 py-1 rounded-lg text-sm ${filterStatus === 'all' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
-              All
+              {t.endOfService.all}
             </button>
             <button
               onClick={() => setFilterStatus('draft')}
               className={`px-3 py-1 rounded-lg text-sm ${filterStatus === 'draft' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
-              Draft
+              {t.endOfService.draft}
             </button>
             <button
               onClick={() => setFilterStatus('approved')}
               className={`px-3 py-1 rounded-lg text-sm ${filterStatus === 'approved' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
-              Approved
+              {t.endOfService.approved}
             </button>
             <button
               onClick={() => setFilterStatus('paid')}
               className={`px-3 py-1 rounded-lg text-sm ${filterStatus === 'paid' ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
             >
-              Paid
+              {t.endOfService.paid}
             </button>
           </div>
         </div>
@@ -638,24 +638,24 @@ export function EndOfService() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Employee</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Termination Date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Years of Service</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Gross Amount</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Net Amount</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{t.endOfService.employee}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{t.endOfService.terminationDate}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{t.endOfService.serviceYears}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-left' : 'text-right'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{t.endOfService.grossAmount}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-left' : 'text-right'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{t.endOfService.netAmount}</th>
+                <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{t.endOfService.status}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">Loading...</td>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">{t.endOfService.loading}</td>
                 </tr>
               ) : filteredCalculations.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-2 text-gray-400" />
-                    No calculations found
+                    {t.endOfService.noCalculationsFound}
                   </td>
                 </tr>
               ) : (
@@ -671,12 +671,12 @@ export function EndOfService() {
                       {format(new Date(calc.termination_date), 'dd/MM/yyyy')}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900">
-                      {calc.total_service_years} years
+                      {calc.total_service_years} {t.endOfService.years}
                     </td>
-                    <td className="px-6 py-4 text-sm text-right text-gray-900">
+                    <td className={`px-6 py-4 text-sm ${isRTL ? 'text-left' : 'text-right'} text-gray-900`}>
                       {calc.gross_benefit_amount.toLocaleString()} SAR
                     </td>
-                    <td className="px-6 py-4 text-sm text-right font-medium text-primary-600">
+                    <td className={`px-6 py-4 text-sm ${isRTL ? 'text-left' : 'text-right'} font-medium text-primary-600`}>
                       {calc.net_benefit_amount.toLocaleString()} SAR
                     </td>
                     <td className="px-6 py-4">
@@ -690,16 +690,16 @@ export function EndOfService() {
         </div>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex gap-3">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className={`flex gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
           <AlertCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-800">
-            <p className="font-medium mb-2">Saudi Labor Law - End of Service Benefits Summary:</p>
-            <ul className="space-y-1 ml-4 list-disc">
-              <li><strong>Unlimited Contracts:</strong> Less than 2 years = No benefits | 2-5 years = Half month/year | 5+ years = Half month for first 5 years, full month thereafter</li>
-              <li><strong>Limited Contracts:</strong> Full benefits if employer terminates | Half benefits if employee resigns</li>
-              <li><strong>Full Benefits:</strong> Retirement, death, disability, employer termination, mutual agreement, female marriage (within 6 months)</li>
-              <li><strong>Deductions:</strong> Outstanding loans and salary advances are automatically deducted from final settlement</li>
+          <div className={`text-sm text-blue-800 ${isRTL ? 'text-right' : 'text-left'}`}>
+            <p className="font-medium mb-2">{t.endOfService.lawSummaryTitle}</p>
+            <ul className={`space-y-1 ${isRTL ? 'mr-4' : 'ml-4'} list-disc`}>
+              <li>{t.endOfService.lawUnlimited}</li>
+              <li>{t.endOfService.lawLimited}</li>
+              <li>{t.endOfService.lawFullBenefits}</li>
+              <li>{t.endOfService.lawDeductions}</li>
             </ul>
           </div>
         </div>

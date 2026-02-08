@@ -56,7 +56,7 @@ const VAT_RATE = 15;
 
 export function Expenses() {
   const { currentCompany } = useCompany();
-  const { t } = useLanguage();
+  const { t, isRTL } = useLanguage();
   const { userRole } = useAuth();
   const [claims, setClaims] = useState<ExpenseClaim[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -219,7 +219,7 @@ export function Expenses() {
     if (!currentCompany) return;
 
     if (!invoiceFile) {
-      alert('Please upload an invoice/receipt');
+      alert(t.expenses.pleaseUploadReceipt);
       return;
     }
 
@@ -283,7 +283,7 @@ export function Expenses() {
       fetchClaims();
     } catch (error) {
       console.error('Error creating expense claim:', error);
-      alert('Failed to create expense claim. Please try again.');
+      alert(t.expenses.failedToCreate);
     } finally {
       setSubmitting(false);
     }
@@ -673,12 +673,12 @@ export function Expenses() {
 
       {showNewClaimModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full my-8">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full my-8" dir={isRTL ? 'rtl' : 'ltr'}>
             <div className="p-6 border-b border-gray-200">
-              <div className="flex justify-between items-start">
+              <div className={`flex justify-between items-start ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-900">New Expense Claim</h2>
-                  <p className="text-gray-600 mt-1">Submit a new expense for reimbursement</p>
+                  <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{t.expenses.newExpenseClaim}</h2>
+                  <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.expenses.submitExpenseDesc}</p>
                 </div>
                 <button
                   onClick={handleCloseModal}
@@ -693,8 +693,8 @@ export function Expenses() {
               <div className="p-6 max-h-[calc(100vh-240px)] overflow-y-auto space-y-4">
                 {userRole?.role !== 'employee' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Employee <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.expenses.employee} <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
@@ -702,7 +702,7 @@ export function Expenses() {
                       onChange={(e) => setFormData({ ...formData, employee_id: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Select Employee</option>
+                      <option value="">{t.expenses.selectEmployee}</option>
                       {employees.map((emp) => (
                         <option key={emp.id} value={emp.id}>
                           {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
@@ -714,8 +714,8 @@ export function Expenses() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Expense Category <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.expenses.expenseCategory} <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
@@ -723,7 +723,7 @@ export function Expenses() {
                       onChange={(e) => setFormData({ ...formData, expense_category: e.target.value, subcategory: '' })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="">Select Category</option>
+                      <option value="">{t.expenses.selectCategory}</option>
                       {Object.keys(EXPENSE_CATEGORIES).map((cat) => (
                         <option key={cat} value={cat}>
                           {cat}
@@ -734,8 +734,8 @@ export function Expenses() {
 
                   {formData.expense_category && (
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Subcategory <span className="text-red-500">*</span>
+                      <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                        {t.expenses.subcategory} <span className="text-red-500">*</span>
                       </label>
                       <select
                         required
@@ -743,7 +743,7 @@ export function Expenses() {
                         onChange={(e) => setFormData({ ...formData, subcategory: e.target.value })}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
-                        <option value="">Select Subcategory</option>
+                        <option value="">{t.expenses.selectSubcategory}</option>
                         {EXPENSE_CATEGORIES[formData.expense_category as keyof typeof EXPENSE_CATEGORIES]?.map((sub) => (
                           <option key={sub} value={sub}>
                             {sub}
@@ -755,8 +755,8 @@ export function Expenses() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.expenses.description} <span className="text-red-500">*</span>
                   </label>
                   <textarea
                     required
@@ -764,14 +764,14 @@ export function Expenses() {
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Provide details about the expense..."
+                    placeholder={t.expenses.descriptionPlaceholder}
                   />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Amount (excl. VAT) <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.expenses.amountExclVat} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="number"
@@ -784,15 +784,15 @@ export function Expenses() {
                     />
                     {formData.amount && (
                       <p className="text-xs text-gray-500 mt-1">
-                        VAT (15%): {(parseFloat(formData.amount) * 0.15).toFixed(2)} |
-                        Total: {(parseFloat(formData.amount) * 1.15).toFixed(2)}
+                        {t.expenses.vat} (15%): {(parseFloat(formData.amount) * 0.15).toFixed(2)} |
+                        {t.expenses.total}: {(parseFloat(formData.amount) * 1.15).toFixed(2)}
                       </p>
                     )}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Currency <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.expenses.currency} <span className="text-red-500">*</span>
                     </label>
                     <select
                       required
@@ -809,8 +809,8 @@ export function Expenses() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Date <span className="text-red-500">*</span>
+                    <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                      {t.expenses.date} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="date"
@@ -824,8 +824,8 @@ export function Expenses() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Payment Method <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.expenses.paymentMethod} <span className="text-red-500">*</span>
                   </label>
                   <select
                     required
@@ -833,21 +833,21 @@ export function Expenses() {
                     onChange={(e) => setFormData({ ...formData, payment_method: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="personal_card">Personal Credit Card</option>
-                    <option value="company_card">Company Credit Card</option>
-                    <option value="cash">Cash</option>
-                    <option value="bank_transfer">Bank Transfer</option>
+                    <option value="personal_card">{t.expenses.personalCreditCard}</option>
+                    <option value="company_card">{t.expenses.companyCreditCard}</option>
+                    <option value="cash">{t.expenses.cash}</option>
+                    <option value="bank_transfer">{t.expenses.bankTransfer}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Invoice/Receipt <span className="text-red-500">*</span>
+                  <label className={`block text-sm font-medium text-gray-700 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.expenses.invoiceReceipt} <span className="text-red-500">*</span>
                   </label>
                   <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-blue-400 transition-colors">
                     <div className="space-y-1 text-center">
                       {invoiceFile ? (
-                        <div className="flex items-center justify-center space-x-2">
+                        <div className="flex items-center justify-center gap-2">
                           <Paperclip className="h-8 w-8 text-green-500" />
                           <div className="text-sm text-gray-600">
                             <p className="font-medium">{invoiceFile.name}</p>
@@ -871,7 +871,7 @@ export function Expenses() {
                               htmlFor="invoice-upload"
                               className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500"
                             >
-                              <span>Upload a file</span>
+                              <span>{t.expenses.uploadFile}</span>
                               <input
                                 id="invoice-upload"
                                 name="invoice-upload"
@@ -883,7 +883,7 @@ export function Expenses() {
                                   const file = e.target.files?.[0];
                                   if (file) {
                                     if (file.size > 10485760) {
-                                      alert('File size must be less than 10MB');
+                                      alert(t.expenses.fileSizeError);
                                       e.target.value = '';
                                       return;
                                     }
@@ -892,9 +892,9 @@ export function Expenses() {
                                 }}
                               />
                             </label>
-                            <p className="pl-1">or drag and drop</p>
+                            <p className={`${isRTL ? 'pr-1' : 'pl-1'}`}>{t.expenses.orDragDrop}</p>
                           </div>
-                          <p className="text-xs text-gray-500">PDF, PNG, JPG up to 10MB</p>
+                          <p className="text-xs text-gray-500">{t.expenses.fileTypesExpense}</p>
                         </>
                       )}
                     </div>
@@ -902,21 +902,21 @@ export function Expenses() {
                 </div>
               </div>
 
-              <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
+              <div className={`p-6 border-t border-gray-200 flex justify-end gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <button
                   type="button"
                   onClick={handleCloseModal}
                   className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
                   disabled={submitting}
                 >
-                  Cancel
+                  {t.expenses.cancel}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
                   disabled={submitting}
                 >
-                  {submitting ? 'Submitting...' : 'Submit Claim'}
+                  {submitting ? t.expenses.submitting : t.expenses.submitClaim}
                 </button>
               </div>
             </form>

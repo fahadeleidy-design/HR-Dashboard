@@ -176,17 +176,17 @@ export function Loans() {
     if (!currentCompany) return;
 
     if (!formData.employee_id) {
-      alert('Please select an employee');
+      alert(t.loans.pleaseSelectEmployee);
       return;
     }
 
     if (formData.number_of_installments > 6 || formData.number_of_installments < 1) {
-      alert('Number of installments must be between 1 and 6 months');
+      alert(t.loans.installmentsBetween1And6);
       return;
     }
 
     if (loanEligibility && formData.loan_amount > loanEligibility.available_loan_amount) {
-      alert(`Loan amount (${formatCurrency(formData.loan_amount, language)}) exceeds available loan amount (${formatCurrency(loanEligibility.available_loan_amount, language)})`);
+      alert(`${t.loans.loanExceedsAvailable} (${formatCurrency(loanEligibility.available_loan_amount, language)})`);
       return;
     }
 
@@ -209,7 +209,7 @@ export function Loans() {
           .eq('id', editingLoan.id);
 
         if (error) throw error;
-        alert('Loan updated successfully!');
+        alert(t.loans.loanUpdatedSuccess);
       } else {
         const { data, error } = await supabase
           .from('loans')
@@ -219,14 +219,14 @@ export function Loans() {
         if (error) {
           throw error;
         }
-        alert('Loan request created successfully!');
+        alert(t.loans.loanCreatedSuccess);
       }
 
       resetForm();
       fetchLoans();
     } catch (error: any) {
       console.error('Error saving loan:', error);
-      alert('Failed to save loan: ' + error.message);
+      alert(t.loans.failedToSave + ': ' + error.message);
     }
   };
 
@@ -244,7 +244,7 @@ export function Loans() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this loan?')) return;
+    if (!confirm(t.loans.loanDeleteConfirm)) return;
 
     try {
       const { error } = await supabase
@@ -253,11 +253,11 @@ export function Loans() {
         .eq('id', id);
 
       if (error) throw error;
-      alert('Loan deleted successfully!');
+      alert(t.loans.loanDeletedSuccess);
       fetchLoans();
     } catch (error: any) {
       console.error('Error deleting loan:', error);
-      alert('Failed to delete loan: ' + error.message);
+      alert(t.loans.failedToDelete + ': ' + error.message);
     }
   };
 
@@ -269,11 +269,11 @@ export function Loans() {
         .eq('id', id);
 
       if (error) throw error;
-      alert(`Loan status updated to ${status}!`);
+      alert(t.loans.loanStatusUpdated);
       fetchLoans();
     } catch (error: any) {
       console.error('Error updating loan status:', error);
-      alert('Failed to update loan status: ' + error.message);
+      alert(t.loans.failedToUpdateStatus + ': ' + error.message);
     }
   };
 
@@ -546,44 +546,44 @@ export function Loans() {
 
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4" dir={isRTL ? 'rtl' : 'ltr'}>
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-2xl font-bold text-gray-900">
-                {editingLoan ? 'Edit Loan' : 'New Loan'}
+              <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {editingLoan ? t.loans.editLoan : t.loans.newLoan}
               </h2>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-6">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="text-sm font-semibold text-blue-900 mb-2">Loan Policy</h3>
-                <ul className="text-sm text-blue-800 space-y-1">
-                  <li>• Maximum loan: 50% of End of Service benefits</li>
-                  <li>• Maximum repayment period: 6 months</li>
-                  <li>• Equal monthly installments</li>
-                  <li>• Cannot request loan while an active advance exists</li>
-                  <li>• Only one loan request per calendar year</li>
+                <h3 className={`text-sm font-semibold text-blue-900 mb-2 ${isRTL ? 'text-right' : 'text-left'}`}>{t.loans.loanPolicy}</h3>
+                <ul className={`text-sm text-blue-800 space-y-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  <li>• {t.loans.policyMaxLoan}</li>
+                  <li>• {t.loans.policyMaxRepayment}</li>
+                  <li>• {t.loans.policyEqualInstallments}</li>
+                  <li>• {t.loans.policyNoAdvance}</li>
+                  <li>• {t.loans.policyOnePerYear}</li>
                 </ul>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Employee *
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.loans.employee} *
                 </label>
                 {employees.length === 0 ? (
                   <div className="w-full px-3 py-2 border border-yellow-300 bg-yellow-50 rounded-md text-sm text-yellow-800">
-                    Loading employees...
+                    {t.loans.loadingEmployees}
                   </div>
                 ) : userRole?.role === 'employee' ? (
                   <div>
                     <div className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-md text-sm text-gray-700">
                       {employees[0] && `${employees[0].employee_number} - ${employees[0].first_name_en} ${employees[0].last_name_en}`}
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">You can only create loan requests for yourself</p>
+                    <p className={`mt-1 text-xs text-gray-500 ${isRTL ? 'text-right' : 'text-left'}`}>{t.loans.selfServiceNote}</p>
                   </div>
                 ) : (
                   <SearchableSelect
                     options={[
-                      { value: '', label: 'Select Employee' },
+                      { value: '', label: t.loans.pleaseSelectEmployee },
                       ...employees.map(emp => ({
                         value: emp.id,
                         label: `${emp.employee_number} - ${emp.first_name_en} ${emp.last_name_en}`,
@@ -603,26 +603,26 @@ export function Loans() {
                 }`}>
                   <h3 className={`text-sm font-semibold mb-2 ${
                     loanEligibility.is_eligible ? 'text-green-900' : 'text-red-900'
-                  }`}>
-                    Loan Eligibility
+                  } ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.loans.loanEligibility}
                   </h3>
                   <div className={`text-sm space-y-1 ${
                     loanEligibility.is_eligible ? 'text-green-800' : 'text-red-800'
                   }`}>
-                    <p>Max Loan Amount: {formatCurrency(loanEligibility.max_loan_amount, language)}</p>
-                    <p>Outstanding Loans: {formatCurrency(loanEligibility.outstanding_loans, language)}</p>
-                    <p>Outstanding Advances: {formatCurrency(loanEligibility.outstanding_advances, language)}</p>
-                    <p>Loans This Year: {loanEligibility.loans_this_year}</p>
-                    <p className="font-semibold">Available: {formatCurrency(loanEligibility.available_loan_amount, language)}</p>
-                    <p className="font-semibold">Status: {loanEligibility.eligibility_status}</p>
+                    <p>{t.loans.maxLoanAmount}: {formatCurrency(loanEligibility.max_loan_amount, language)}</p>
+                    <p>{t.loans.outstandingLoansLabel}: {formatCurrency(loanEligibility.outstanding_loans, language)}</p>
+                    <p>{t.loans.outstandingAdvancesLabel}: {formatCurrency(loanEligibility.outstanding_advances, language)}</p>
+                    <p>{t.loans.loansThisYear}: {loanEligibility.loans_this_year}</p>
+                    <p className="font-semibold">{t.loans.availableAmount}: {formatCurrency(loanEligibility.available_loan_amount, language)}</p>
+                    <p className="font-semibold">{t.loans.eligibilityStatus}: {loanEligibility.eligibility_status}</p>
                   </div>
                 </div>
               )}
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Loan Type *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.loans.loanType} *
                   </label>
                   <select
                     value={formData.loan_type}
@@ -630,16 +630,16 @@ export function Loans() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   >
-                    <option value="personal">Personal</option>
-                    <option value="housing">Housing</option>
-                    <option value="emergency">Emergency</option>
-                    <option value="other">Other</option>
+                    <option value="personal">{t.loans.personal}</option>
+                    <option value="housing">{t.loans.housing}</option>
+                    <option value="emergency">{t.loans.emergency}</option>
+                    <option value="other">{t.loans.other}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Start Date *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.loans.startDate} *
                   </label>
                   <input
                     type="date"
@@ -653,8 +653,8 @@ export function Loans() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Loan Amount (SAR) *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.loans.loanAmountSar} *
                   </label>
                   <input
                     type="number"
@@ -668,14 +668,14 @@ export function Loans() {
                   />
                   {loanEligibility && formData.loan_amount > loanEligibility.available_loan_amount && (
                     <p className="text-xs text-red-600 mt-1">
-                      Exceeds available amount
+                      {t.loans.exceedsAvailableAmount}
                     </p>
                   )}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Number of Installments *
+                  <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                    {t.loans.numberOfInstallments} *
                   </label>
                   <select
                     value={formData.number_of_installments}
@@ -683,24 +683,24 @@ export function Loans() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   >
-                    <option value={1}>1 month</option>
-                    <option value={2}>2 months</option>
-                    <option value={3}>3 months</option>
-                    <option value={4}>4 months</option>
-                    <option value={5}>5 months</option>
-                    <option value={6}>6 months</option>
+                    <option value={1}>1 {t.loans.month}</option>
+                    <option value={2}>2 {t.loans.months}</option>
+                    <option value={3}>3 {t.loans.months}</option>
+                    <option value={4}>4 {t.loans.months}</option>
+                    <option value={5}>5 {t.loans.months}</option>
+                    <option value={6}>6 {t.loans.months}</option>
                   </select>
-                  <p className="text-xs text-gray-500 mt-1">Maximum 6 months</p>
+                  <p className={`text-xs text-gray-500 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.loans.maximumSixMonths}</p>
                 </div>
               </div>
 
               {formData.loan_amount > 0 && formData.number_of_installments > 0 && (
                 <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                   <p className="text-sm text-gray-800 font-semibold">
-                    Monthly Installment: {formatCurrency(formData.loan_amount / formData.number_of_installments, language)}
+                    {t.loans.monthlyInstallment}: {formatCurrency(formData.loan_amount / formData.number_of_installments, language)}
                   </p>
                   <p className="text-sm text-gray-700 mt-1">
-                    Expected completion: {new Date(new Date(formData.start_date).setMonth(
+                    {t.loans.expectedCompletion}: {new Date(new Date(formData.start_date).setMonth(
                       new Date(formData.start_date).getMonth() + formData.number_of_installments
                     )).toLocaleDateString()}
                   </p>
@@ -708,8 +708,8 @@ export function Loans() {
               )}
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Notes
+                <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {t.loans.notes}
                 </label>
                 <textarea
                   value={formData.notes}
@@ -719,13 +719,13 @@ export function Loans() {
                 />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+              <div className={`flex justify-end gap-3 pt-4 border-t border-gray-200 ${isRTL ? 'flex-row-reverse' : ''}`}>
                 <button
                   type="button"
                   onClick={resetForm}
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
                 >
-                  Cancel
+                  {t.loans.cancel}
                 </button>
                 <button
                   type="submit"
@@ -736,7 +736,7 @@ export function Loans() {
                       : 'hover:bg-primary-700'
                   }`}
                 >
-                  {editingLoan ? 'Update Loan' : 'Create Loan'}
+                  {editingLoan ? t.loans.updateLoan : t.loans.createLoan}
                 </button>
               </div>
             </form>

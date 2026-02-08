@@ -88,13 +88,13 @@ export function GovernmentalDocs() {
           .update(docData)
           .eq('id', editingDoc.id);
         if (error) throw error;
-        alert('Document updated successfully!');
+        alert(t.governmentalDocs.documentSavedSuccess);
       } else {
         const { error } = await supabase
           .from('governmental_documents')
           .insert([docData]);
         if (error) throw error;
-        alert('Document added successfully!');
+        alert(t.governmentalDocs.documentSavedSuccess);
       }
 
       setShowForm(false);
