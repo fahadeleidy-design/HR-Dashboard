@@ -131,7 +131,7 @@ export function EmployeeDashboard() {
     if (user && currentCompany) {
       loadEmployeeData();
     }
-  }, [user, currentCompany]);
+  }, [user, currentCompany, userRole]);
 
   const loadEmployeeData = async () => {
     if (!user || !currentCompany) return;
