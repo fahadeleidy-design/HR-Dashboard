@@ -14,6 +14,14 @@ import {
   AlertTriangle, UserCircle, Contact, Plane, Heart
 } from 'lucide-react';
 
+interface ManagerInfo {
+  first_name_en: string;
+  last_name_en: string;
+  first_name_ar: string | null;
+  last_name_ar: string | null;
+  job_title_en: string | null;
+}
+
 interface EmployeeData {
   id: string;
   employee_number: string;
@@ -40,6 +48,7 @@ interface EmployeeData {
   contract_start_date: string | null;
   contract_end_date: string | null;
   department_id: string | null;
+  manager_id: string | null;
   department?: { name_en: string; name_ar: string | null };
 }
 
@@ -102,6 +111,7 @@ export function EmployeeDashboard() {
   const { t, language, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [employee, setEmployee] = useState<EmployeeData | null>(null);
+  const [manager, setManager] = useState<ManagerInfo | null>(null);
   const [stats, setStats] = useState<EmployeeStats>({
     leaveBalances: [],
     totalLeaveAvailable: 0,
@@ -144,6 +154,15 @@ export function EmployeeDashboard() {
       }
 
       setEmployee(empData);
+
+      if (empData.manager_id) {
+        const { data: mgrData } = await supabase
+          .from('employees')
+          .select('first_name_en, last_name_en, first_name_ar, last_name_ar, job_title_en')
+          .eq('id', empData.manager_id)
+          .maybeSingle();
+        if (mgrData) setManager(mgrData);
+      }
 
       const [
         leaveBalancesData,
@@ -408,64 +427,93 @@ export function EmployeeDashboard() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div
-          onClick={() => navigate('/leave')}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
-        >
-          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
-            <div className={isRTL ? 'text-right' : 'text-left'}>
-              <p className="text-sm font-medium text-gray-600">
-                {isRTL ? 'رصيد الإجازات' : 'Leave Balance'}
-              </p>
-              <p className="text-3xl font-bold text-green-600 mt-1">{formatInteger(stats.totalLeaveAvailable, language)}</p>
-              <p className="text-xs text-gray-500 mt-1">
-                {stats.totalLeaveUsed} {isRTL ? 'يوم مستخدم' : 'days used'}
-              </p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-full">
-              <CalendarDays className="h-8 w-8 text-green-600" />
-            </div>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <div
           onClick={() => navigate('/payroll')}
-          className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow cursor-pointer"
+          className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-all cursor-pointer group"
         >
           <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className={isRTL ? 'text-right' : 'text-left'}>
-              <p className="text-sm font-medium text-gray-600">
+              <p className="text-sm font-medium text-gray-500">
                 {isRTL ? 'صافي الراتب' : 'Net Salary'}
               </p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">
+              <p className="text-2xl font-bold text-gray-900 mt-1">
                 {formatCurrency(netSalary, language)}
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {isRTL ? 'شهرياً' : 'Monthly'}
+                {isRTL ? 'إجمالي' : 'Gross'}: {formatCurrency(totalSalary, language)}
               </p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-full">
+            <div className="p-3 bg-blue-50 rounded-xl group-hover:bg-blue-100 transition-colors">
               <Wallet className="h-8 w-8 text-blue-600" />
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        <div className={`bg-white rounded-lg shadow-sm border p-5 ${
+          !employee.is_saudi && iqamaExpiry.color === 'red' ? 'border-red-300' :
+          !employee.is_saudi && iqamaExpiry.color === 'yellow' ? 'border-yellow-300' :
+          'border-gray-200'
+        }`}>
           <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className={isRTL ? 'text-right' : 'text-left'}>
-              <p className="text-sm font-medium text-gray-600">
-                {isRTL ? 'اشتراك التأمينات' : 'GOSI Contribution'}
+              <p className="text-sm font-medium text-gray-500">
+                {isRTL ? 'انتهاء الإقامة' : 'Iqama Expiration'}
               </p>
-              <p className="text-2xl font-bold text-orange-600 mt-1">
-                {formatCurrency(stats.gosi.employeeShare, language)}
+              {employee.is_saudi ? (
+                <>
+                  <p className="text-lg font-bold text-gray-400 mt-1">{isRTL ? 'سعودي' : 'Saudi National'}</p>
+                  <p className="text-xs text-gray-400 mt-1">{isRTL ? 'غير مطلوب' : 'Not applicable'}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-lg font-bold text-gray-900 mt-1">{formatDate(employee.iqama_expiry)}</p>
+                  <div className="mt-1">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      iqamaExpiry.color === 'red' ? 'bg-red-100 text-red-700' :
+                      iqamaExpiry.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {iqamaExpiry.days !== undefined && iqamaExpiry.days > 0
+                        ? `${iqamaExpiry.days} ${isRTL ? 'يوم متبقي' : 'days left'}`
+                        : iqamaExpiry.label}
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className={`p-3 rounded-xl ${
+              !employee.is_saudi && iqamaExpiry.color === 'red' ? 'bg-red-50' :
+              !employee.is_saudi && iqamaExpiry.color === 'yellow' ? 'bg-yellow-50' :
+              'bg-green-50'
+            }`}>
+              <CreditCard className={`h-8 w-8 ${
+                !employee.is_saudi && iqamaExpiry.color === 'red' ? 'text-red-600' :
+                !employee.is_saudi && iqamaExpiry.color === 'yellow' ? 'text-yellow-600' :
+                'text-green-600'
+              }`} />
+            </div>
+          </div>
+        </div>
+
+        <div
+          onClick={() => navigate('/leave')}
+          className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 hover:shadow-md transition-all cursor-pointer group"
+        >
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-sm font-medium text-gray-500">
+                {isRTL ? 'رصيد الإجازات' : 'Leave Balance'}
+              </p>
+              <p className="text-2xl font-bold text-green-600 mt-1">
+                {formatInteger(stats.totalLeaveAvailable, language)} <span className="text-sm font-normal text-gray-500">{isRTL ? 'يوم' : 'days'}</span>
               </p>
               <p className="text-xs text-gray-500 mt-1">
-                {isRTL ? 'حصة الموظف' : 'Employee share'}
+                {stats.totalLeaveUsed} {isRTL ? 'يوم مستخدم' : 'days used'}
               </p>
             </div>
-            <div className="p-3 bg-orange-50 rounded-full">
-              <Shield className="h-8 w-8 text-orange-600" />
+            <div className="p-3 bg-green-50 rounded-xl group-hover:bg-green-100 transition-colors">
+              <CalendarDays className="h-8 w-8 text-green-600" />
             </div>
           </div>
         </div>
@@ -473,20 +521,89 @@ export function EmployeeDashboard() {
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
           <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
             <div className={isRTL ? 'text-right' : 'text-left'}>
-              <p className="text-sm font-medium text-gray-600">
-                {isRTL ? 'التأمين الطبي' : 'Medical Insurance'}
+              <p className="text-sm font-medium text-gray-500">
+                {isRTL ? 'القسم' : 'Department'}
+              </p>
+              <p className="text-lg font-bold text-gray-900 mt-1">
+                {isRTL
+                  ? (employee.department?.name_ar || employee.department?.name_en || '-')
+                  : (employee.department?.name_en || '-')}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {isRTL ? (employee.position_ar || employee.position) : employee.position}
+              </p>
+            </div>
+            <div className="p-3 bg-gray-100 rounded-xl">
+              <Building2 className="h-8 w-8 text-gray-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-sm font-medium text-gray-500">
+                {isRTL ? 'المدير المباشر' : 'Direct Manager'}
+              </p>
+              {manager ? (
+                <>
+                  <p className="text-lg font-bold text-gray-900 mt-1">
+                    {isRTL
+                      ? (`${manager.first_name_ar || manager.first_name_en} ${manager.last_name_ar || manager.last_name_en}`)
+                      : (`${manager.first_name_en} ${manager.last_name_en}`)}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{manager.job_title_en || ''}</p>
+                </>
+              ) : (
+                <p className="text-lg font-bold text-gray-400 mt-1">{isRTL ? 'غير محدد' : 'Not Assigned'}</p>
+              )}
+            </div>
+            <div className="p-3 bg-blue-50 rounded-xl">
+              <UserCircle className="h-8 w-8 text-blue-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className={`bg-white rounded-lg shadow-sm border p-5 ${
+          stats.insurance.hasInsurance && insuranceExpiry.color === 'red' ? 'border-red-300' :
+          stats.insurance.hasInsurance && insuranceExpiry.color === 'yellow' ? 'border-yellow-300' :
+          'border-gray-200'
+        }`}>
+          <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+            <div className={isRTL ? 'text-right' : 'text-left'}>
+              <p className="text-sm font-medium text-gray-500">
+                {isRTL ? 'انتهاء التأمين الصحي' : 'Health Insurance Expiry'}
               </p>
               {stats.insurance.hasInsurance ? (
                 <>
-                  <p className="text-lg font-bold text-teal-600 mt-1">{stats.insurance.class || 'Active'}</p>
-                  <p className="text-xs text-gray-500 mt-1">{stats.insurance.provider}</p>
+                  <p className="text-lg font-bold text-gray-900 mt-1">{formatDate(stats.insurance.expiryDate)}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                      insuranceExpiry.color === 'red' ? 'bg-red-100 text-red-700' :
+                      insuranceExpiry.color === 'yellow' ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {insuranceExpiry.label}
+                    </span>
+                    {stats.insurance.class && (
+                      <span className="text-xs text-gray-500">{stats.insurance.class}</span>
+                    )}
+                  </div>
                 </>
               ) : (
                 <p className="text-lg font-bold text-gray-400 mt-1">{isRTL ? 'غير متاح' : 'Not Available'}</p>
               )}
             </div>
-            <div className="p-3 bg-teal-50 rounded-full">
-              <Heart className="h-8 w-8 text-teal-600" />
+            <div className={`p-3 rounded-xl ${
+              stats.insurance.hasInsurance && insuranceExpiry.color === 'red' ? 'bg-red-50' :
+              stats.insurance.hasInsurance && insuranceExpiry.color === 'yellow' ? 'bg-yellow-50' :
+              'bg-teal-50'
+            }`}>
+              <Heart className={`h-8 w-8 ${
+                stats.insurance.hasInsurance && insuranceExpiry.color === 'red' ? 'text-red-600' :
+                stats.insurance.hasInsurance && insuranceExpiry.color === 'yellow' ? 'text-yellow-600' :
+                'text-teal-600'
+              }`} />
             </div>
           </div>
         </div>
@@ -853,12 +970,12 @@ export function EmployeeDashboard() {
           </button>
           <button
             onClick={() => navigate('/advances')}
-            className={`flex items-center gap-3 p-4 bg-purple-50 hover:bg-purple-100 rounded-lg transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+            className={`flex items-center gap-3 p-4 bg-teal-50 hover:bg-teal-100 rounded-lg transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
           >
-            <DollarSign className="h-6 w-6 text-purple-600" />
+            <DollarSign className="h-6 w-6 text-teal-600" />
             <div className={isRTL ? 'text-right' : 'text-left'}>
-              <p className="font-medium text-purple-900">{isRTL ? 'طلب سلفة' : 'Request Advance'}</p>
-              <p className="text-xs text-purple-600">{isRTL ? 'سلفة جديدة' : 'New advance'}</p>
+              <p className="font-medium text-teal-900">{isRTL ? 'طلب سلفة' : 'Request Advance'}</p>
+              <p className="text-xs text-teal-600">{isRTL ? 'سلفة جديدة' : 'New advance'}</p>
             </div>
           </button>
         </div>
