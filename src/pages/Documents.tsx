@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
@@ -31,8 +32,10 @@ interface Document {
 }
 
 export function Documents() {
+  const { userRole } = useAuth();
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const isEmployee = userRole?.role === 'employee';
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'expiring_soon' | 'expired'>('all');
@@ -58,8 +61,10 @@ export function Documents() {
   useEffect(() => {
     if (currentCompany) {
       fetchDocuments();
-      fetchEmployees();
-      fetchEmployeesWithoutContracts();
+      if (!isEmployee) {
+        fetchEmployees();
+        fetchEmployeesWithoutContracts();
+      }
     }
   }, [currentCompany]);
 
@@ -165,14 +170,19 @@ export function Documents() {
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('documents')
         .select(`
           *,
           employee:employees(employee_number, first_name_en, last_name_en)
         `)
-        .eq('company_id', currentCompany.id)
-        .order('expiry_date', { ascending: true });
+        .eq('company_id', currentCompany.id);
+
+      if (isEmployee && userRole?.employee_id) {
+        query = query.eq('employee_id', userRole.employee_id);
+      }
+
+      const { data, error } = await query.order('expiry_date', { ascending: true });
 
       if (error) throw error;
       setDocuments(data || []);
@@ -427,38 +437,42 @@ export function Documents() {
     <div className="space-y-6">
       <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
         <div className={isRTL ? 'text-right' : 'text-left'}>
-          <h1 className="text-3xl font-bold text-gray-900">{t.documents.title}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{isEmployee ? (language === 'ar' ? 'مستنداتي' : 'My Documents') : t.documents.title}</h1>
           <p className="text-gray-600 mt-1">{t.documents.subtitle}</p>
-          <p className="text-xs text-blue-600 mt-2 font-mono bg-blue-50 px-3 py-1 rounded inline-block">
-            📊 {employees.length} employees | {documents.filter(d => d.document_type === 'contract').length} contracts | {employeesWithoutContracts.length} missing
-          </p>
+          {!isEmployee && (
+            <p className="text-xs text-blue-600 mt-2 font-mono bg-blue-50 px-3 py-1 rounded inline-block">
+              {employees.length} employees | {documents.filter(d => d.document_type === 'contract').length} contracts | {employeesWithoutContracts.length} missing
+            </p>
+          )}
         </div>
-        <div className="flex gap-3">
-          <button
-            onClick={handleExportAllDocuments}
-            className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-green-200 hover:shadow-xl hover:scale-105"
-          >
-            <FileSpreadsheet className="h-5 w-5" />
-            <span>Export All</span>
-          </button>
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-200 hover:shadow-xl hover:scale-105"
-          >
-            <Plus className="h-5 w-5" />
-            <span>{t.documents.addDocument}</span>
-          </button>
-          <button
-            onClick={() => setShowBulkUploadModal(true)}
-            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg font-medium hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-lg shadow-purple-200 hover:shadow-xl hover:scale-105"
-          >
-            <Layers className="h-5 w-5" />
-            <span>AI Bulk Upload</span>
-          </button>
-        </div>
+        {!isEmployee && (
+          <div className="flex gap-3">
+            <button
+              onClick={handleExportAllDocuments}
+              className="flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg shadow-green-200 hover:shadow-xl hover:scale-105"
+            >
+              <FileSpreadsheet className="h-5 w-5" />
+              <span>Export All</span>
+            </button>
+            <button
+              onClick={() => setShowUploadModal(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-primary-600 to-primary-700 text-white rounded-lg font-medium hover:from-primary-700 hover:to-primary-800 transition-all duration-200 shadow-lg shadow-primary-200 hover:shadow-xl hover:scale-105"
+            >
+              <Plus className="h-5 w-5" />
+              <span>{t.documents.addDocument}</span>
+            </button>
+            <button
+              onClick={() => setShowBulkUploadModal(true)}
+              className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-lg shadow-blue-200 hover:shadow-xl hover:scale-105"
+            >
+              <Layers className="h-5 w-5" />
+              <span>AI Bulk Upload</span>
+            </button>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+      <div className={`grid grid-cols-1 ${isEmployee ? 'md:grid-cols-3' : 'md:grid-cols-5'} gap-6`}>
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -489,89 +503,95 @@ export function Documents() {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">{t.common.expired}</p>
-              <p className="text-2xl font-bold text-red-600 mt-1">{formatInteger(expiredCount, language)}</p>
+        {!isEmployee && (
+          <>
+            <div className="bg-white rounded-lg shadow p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-600">{t.common.expired}</p>
+                  <p className="text-2xl font-bold text-red-600 mt-1">{formatInteger(expiredCount, language)}</p>
+                </div>
+                <AlertTriangle className="h-12 w-12 text-red-600" />
+              </div>
             </div>
-            <AlertTriangle className="h-12 w-12 text-red-600" />
-          </div>
-        </div>
 
-        <div
-          className={`rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-all duration-200 border-2 ${
-            employeesWithoutContracts.length > 0
-              ? 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 hover:border-orange-400'
-              : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 hover:border-green-400'
-          }`}
-          onClick={() => setShowMissingContractsModal(true)}
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className={`text-sm font-medium ${employeesWithoutContracts.length > 0 ? 'text-orange-700' : 'text-green-700'}`}>
-                Missing Contracts
-              </p>
-              <p className={`text-2xl font-bold mt-1 ${employeesWithoutContracts.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                {formatInteger(employeesWithoutContracts.length, language)}
-              </p>
-              <p className={`text-xs mt-1 ${employeesWithoutContracts.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
-                {employeesWithoutContracts.length === 0 ? 'all have contracts' : 'employees'}
-              </p>
+            <div
+              className={`rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-all duration-200 border-2 ${
+                employeesWithoutContracts.length > 0
+                  ? 'bg-gradient-to-br from-orange-50 to-red-50 border-orange-200 hover:border-orange-400'
+                  : 'bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 hover:border-green-400'
+              }`}
+              onClick={() => setShowMissingContractsModal(true)}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-sm font-medium ${employeesWithoutContracts.length > 0 ? 'text-orange-700' : 'text-green-700'}`}>
+                    Missing Contracts
+                  </p>
+                  <p className={`text-2xl font-bold mt-1 ${employeesWithoutContracts.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                    {formatInteger(employeesWithoutContracts.length, language)}
+                  </p>
+                  <p className={`text-xs mt-1 ${employeesWithoutContracts.length > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                    {employeesWithoutContracts.length === 0 ? 'all have contracts' : 'employees'}
+                  </p>
+                </div>
+                {employeesWithoutContracts.length > 0 ? (
+                  <FileQuestion className="h-12 w-12 text-orange-600" />
+                ) : (
+                  <CheckCircle className="h-12 w-12 text-green-600" />
+                )}
+              </div>
             </div>
-            {employeesWithoutContracts.length > 0 ? (
-              <FileQuestion className="h-12 w-12 text-orange-600" />
-            ) : (
-              <CheckCircle className="h-12 w-12 text-green-600" />
-            )}
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 border-b border-gray-200 space-y-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3 flex-1">
-              <Filter className="h-5 w-5 text-gray-500" />
-              <select
-                value={selectedEmployeeId}
-                onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                className="flex-1 max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-              >
-                <option value="">All Employees</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
-                  </option>
-                ))}
-              </select>
-              {selectedEmployeeId && (
-                <>
-                  <button
-                    onClick={() => handleViewEmployeeDocuments(selectedEmployeeId)}
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <Eye className="h-4 w-4" />
-                    <span>View</span>
-                  </button>
-                  <button
-                    onClick={() => handlePrintEmployeeDocuments(selectedEmployeeId)}
-                    className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
-                  >
-                    <Printer className="h-4 w-4" />
-                    <span>Print</span>
-                  </button>
-                  <button
-                    onClick={() => handleExportEmployeeDocuments(selectedEmployeeId)}
-                    className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Export</span>
-                  </button>
-                </>
-              )}
+          {!isEmployee && (
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 flex-1">
+                <Filter className="h-5 w-5 text-gray-500" />
+                <select
+                  value={selectedEmployeeId}
+                  onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                  className="flex-1 max-w-xs px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                >
+                  <option value="">All Employees</option>
+                  {employees.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.employee_number} - {emp.first_name_en} {emp.last_name_en}
+                    </option>
+                  ))}
+                </select>
+                {selectedEmployeeId && (
+                  <>
+                    <button
+                      onClick={() => handleViewEmployeeDocuments(selectedEmployeeId)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <Eye className="h-4 w-4" />
+                      <span>View</span>
+                    </button>
+                    <button
+                      onClick={() => handlePrintEmployeeDocuments(selectedEmployeeId)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                    >
+                      <Printer className="h-4 w-4" />
+                      <span>Print</span>
+                    </button>
+                    <button
+                      onClick={() => handleExportEmployeeDocuments(selectedEmployeeId)}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      <Download className="h-4 w-4" />
+                      <span>Export</span>
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="flex space-x-2">
             {['all', 'active', 'expiring_soon', 'expired'].map((status) => (
@@ -594,12 +614,14 @@ export function Documents() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <SortableTableHeader
-                  label={t.common.employee}
-                  sortKey="employee.first_name_en"
-                  currentSort={sortConfig}
-                  onSort={requestSort}
-                />
+                {!isEmployee && (
+                  <SortableTableHeader
+                    label={t.common.employee}
+                    sortKey="employee.first_name_en"
+                    currentSort={sortConfig}
+                    onSort={requestSort}
+                  />
+                )}
                 <SortableTableHeader
                   label={t.documents.documentType}
                   sortKey="document_type"
@@ -630,9 +652,11 @@ export function Documents() {
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  AI Analysis
-                </th>
+                {!isEmployee && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    AI Analysis
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
@@ -641,19 +665,21 @@ export function Documents() {
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedData.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={isEmployee ? 6 : 8} className="px-6 py-12 text-center text-gray-500">
                     {t.messages.noResults}
                   </td>
                 </tr>
               ) : (
                 sortedData.map((document) => (
                   <tr key={document.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">
-                        {document.employee ? `${document.employee.first_name_en} ${document.employee.last_name_en}` : '-'}
-                      </div>
-                      <div className="text-sm text-gray-500">{document.employee?.employee_number || '-'}</div>
-                    </td>
+                    {!isEmployee && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">
+                          {document.employee ? `${document.employee.first_name_en} ${document.employee.last_name_en}` : '-'}
+                        </div>
+                        <div className="text-sm text-gray-500">{document.employee?.employee_number || '-'}</div>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {document.document_type}
                     </td>
@@ -677,25 +703,27 @@ export function Documents() {
                         {document.status.split('_').join(' ')}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {document.extraction_status === 'completed' ? (
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
-                            <CheckCircle className="h-3 w-3" />
-                            <span>{document.extraction_confidence}%</span>
+                    {!isEmployee && (
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {document.extraction_status === 'completed' ? (
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                              <CheckCircle className="h-3 w-3" />
+                              <span>{document.extraction_confidence}%</span>
+                            </div>
                           </div>
-                        </div>
-                      ) : document.extraction_status === 'processing' ? (
-                        <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
-                          <Loader2 className="h-3 w-3 animate-spin" />
-                          <span>Processing</span>
-                        </div>
-                      ) : (
-                        <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
-                          Not analyzed
-                        </span>
-                      )}
-                    </td>
+                        ) : document.extraction_status === 'processing' ? (
+                          <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                            <span>Processing</span>
+                          </div>
+                        ) : (
+                          <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded-full text-xs font-medium">
+                            Not analyzed
+                          </span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center gap-2">
                         {document.document_url && (
@@ -707,16 +735,18 @@ export function Documents() {
                             <span>View</span>
                           </button>
                         )}
-                        <button
-                          onClick={() => {
-                            setSelectedDocument(document);
-                            setShowAIAnalysisModal(true);
-                          }}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg text-xs font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-200"
-                        >
-                          <Brain className="h-3 w-3" />
-                          <span>AI</span>
-                        </button>
+                        {!isEmployee && (
+                          <button
+                            onClick={() => {
+                              setSelectedDocument(document);
+                              setShowAIAnalysisModal(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg text-xs font-medium hover:from-blue-700 hover:to-blue-800 transition-all duration-200"
+                          >
+                            <Brain className="h-3 w-3" />
+                            <span>AI</span>
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
