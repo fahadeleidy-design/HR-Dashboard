@@ -296,6 +296,41 @@ export function Visas() {
     return colors[priority] || 'text-gray-600';
   };
 
+  const statusLabels: Record<string, string> = {
+    active: t.visas.statusActive,
+    used: t.visas.statusUsed,
+    expired: t.visas.statusExpired,
+    cancelled: t.visas.statusCancelled,
+    pending: t.visas.statusPending,
+    in_progress: t.visas.statusInProgress,
+    completed: t.visas.statusCompleted,
+    rejected: t.visas.statusRejected,
+    under_renewal: t.visas.statusUnderRenewal,
+  };
+
+  const visaTypeLabels: Record<string, string> = {
+    employment: t.visas.typeEmployment,
+    business: t.visas.typeBusiness,
+    dependent: t.visas.typeDependent,
+    visit: t.visas.typeVisit,
+  };
+
+  const requestTypeLabels: Record<string, string> = {
+    new_visa: t.visas.requestTypeNewVisa,
+    iqama_issuance: t.visas.requestTypeIqamaIssuance,
+    iqama_renewal: t.visas.requestTypeIqamaRenewal,
+    iqama_transfer: t.visas.requestTypeIqamaTransfer,
+    profession_change: t.visas.requestTypeProfessionChange,
+    dependent_visa: t.visas.requestTypeDependentVisa,
+  };
+
+  const priorityLabels: Record<string, string> = {
+    low: t.visas.low,
+    normal: t.visas.normal,
+    high: t.visas.high,
+    urgent: t.visas.urgent,
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -360,19 +395,27 @@ export function Visas() {
       <div className="bg-white rounded-lg shadow">
         <div className="border-b border-gray-200">
           <nav className="flex -mb-px">
-            {(['visas', 'iqamas', 'requests', 'quotas'] as const).map((tab) => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`px-6 py-3 text-sm font-medium border-b-2 capitalize ${
-                  activeTab === tab
-                    ? 'border-primary-600 text-primary-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                {tab === 'iqamas' ? 'Residence Permits (Iqama)' : tab}
-              </button>
-            ))}
+            {(['visas', 'iqamas', 'requests', 'quotas'] as const).map((tab) => {
+              const tabLabels: Record<string, string> = {
+                visas: t.visas.tabVisas,
+                iqamas: t.visas.tabIqamas,
+                requests: t.visas.tabRequests,
+                quotas: t.visas.tabQuotas,
+              };
+              return (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`px-6 py-3 text-sm font-medium border-b-2 ${
+                    activeTab === tab
+                      ? 'border-primary-600 text-primary-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  {tabLabels[tab]}
+                </button>
+              );
+            })}
           </nav>
         </div>
 
@@ -394,18 +437,18 @@ export function Visas() {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
             >
-              <option value="all">All Status</option>
-              <option value="active">Active</option>
-              <option value="pending">Pending</option>
-              <option value="expired">Expired</option>
-              <option value="under_renewal">Under Renewal</option>
+              <option value="all">{t.visas.allStatus}</option>
+              <option value="active">{t.visas.filterActive}</option>
+              <option value="pending">{t.visas.filterPending}</option>
+              <option value="expired">{t.visas.filterExpired}</option>
+              <option value="under_renewal">{t.visas.filterUnderRenewal}</option>
             </select>
             <button
               onClick={fetchData}
               className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center gap-2"
             >
               <RefreshCw className="h-4 w-4" />
-              Refresh
+              {t.visas.refresh}
             </button>
           </div>
 
@@ -415,22 +458,22 @@ export function Visas() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Visa Number</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job Title</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nationality</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issue Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expiry Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.visaNumber}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.type}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.jobTitle}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.nationality}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.issueDate}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.expiryDate}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.status}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.cost}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {workVisas.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                        No work visas found. Click "New Request" to add one.
+                        {t.visas.noWorkVisasFound}
                       </td>
                     </tr>
                   ) : (
@@ -447,8 +490,8 @@ export function Visas() {
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {visa.visa_number}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
-                            {visa.visa_type.replace('_', ' ')}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {visaTypeLabels[visa.visa_type] || visa.visa_type}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{visa.job_title}</td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{visa.nationality}</td>
@@ -460,18 +503,18 @@ export function Visas() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(visa.status)}`}>
-                              {visa.status}
+                              {statusLabels[visa.status] || visa.status}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {visa.cost?.toLocaleString('en-SA')} SAR
+                            {formatCurrency(visa.cost, language)} {t.visas.sar}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <div className="flex gap-2">
-                              <button className="text-blue-600 hover:text-blue-800" title="View Details">
+                              <button className="text-blue-600 hover:text-blue-800" title={t.visas.viewDetailsTitle}>
                                 <Eye className="h-4 w-4" />
                               </button>
-                              <button className="text-gray-600 hover:text-gray-800" title="Edit">
+                              <button className="text-gray-600 hover:text-gray-800" title={t.visas.editTitle}>
                                 <Edit className="h-4 w-4" />
                               </button>
                             </div>
@@ -490,22 +533,22 @@ export function Visas() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Iqama Number</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profession</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issue Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expiry Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Days Left</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Dependents</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.employee}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.iqamaNumber}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.profession}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.issueDate}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.expiryDate}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.daysLeft}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.dependents}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.status}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {residencePermits.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                        No residence permits (iqamas) found.
+                        {t.visas.noIqamasFound}
                       </td>
                     </tr>
                   ) : (
@@ -526,7 +569,7 @@ export function Visas() {
                           <tr key={iqama.id} className="hover:bg-gray-50">
                             <td className="px-6 py-4 whitespace-nowrap">
                               <div className="text-sm font-medium text-gray-900">
-                                {iqama.employees ? `${iqama.employees.first_name_en} ${iqama.employees.last_name_en}` : 'N/A'}
+                                {iqama.employees ? `${iqama.employees.first_name_en} ${iqama.employees.last_name_en}` : t.visas.na}
                               </div>
                               <div className="text-xs text-gray-500">
                                 {iqama.employees?.employee_number}
@@ -548,7 +591,7 @@ export function Visas() {
                                 isExpiring ? 'text-orange-600' :
                                 'text-green-600'
                               }`}>
-                                {isExpired ? 'EXPIRED' : `${daysLeft} days`}
+                                {isExpired ? t.visas.expiredLabel : `${formatNumber(daysLeft, language)} ${t.visas.daysUnit}`}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
@@ -556,15 +599,15 @@ export function Visas() {
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
                               <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(iqama.status)}`}>
-                                {iqama.status}
+                                {statusLabels[iqama.status] || iqama.status}
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
                               <div className="flex gap-2">
-                                <button className="text-blue-600 hover:text-blue-800" title="View Details">
+                                <button className="text-blue-600 hover:text-blue-800" title={t.visas.viewDetailsTitle}>
                                   <Eye className="h-4 w-4" />
                                 </button>
-                                <button className="text-gray-600 hover:text-gray-800" title="Edit">
+                                <button className="text-gray-600 hover:text-gray-800" title={t.visas.editTitle}>
                                   <Edit className="h-4 w-4" />
                                 </button>
                               </div>
@@ -584,22 +627,22 @@ export function Visas() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Employee</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Job Title</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nationality</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Request Date</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cost</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.requestType}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.employee}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.jobTitle}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.nationality}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.requestDate}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.priority}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.status}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.cost}</th>
+                    <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.actions}</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {visaRequests.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
-                        No visa requests found.
+                        {t.visas.noRequestsFound}
                       </td>
                     </tr>
                   ) : (
@@ -613,8 +656,8 @@ export function Visas() {
                       )
                       .map((request) => (
                         <tr key={request.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                            {request.request_type.replace(/_/g, ' ')}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {requestTypeLabels[request.request_type] || request.request_type}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {request.employee_name}
@@ -625,24 +668,24 @@ export function Visas() {
                             {format(new Date(request.request_date), 'dd MMM yyyy')}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`text-sm font-medium ${getPriorityColor(request.priority)} capitalize`}>
-                              {request.priority}
+                            <span className={`text-sm font-medium ${getPriorityColor(request.priority)}`}>
+                              {priorityLabels[request.priority] || request.priority}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(request.processing_status)}`}>
-                              {request.processing_status.replace('_', ' ')}
+                              {statusLabels[request.processing_status] || request.processing_status}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {request.cost?.toLocaleString('en-SA')} SAR
+                            {formatCurrency(request.cost, language)} {t.visas.sar}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <div className="flex gap-2">
-                              <button className="text-blue-600 hover:text-blue-800" title="View Details">
+                              <button className="text-blue-600 hover:text-blue-800" title={t.visas.viewDetailsTitle}>
                                 <Eye className="h-4 w-4" />
                               </button>
-                              <button className="text-gray-600 hover:text-gray-800" title="Edit">
+                              <button className="text-gray-600 hover:text-gray-800" title={t.visas.editTitle}>
                                 <Edit className="h-4 w-4" />
                               </button>
                             </div>
@@ -658,20 +701,20 @@ export function Visas() {
           {/* Quotas Tab */}
           {activeTab === 'quotas' && (
             <div className="space-y-4">
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h3 className="font-semibold text-blue-900 mb-2">Visa Quota Summary {new Date().getFullYear()}</h3>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4" dir={isRTL ? 'rtl' : 'ltr'}>
+                <h3 className="font-semibold text-blue-900 mb-2">{t.visas.quotaSummary} {new Date().getFullYear()}</h3>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <p className="text-sm text-gray-600">Total Allocated</p>
-                    <p className="text-2xl font-bold text-blue-900">{totalQuota}</p>
+                    <p className="text-sm text-gray-600">{t.visas.totalAllocated}</p>
+                    <p className="text-2xl font-bold text-blue-900">{formatNumber(totalQuota, language)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Used</p>
-                    <p className="text-2xl font-bold text-orange-600">{usedQuota}</p>
+                    <p className="text-sm text-gray-600">{t.visas.quotaUsed}</p>
+                    <p className="text-2xl font-bold text-orange-600">{formatNumber(usedQuota, language)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Available</p>
-                    <p className="text-2xl font-bold text-green-600">{availableQuota}</p>
+                    <p className="text-sm text-gray-600">{t.visas.quotaAvailable}</p>
+                    <p className="text-2xl font-bold text-green-600">{formatNumber(availableQuota, language)}</p>
                   </div>
                 </div>
               </div>
@@ -680,46 +723,46 @@ export function Visas() {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Quota Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Profession</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nationality</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Quota</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Used</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Available</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                      <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.quotaType}</th>
+                      <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.profession}</th>
+                      <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.nationality}</th>
+                      <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.totalQuota}</th>
+                      <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.quotaUsed}</th>
+                      <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.quotaAvailable}</th>
+                      <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.visas.status}</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {quotas.length === 0 ? (
                       <tr>
                         <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                          No quota information available for {new Date().getFullYear()}.
+                          {t.visas.noQuotasFound} {new Date().getFullYear()}.
                         </td>
                       </tr>
                     ) : (
                       quotas.map((quota) => (
                         <tr key={quota.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
-                            {quota.quota_type.replace('_', ' ')}
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {statusLabels[quota.quota_type] || quota.quota_type}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {quota.profession_name || 'General'}
+                            {quota.profession_name || t.visas.general}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {quota.nationality || 'All'}
+                            {quota.nationality || t.visas.all}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            {quota.total_quota}
+                            {formatNumber(quota.total_quota, language)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-orange-600">
-                            {quota.quota_used}
+                            {formatNumber(quota.quota_used, language)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
-                            {quota.quota_available}
+                            {formatNumber(quota.quota_available, language)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 py-1 text-xs rounded-full ${getStatusColor(quota.status)}`}>
-                              {quota.status}
+                              {statusLabels[quota.status] || quota.status}
                             </span>
                           </td>
                         </tr>
