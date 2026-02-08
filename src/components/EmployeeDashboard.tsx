@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { useCompany } from '@/contexts/CompanyContext';
+
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
@@ -108,7 +108,6 @@ interface EmployeeStats {
 
 export function EmployeeDashboard() {
   const { user, userRole } = useAuth();
-  const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const navigate = useNavigate();
   const [employee, setEmployee] = useState<EmployeeData | null>(null);
@@ -126,210 +125,216 @@ export function EmployeeDashboard() {
     attendance: { present: 0, late: 0, absent: 0 }
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const employeeId = userRole?.employee_id;
 
   useEffect(() => {
-    if (user && (userRole?.employee_id || currentCompany)) {
-      loadEmployeeData();
-    }
-  }, [user, currentCompany, userRole]);
+    let cancelled = false;
 
-  const loadEmployeeData = async () => {
-    if (!user) return;
-
-    setLoading(true);
-    try {
-      let query = supabase
-        .from('employees')
-        .select(`
-          *,
-          department:departments(name_en, name_ar)
-        `);
-
-      if (userRole?.employee_id) {
-        query = query.eq('id', userRole.employee_id);
-      } else if (user.email && currentCompany) {
-        query = query.eq('company_id', currentCompany.id).eq('email', user.email);
-      } else {
-        setLoading(false);
-        return;
-      }
-
-      const { data: empData, error: empError } = await query.maybeSingle();
-
-      if (empError) throw empError;
-      if (!empData) {
-        setLoading(false);
-        return;
-      }
-
-      setEmployee(empData);
-
-      if (empData.manager_id) {
-        const { data: mgrData } = await supabase
-          .from('employees')
-          .select('first_name_en, last_name_en, first_name_ar, last_name_ar, job_title_en')
-          .eq('id', empData.manager_id)
-          .maybeSingle();
-        if (mgrData) setManager(mgrData);
-      }
-
-      const [
-        leaveBalancesData,
-        loansData,
-        advancesData,
-        documentsData,
-        attendanceData,
-        insuranceData,
-        gosiRatesData
-      ] = await Promise.all([
-        supabase
-          .from('leave_balances')
-          .select('leave_type_id, remaining_days, used_days, total_entitlement, leave_type:leave_types(name_en, name_ar)')
-          .eq('employee_id', empData.id)
-          .eq('year', new Date().getFullYear()),
-        supabase
-          .from('loans')
-          .select('status, amount, balance, monthly_deduction')
-          .eq('employee_id', empData.id),
-        supabase
-          .from('advances')
-          .select('status, amount')
-          .eq('employee_id', empData.id),
-        supabase
-          .from('employee_documents')
-          .select('id, expiry_date')
-          .eq('employee_id', empData.id),
-        supabase
-          .from('attendance')
-          .select('status, date')
-          .eq('employee_id', empData.id)
-          .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-        supabase
-          .from('employee_insurance')
-          .select('policy_number, provider_name, insurance_class, end_date, status')
-          .eq('employee_id', empData.id)
-          .eq('status', 'active')
-          .maybeSingle(),
-        supabase
-          .from('gosi_rates_config')
-          .select('*')
-          .eq('company_id', empData.company_id)
-          .maybeSingle()
-      ]);
-
-      const leaveBalances = (leaveBalancesData.data || []) as LeaveBalance[];
-      const totalLeaveAvailable = leaveBalances.reduce((sum, lb) => sum + (lb.remaining_days || 0), 0);
-      const totalLeaveUsed = leaveBalances.reduce((sum, lb) => sum + (lb.used_days || 0), 0);
-
-      const loans = loansData.data || [];
-      const activeLoans = loans.filter(l => l.status === 'approved' || l.status === 'active');
-      const pendingLoans = loans.filter(l => l.status === 'pending');
-
-      const advances = advancesData.data || [];
-      const pendingAdvances = advances.filter(a => a.status === 'pending');
-      const approvedAdvances = advances.filter(a => a.status === 'approved');
-
-      const documents = documentsData.data || [];
-      const thirtyDaysFromNow = new Date();
-      thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
-      const expiringDocs = documents.filter(doc =>
-        doc.expiry_date &&
-        new Date(doc.expiry_date) <= thirtyDaysFromNow &&
-        new Date(doc.expiry_date) >= new Date()
-      );
-
-      const attendance = attendanceData.data || [];
-
-      const gosiRates = gosiRatesData.data;
-      const totalSalary = (empData.basic_salary || 0) + (empData.housing_allowance || 0);
-      let employeeGosiShare = 0;
-      let employerGosiShare = 0;
-
-      if (gosiRates) {
-        if (empData.is_saudi) {
-          employeeGosiShare = totalSalary * (gosiRates.saudi_employee_pension_rate || 0.0975);
-          employerGosiShare = totalSalary * ((gosiRates.saudi_employer_pension_rate || 0.0975) + (gosiRates.employer_oci_rate || 0.02));
-        } else {
-          employeeGosiShare = 0;
-          employerGosiShare = totalSalary * (gosiRates.employer_oci_rate || 0.02);
-        }
-      }
-
-      let contractDurationMonths = 0;
-      let remainingDays = 0;
-      let contractStatus = 'active';
-
-      if (empData.contract_start_date) {
-        const startDate = parseISO(empData.contract_start_date);
-        if (empData.contract_end_date) {
-          const endDate = parseISO(empData.contract_end_date);
-          contractDurationMonths = differenceInMonths(endDate, startDate);
-          remainingDays = differenceInDays(endDate, new Date());
-          if (remainingDays < 0) {
-            contractStatus = 'expired';
-            remainingDays = 0;
-          } else if (remainingDays <= 90) {
-            contractStatus = 'expiring_soon';
-          }
-        } else {
-          contractStatus = 'indefinite';
-        }
-      }
-
-      const insurance = insuranceData.data;
-
-      setStats({
-        leaveBalances,
-        totalLeaveAvailable,
-        totalLeaveUsed,
-        gosi: {
-          employeeShare: employeeGosiShare,
-          employerShare: employerGosiShare,
-          totalContribution: employeeGosiShare + employerGosiShare
-        },
-        insurance: {
-          hasInsurance: !!insurance,
-          policyNumber: insurance?.policy_number || null,
-          provider: insurance?.provider_name || null,
-          class: insurance?.insurance_class || null,
-          expiryDate: insurance?.end_date || null
-        },
-        contract: {
-          type: empData.contract_type || 'indefinite',
-          startDate: empData.contract_start_date,
-          endDate: empData.contract_end_date,
-          durationMonths: contractDurationMonths,
-          remainingDays,
-          status: contractStatus
-        },
-        loans: {
-          active: activeLoans.length,
-          totalAmount: activeLoans.reduce((sum, l) => sum + (l.balance || 0), 0),
-          pendingAmount: pendingLoans.reduce((sum, l) => sum + (l.amount || 0), 0),
-          monthlyDeduction: activeLoans.reduce((sum, l) => sum + (l.monthly_deduction || 0), 0)
-        },
-        advances: {
-          pending: pendingAdvances.length,
-          approved: approvedAdvances.length,
-          totalAmount: approvedAdvances.reduce((sum, a) => sum + (a.amount || 0), 0)
-        },
-        documents: {
-          total: documents.length,
-          expiring: expiringDocs.length
-        },
-        attendance: {
-          present: attendance.filter(a => a.status === 'present').length,
-          late: attendance.filter(a => a.status === 'late').length,
-          absent: attendance.filter(a => a.status === 'absent').length
-        }
-      });
-
-    } catch (error) {
-      console.error('Error loading employee data:', error);
-    } finally {
+    if (!user || !employeeId) {
       setLoading(false);
+      return;
     }
-  };
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data: empData, error: empError } = await supabase
+          .from('employees')
+          .select(`
+            *,
+            department:departments(name_en, name_ar)
+          `)
+          .eq('id', employeeId)
+          .maybeSingle();
+
+        if (cancelled) return;
+        if (empError) throw empError;
+        if (!empData) {
+          setLoading(false);
+          return;
+        }
+
+        setEmployee(empData);
+
+        if (empData.manager_id) {
+          const { data: mgrData } = await supabase
+            .from('employees')
+            .select('first_name_en, last_name_en, first_name_ar, last_name_ar, job_title_en')
+            .eq('id', empData.manager_id)
+            .maybeSingle();
+          if (!cancelled && mgrData) setManager(mgrData);
+        }
+
+        const [
+          leaveBalancesData,
+          loansData,
+          advancesData,
+          documentsData,
+          attendanceData,
+          insuranceData,
+          gosiRatesData
+        ] = await Promise.all([
+          supabase
+            .from('leave_balances')
+            .select('leave_type_id, remaining_days, used_days, total_entitlement, leave_type:leave_types(name_en, name_ar)')
+            .eq('employee_id', empData.id)
+            .eq('year', new Date().getFullYear()),
+          supabase
+            .from('loans')
+            .select('status, amount, balance, monthly_deduction')
+            .eq('employee_id', empData.id),
+          supabase
+            .from('advances')
+            .select('status, amount')
+            .eq('employee_id', empData.id),
+          supabase
+            .from('employee_documents')
+            .select('id, expiry_date')
+            .eq('employee_id', empData.id),
+          supabase
+            .from('attendance')
+            .select('status, date')
+            .eq('employee_id', empData.id)
+            .gte('date', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
+          supabase
+            .from('employee_insurance')
+            .select('policy_number, provider_name, insurance_class, end_date, status')
+            .eq('employee_id', empData.id)
+            .eq('status', 'active')
+            .maybeSingle(),
+          supabase
+            .from('gosi_rates_config')
+            .select('*')
+            .eq('company_id', empData.company_id)
+            .maybeSingle()
+        ]);
+
+        if (cancelled) return;
+
+        const leaveBalances = (leaveBalancesData.data || []) as LeaveBalance[];
+        const totalLeaveAvailable = leaveBalances.reduce((sum, lb) => sum + (lb.remaining_days || 0), 0);
+        const totalLeaveUsed = leaveBalances.reduce((sum, lb) => sum + (lb.used_days || 0), 0);
+
+        const loans = loansData.data || [];
+        const activeLoans = loans.filter(l => l.status === 'approved' || l.status === 'active');
+        const pendingLoans = loans.filter(l => l.status === 'pending');
+
+        const advances = advancesData.data || [];
+        const pendingAdvances = advances.filter(a => a.status === 'pending');
+        const approvedAdvances = advances.filter(a => a.status === 'approved');
+
+        const documents = documentsData.data || [];
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+        const expiringDocs = documents.filter(doc =>
+          doc.expiry_date &&
+          new Date(doc.expiry_date) <= thirtyDaysFromNow &&
+          new Date(doc.expiry_date) >= new Date()
+        );
+
+        const attendance = attendanceData.data || [];
+
+        const gosiRates = gosiRatesData.data;
+        const totalSalary = (empData.basic_salary || 0) + (empData.housing_allowance || 0);
+        let employeeGosiShare = 0;
+        let employerGosiShare = 0;
+
+        if (gosiRates) {
+          if (empData.is_saudi) {
+            employeeGosiShare = totalSalary * (gosiRates.saudi_employee_pension_rate || 0.0975);
+            employerGosiShare = totalSalary * ((gosiRates.saudi_employer_pension_rate || 0.0975) + (gosiRates.employer_oci_rate || 0.02));
+          } else {
+            employeeGosiShare = 0;
+            employerGosiShare = totalSalary * (gosiRates.employer_oci_rate || 0.02);
+          }
+        }
+
+        let contractDurationMonths = 0;
+        let remainingDays = 0;
+        let contractStatus = 'active';
+
+        if (empData.contract_start_date) {
+          const startDate = parseISO(empData.contract_start_date);
+          if (empData.contract_end_date) {
+            const endDate = parseISO(empData.contract_end_date);
+            contractDurationMonths = differenceInMonths(endDate, startDate);
+            remainingDays = differenceInDays(endDate, new Date());
+            if (remainingDays < 0) {
+              contractStatus = 'expired';
+              remainingDays = 0;
+            } else if (remainingDays <= 90) {
+              contractStatus = 'expiring_soon';
+            }
+          } else {
+            contractStatus = 'indefinite';
+          }
+        }
+
+        const insurance = insuranceData.data;
+
+        setStats({
+          leaveBalances,
+          totalLeaveAvailable,
+          totalLeaveUsed,
+          gosi: {
+            employeeShare: employeeGosiShare,
+            employerShare: employerGosiShare,
+            totalContribution: employeeGosiShare + employerGosiShare
+          },
+          insurance: {
+            hasInsurance: !!insurance,
+            policyNumber: insurance?.policy_number || null,
+            provider: insurance?.provider_name || null,
+            class: insurance?.insurance_class || null,
+            expiryDate: insurance?.end_date || null
+          },
+          contract: {
+            type: empData.contract_type || 'indefinite',
+            startDate: empData.contract_start_date,
+            endDate: empData.contract_end_date,
+            durationMonths: contractDurationMonths,
+            remainingDays,
+            status: contractStatus
+          },
+          loans: {
+            active: activeLoans.length,
+            totalAmount: activeLoans.reduce((sum, l) => sum + (l.balance || 0), 0),
+            pendingAmount: pendingLoans.reduce((sum, l) => sum + (l.amount || 0), 0),
+            monthlyDeduction: activeLoans.reduce((sum, l) => sum + (l.monthly_deduction || 0), 0)
+          },
+          advances: {
+            pending: pendingAdvances.length,
+            approved: approvedAdvances.length,
+            totalAmount: approvedAdvances.reduce((sum, a) => sum + (a.amount || 0), 0)
+          },
+          documents: {
+            total: documents.length,
+            expiring: expiringDocs.length
+          },
+          attendance: {
+            present: attendance.filter(a => a.status === 'present').length,
+            late: attendance.filter(a => a.status === 'late').length,
+            absent: attendance.filter(a => a.status === 'absent').length
+          }
+        });
+
+      } catch (err: any) {
+        if (!cancelled) {
+          console.error('Error loading employee data:', err);
+          setError(err?.message || 'Failed to load employee data');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+
+    return () => { cancelled = true; };
+  }, [user, employeeId]);
 
   const getTenure = (hireDate: string) => {
     const hire = new Date(hireDate);
@@ -388,10 +393,12 @@ export function EmployeeDashboard() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
         <User className="h-16 w-16 text-gray-400 mx-auto mb-4" />
         <p className="text-lg font-medium text-gray-900">
-          {isRTL ? 'لم يتم العثور على بيانات الموظف' : 'No employee record found'}
+          {error
+            ? (isRTL ? 'حدث خطأ أثناء تحميل البيانات' : 'Error loading employee data')
+            : (isRTL ? 'لم يتم العثور على بيانات الموظف' : 'No employee record found')}
         </p>
         <p className="text-sm text-gray-600 mt-2">
-          {isRTL ? 'يرجى التواصل مع قسم الموارد البشرية' : 'Please contact HR department'}
+          {error || (isRTL ? 'يرجى التواصل مع قسم الموارد البشرية' : 'Please contact HR department')}
         </p>
       </div>
     );
