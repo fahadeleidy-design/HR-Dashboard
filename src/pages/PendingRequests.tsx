@@ -49,7 +49,7 @@ interface SLAStatus {
 export function PendingRequests() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
-  const { userRole, employeeProfile } = useAuth();
+  const { userRole } = useAuth();
   const { showToast } = useToast();
   const [requests, setRequests] = useState<PendingRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<PendingRequest[]>([]);
@@ -80,7 +80,7 @@ export function PendingRequests() {
 
   useEffect(() => {
     filterRequests();
-  }, [requests, selectedType, selectedLevel, employeeProfile, userRole]);
+  }, [requests, selectedType, selectedLevel, userRole]);
 
   const fetchPendingRequests = async () => {
     if (!currentCompany) return;
@@ -142,7 +142,7 @@ export function PendingRequests() {
     if (selectedLevel === 'my_level') {
       filtered = filtered.filter(r => {
         const role = userRole?.role;
-        if (role === 'manager' && r.pending_at_level === 'manager' && r.manager_id === employeeProfile?.id) {
+        if (role === 'manager' && r.pending_at_level === 'manager' && r.manager_id === userRole?.employee_id) {
           return true;
         }
         if ((role === 'hr' || role === 'admin' || role === 'super_admin') && r.pending_at_level === 'hr') {
@@ -161,7 +161,7 @@ export function PendingRequests() {
   };
 
   const handleApprove = async (request: PendingRequest) => {
-    if (!employeeProfile?.id) {
+    if (!userRole?.employee_id) {
       showToast('Employee profile not found', 'error');
       return;
     }
@@ -172,7 +172,7 @@ export function PendingRequests() {
         p_request_id: request.id,
         p_request_type: request.request_type,
         p_approval_level: request.pending_at_level,
-        p_approver_id: employeeProfile.id,
+        p_approver_id: userRole!.employee_id!,
         p_comments: null
       });
 
@@ -195,7 +195,7 @@ export function PendingRequests() {
   };
 
   const handleReject = async () => {
-    if (!rejectingRequest || !employeeProfile?.id) return;
+    if (!rejectingRequest || !userRole?.employee_id) return;
 
     if (!rejectionReason.trim()) {
       showToast('Please provide a rejection reason', 'error');
@@ -208,7 +208,7 @@ export function PendingRequests() {
         p_request_id: rejectingRequest.id,
         p_request_type: rejectingRequest.request_type,
         p_approval_level: rejectingRequest.pending_at_level,
-        p_rejector_id: employeeProfile.id,
+        p_rejector_id: userRole!.employee_id!,
         p_reason: rejectionReason
       });
 
@@ -326,7 +326,7 @@ export function PendingRequests() {
 
   const canApprove = (request: PendingRequest) => {
     const role = userRole?.role;
-    if (request.pending_at_level === 'manager' && role === 'manager' && request.manager_id === employeeProfile?.id) {
+    if (request.pending_at_level === 'manager' && role === 'manager' && request.manager_id === userRole?.employee_id) {
       return true;
     }
     if (request.pending_at_level === 'hr' && (role === 'hr' || role === 'admin' || role === 'super_admin')) {
