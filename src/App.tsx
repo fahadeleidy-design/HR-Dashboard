@@ -214,7 +214,7 @@ function App() {
             <Route path="/global-hr" element={<ProtectedRoute allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager']}><Layout><GlobalHR /></Layout></ProtectedRoute>} />
             <Route path="/skills" element={<ProtectedRoute><Layout><SkillsManagement /></Layout></ProtectedRoute>} />
             <Route path="/penalties" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'admin', 'super_admin']}><Layout><Penalties /></Layout></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><Settings /></Layout></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute allowedRoles={['super_admin', 'hr']}><Layout><Settings /></Layout></ProtectedRoute>} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
             </ToastProvider>

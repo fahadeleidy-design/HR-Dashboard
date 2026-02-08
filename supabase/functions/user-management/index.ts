@@ -15,7 +15,7 @@ interface RequestBody {
   companyId?: string;
   userIds?: string[];
   employeeId?: string | null;
-  role?: 'super_admin' | 'hr' | 'finance' | 'employee';
+  role?: 'super_admin' | 'hr' | 'finance' | 'manager' | 'employee';
 }
 
 Deno.serve(async (req: Request) => {
@@ -143,6 +143,14 @@ Deno.serve(async (req: Request) => {
       case 'create_user': {
         if (!body.email || !body.companyId || !body.role) {
           throw new Error('Email, company ID, and role are required');
+        }
+
+        if (!hasSuperAdminRole && body.role === 'super_admin') {
+          throw new Error('Only Super Admins can assign the Super Admin role');
+        }
+
+        if (hasHrRole && !hasSuperAdminRole && !['employee', 'hr', 'manager'].includes(body.role)) {
+          throw new Error('HR users can only assign Employee, HR, or Manager roles');
         }
 
         let userId: string;

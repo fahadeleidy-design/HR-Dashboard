@@ -15,7 +15,7 @@ interface UserRole {
   id: string;
   user_id: string;
   employee_id: string | null;
-  role: 'super_admin' | 'hr' | 'finance' | 'employee';
+  role: 'super_admin' | 'hr' | 'finance' | 'manager' | 'employee';
   employee_number: string | null;
   first_name_en: string | null;
   last_name_en: string | null;
@@ -42,6 +42,12 @@ const ROLES = [
     color: 'blue'
   },
   {
+    value: 'manager',
+    label: 'Manager',
+    description: 'Team management, approve leave and expense requests for direct reports',
+    color: 'amber'
+  },
+  {
     value: 'finance',
     label: 'Finance',
     description: 'Payroll, loans, advances, expenses, approve financial operations',
@@ -65,7 +71,7 @@ export function UserRoleManagement() {
   const [form, setForm] = useState({
     email: '',
     employee_id: '',
-    role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'employee'
+    role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'manager' | 'employee'
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
@@ -74,12 +80,17 @@ export function UserRoleManagement() {
   const [editingRole, setEditingRole] = useState<UserRole | null>(null);
   const [editForm, setEditForm] = useState({
     employee_id: '',
-    role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'employee'
+    role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'manager' | 'employee'
   });
 
   // Filter available roles based on current user's role
   const isSuperAdmin = userRole?.role === 'super_admin';
-  const availableRoles = isSuperAdmin ? ROLES : ROLES.filter(r => r.value !== 'super_admin');
+  const isHR = userRole?.role === 'hr';
+  const availableRoles = isSuperAdmin
+    ? ROLES
+    : isHR
+      ? ROLES.filter(r => ['employee', 'hr', 'manager'].includes(r.value))
+      : ROLES.filter(r => r.value !== 'super_admin');
 
   useEffect(() => {
     if (currentCompany) {
