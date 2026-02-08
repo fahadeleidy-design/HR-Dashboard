@@ -128,13 +128,13 @@ export function EmployeeDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user && currentCompany) {
+    if (user && (userRole?.employee_id || currentCompany)) {
       loadEmployeeData();
     }
   }, [user, currentCompany, userRole]);
 
   const loadEmployeeData = async () => {
-    if (!user || !currentCompany) return;
+    if (!user) return;
 
     setLoading(true);
     try {
@@ -147,7 +147,7 @@ export function EmployeeDashboard() {
 
       if (userRole?.employee_id) {
         query = query.eq('id', userRole.employee_id);
-      } else if (user.email) {
+      } else if (user.email && currentCompany) {
         query = query.eq('company_id', currentCompany.id).eq('email', user.email);
       } else {
         setLoading(false);
@@ -213,7 +213,7 @@ export function EmployeeDashboard() {
         supabase
           .from('gosi_rates_config')
           .select('*')
-          .eq('company_id', currentCompany.id)
+          .eq('company_id', empData.company_id)
           .maybeSingle()
       ]);
 
