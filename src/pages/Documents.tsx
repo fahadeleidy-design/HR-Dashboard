@@ -650,9 +650,9 @@ export function Documents() {
                   <tr key={document.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {document.employee.first_name_en} {document.employee.last_name_en}
+                        {document.employee ? `${document.employee.first_name_en} ${document.employee.last_name_en}` : '-'}
                       </div>
-                      <div className="text-sm text-gray-500">{document.employee.employee_number}</div>
+                      <div className="text-sm text-gray-500">{document.employee?.employee_number || '-'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {document.document_type}
@@ -931,7 +931,7 @@ export function Documents() {
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">AI Document Analysis</h2>
                   <p className="text-gray-600 mt-1">
-                    {selectedDocument.employee.first_name_en} {selectedDocument.employee.last_name_en} - {selectedDocument.document_type}
+                    {selectedDocument.employee ? `${selectedDocument.employee.first_name_en} ${selectedDocument.employee.last_name_en}` : '-'} - {selectedDocument.document_type}
                   </p>
                 </div>
                 <button
