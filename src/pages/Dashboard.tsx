@@ -45,7 +45,7 @@ interface DashboardStats {
 
 export function Dashboard() {
   const { userRole } = useAuth();
-  const { currentCompany, isConsolidatedView, companies } = useCompany();
+  const { currentCompany, isConsolidatedView, companies, loading: companyLoading } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const navigate = useNavigate();
 
@@ -89,8 +89,10 @@ export function Dashboard() {
   useEffect(() => {
     if (currentCompany || (isConsolidatedView && companies.length > 0)) {
       fetchDashboardStats();
+    } else if (!companyLoading) {
+      setLoading(false);
     }
-  }, [currentCompany, isConsolidatedView, companies]);
+  }, [currentCompany, isConsolidatedView, companies, companyLoading]);
 
   if (isEmployeeOnly) {
     return <EmployeeDashboard />;
