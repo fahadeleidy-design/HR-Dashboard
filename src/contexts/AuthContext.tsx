@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, useRef, useCallback, ReactNode } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { UserRole } from '@/types/database';
@@ -21,8 +21,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const currentUserIdRef = useRef<string | null>(null);
 
-  const fetchUserRole = async (userId: string) => {
+  const fetchUserRole = useCallback(async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('user_roles')
@@ -40,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       console.error('Error fetching user role:', error);
       return null;
     }
-  };
+  }, []);
 
   const refreshUserRole = async () => {
     if (user) {
@@ -52,6 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       (async () => {
+        const userId = session?.user?.id ?? null;
+        currentUserIdRef.current = userId;
         setSession(session);
         setUser(session?.user ?? null);
 
@@ -64,22 +67,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })();
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      (async () => {
-        setSession(session);
-        setUser(session?.user ?? null);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      const newUserId = session?.user?.id ?? null;
 
-        if (session?.user) {
-          const role = await fetchUserRole(session.user.id);
-          setUserRole(role);
-        } else {
-          setUserRole(null);
+      if (event === 'TOKEN_REFRESHED' && newUserId === currentUserIdRef.current) {
+        setSession(session);
+        return;
+      }
+
+      (async () => {
+        const userChanged = newUserId !== currentUserIdRef.current;
+        currentUserIdRef.current = newUserId;
+        setSession(session);
+
+        if (userChanged) {
+          setUser(session?.user ?? null);
+
+          if (session?.user) {
+            const role = await fetchUserRole(session.user.id);
+            setUserRole(role);
+          } else {
+            setUserRole(null);
+          }
         }
       })();
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [fetchUserRole]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

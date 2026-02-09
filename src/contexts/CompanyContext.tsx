@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { createContext, useContext, useState, useRef, ReactNode, useEffect } from 'react';
 import { Company } from '@/types/database';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './AuthContext';
@@ -21,6 +21,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [isConsolidatedView, setIsConsolidatedViewState] = useState(false);
+  const lastFetchedUserIdRef = useRef<string | null>(null);
 
   const fetchCompanies = async () => {
     if (!user) {
@@ -137,9 +138,13 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    if (!authLoading) {
-      fetchCompanies();
-    }
+    if (authLoading) return;
+
+    const userId = user?.id ?? null;
+    if (userId === lastFetchedUserIdRef.current && companies.length > 0) return;
+
+    lastFetchedUserIdRef.current = userId;
+    fetchCompanies();
   }, [user, authLoading]);
 
   const value = {
