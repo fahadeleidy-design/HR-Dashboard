@@ -3,6 +3,8 @@ import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { supabase } from '@/lib/supabase';
 import { buildCompanyFilter } from '@/lib/queryHelpers';
 import { Employee } from '@/types/database';
@@ -17,6 +19,7 @@ import { SavedViewsManager } from '@/components/employees/SavedViewsManager';
 import { EmployeeAnalyticsDashboard } from '@/components/employees/EmployeeAnalyticsDashboard';
 import { EmployeeLifecycleTracker } from '@/components/employees/EmployeeLifecycleTracker';
 import { EmployeeKeyboardShortcuts } from '@/components/employees/EmployeeKeyboardShortcuts';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import * as XLSX from 'xlsx';
 
 interface Department {
@@ -40,6 +43,8 @@ export function Employees() {
   const { currentCompany, isConsolidatedView, companies } = useCompany();
   const { t, isRTL, language } = useLanguage();
   const { userRole } = useAuth();
+  const { showToast } = useToast();
+  const { logError, logActivity } = useErrorHandler();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [employees, setEmployees] = useState<EmployeeWithPayroll[]>([]);
@@ -64,6 +69,7 @@ export function Employees() {
   const [isFilterAnimating, setIsFilterAnimating] = useState(false);
 
   const [selectedEmployees, setSelectedEmployees] = useState<Set<string>>(new Set());
+  const [deleteConfirm, setDeleteConfirm] = useState<{ type: 'single' | 'bulk'; id?: string } | null>(null);
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [showColumnSettings, setShowColumnSettings] = useState(false);
   const [showStats, setShowStats] = useState(true);
@@ -190,7 +196,7 @@ export function Employees() {
       );
 
       if (employeesError) {
-        console.error('Error fetching employees:', employeesError);
+        logError(employeesError, 'medium', { component: 'Employees', action: 'fetchEmployees' });
         throw employeesError;
       }
 
@@ -205,7 +211,7 @@ export function Employees() {
         currentCompany
       );
 
-      if (payrollError) console.error('Error fetching payroll:', payrollError);
+      if (payrollError) logError(payrollError, 'medium', { component: 'Employees', action: 'fetchPayroll' });
 
       const enrichedEmployees = (employeesData || []).map(emp => {
         const payroll = payrollData?.filter(p => p.employee_id === emp.id) || [];
@@ -217,8 +223,8 @@ export function Employees() {
 
       setEmployees(enrichedEmployees);
     } catch (error: any) {
-      console.error('Error fetching employees:', error);
-      alert(`Failed to load employees: ${error.message || 'Unknown error'}. Please check the console for details.`);
+      logError(error, 'medium', { component: 'Employees', action: 'fetchEmployees' });
+      showToast({ type: 'error', title: 'Failed to load employees', message: error.message || 'Unknown error' });
     } finally {
       setLoading(false);
     }
@@ -241,7 +247,7 @@ export function Employees() {
       if (error) throw error;
       setDepartments(data || []);
     } catch (error) {
-      console.error('Error fetching departments:', error);
+      logError(error, 'medium', { component: 'Employees', action: 'fetchDepartments' });
     }
   };
 
@@ -364,32 +370,39 @@ export function Employees() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this employee?')) return;
-
-    try {
-      const { error } = await supabase.from('employees').delete().eq('id', id);
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error deleting employee:', error);
-      alert('Failed to delete employee');
-    }
+    setDeleteConfirm({ type: 'single', id });
   };
 
   const handleBulkDelete = async () => {
     if (selectedEmployees.size === 0) return;
-    if (!confirm(`Are you sure you want to delete ${selectedEmployees.size} employee(s)?`)) return;
+    setDeleteConfirm({ type: 'bulk' });
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
 
     try {
-      const { error } = await supabase
-        .from('employees')
-        .delete()
-        .in('id', Array.from(selectedEmployees));
-
-      if (error) throw error;
-      setSelectedEmployees(new Set());
+      if (deleteConfirm.type === 'single' && deleteConfirm.id) {
+        const { error } = await supabase.from('employees').delete().eq('id', deleteConfirm.id);
+        if (error) throw error;
+        logActivity('employee_deleted', { component: 'Employees', employeeId: deleteConfirm.id });
+        showToast({ type: 'success', title: 'Employee deleted successfully' });
+      } else if (deleteConfirm.type === 'bulk') {
+        const count = selectedEmployees.size;
+        const { error } = await supabase
+          .from('employees')
+          .delete()
+          .in('id', Array.from(selectedEmployees));
+        if (error) throw error;
+        setSelectedEmployees(new Set());
+        logActivity('employees_bulk_deleted', { component: 'Employees', count });
+        showToast({ type: 'success', title: `${count} employee(s) deleted successfully` });
+      }
     } catch (error) {
-      console.error('Error deleting employees:', error);
-      alert('Failed to delete employees');
+      logError(error, 'medium', { component: 'Employees', action: deleteConfirm.type === 'single' ? 'deleteEmployee' : 'bulkDeleteEmployees' });
+      showToast({ type: 'error', title: deleteConfirm.type === 'single' ? 'Failed to delete employee' : 'Failed to delete employees' });
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -397,6 +410,7 @@ export function Employees() {
     if (selectedEmployees.size === 0) return;
 
     try {
+      const count = selectedEmployees.size;
       const { error } = await supabase
         .from('employees')
         .update({ status })
@@ -405,9 +419,11 @@ export function Employees() {
       if (error) throw error;
       setSelectedEmployees(new Set());
       fetchEmployees();
+      logActivity('employees_bulk_status_changed', { component: 'Employees', count, status });
+      showToast({ type: 'success', title: `${count} employee(s) updated to ${status}` });
     } catch (error) {
-      console.error('Error updating employee status:', error);
-      alert('Failed to update employee status');
+      logError(error, 'medium', { component: 'Employees', action: 'bulkStatusChange' });
+      showToast({ type: 'error', title: 'Failed to update employee status' });
     }
   };
 
@@ -438,7 +454,7 @@ export function Employees() {
   };
 
   const handleAddNote = (employeeId: string) => {
-    alert('Note functionality coming soon!');
+    showToast({ type: 'info', title: 'Coming soon' });
   };
 
   const handleFormClose = () => {
@@ -570,6 +586,7 @@ export function Employees() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Employees');
     XLSX.writeFile(wb, `employees_${currentCompany?.name_en}_${new Date().toISOString().split('T')[0]}.xlsx`);
+    logActivity('employees_exported', { component: 'Employees', count: exportData.length });
   };
 
   const toggleSelectAll = () => {
@@ -1720,6 +1737,18 @@ export function Employees() {
           onClose={() => setShowKeyboardShortcuts(false)}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={deleteConfirm !== null}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteConfirm}
+        title={deleteConfirm?.type === 'bulk' ? 'Delete Employees' : 'Delete Employee'}
+        message={deleteConfirm?.type === 'bulk'
+          ? `Are you sure you want to delete ${selectedEmployees.size} employee(s)? This action cannot be undone.`
+          : 'Are you sure you want to delete this employee? This action cannot be undone.'}
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

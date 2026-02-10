@@ -2,7 +2,11 @@ import { useState, useEffect } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { usePagination } from '@/hooks/usePagination';
 import { supabase } from '@/lib/supabase';
+import { Pagination } from '@/components/ui/Pagination';
 import { format } from 'date-fns';
 import {
   AlertTriangle,
@@ -87,6 +91,8 @@ export default function Penalties() {
   const { currentCompany } = useCompany();
   const { user, userRole } = useAuth();
   const { language, t, isRTL } = useLanguage();
+  const { showToast } = useToast();
+  const { logError, logActivity } = useErrorHandler();
 
   const [penalties, setPenalties] = useState<Penalty[]>([]);
   const [penaltyTypes, setPenaltyTypes] = useState<PenaltyType[]>([]);
@@ -283,6 +289,8 @@ export default function Penalties() {
 
       if (error) throw error;
 
+      logActivity('create', 'penalty', { employeeId: formData.employee_id, amount: formData.amount });
+      showToast('success', language === 'ar' ? 'تم إنشاء الجزاء بنجاح' : 'Penalty created successfully');
       setShowForm(false);
       setFormData({
         employee_id: '',
@@ -295,7 +303,8 @@ export default function Penalties() {
       });
       fetchPenalties();
     } catch (error) {
-      console.error('Error creating penalty:', error);
+      logError(error, 'medium', { component: 'Penalties', action: 'createPenalty' });
+      showToast('error', language === 'ar' ? 'فشل في إنشاء الجزاء' : 'Failed to create penalty');
     } finally {
       setSubmitting(false);
     }
@@ -315,9 +324,12 @@ export default function Penalties() {
         .eq('id', penaltyId);
 
       if (error) throw error;
+      logActivity('approve', 'penalty', { penaltyId });
+      showToast('success', language === 'ar' ? 'تم اعتماد الجزاء' : 'Penalty approved successfully');
       fetchPenalties();
     } catch (error) {
-      console.error('Error approving penalty:', error);
+      logError(error, 'medium', { component: 'Penalties', action: 'approvePenalty' });
+      showToast('error', language === 'ar' ? 'فشل في اعتماد الجزاء' : 'Failed to approve penalty');
     } finally {
       setActionLoading(null);
     }
@@ -338,9 +350,12 @@ export default function Penalties() {
         .eq('id', penaltyId);
 
       if (error) throw error;
+      logActivity('reject', 'penalty', { penaltyId, reason });
+      showToast('success', language === 'ar' ? 'تم رفض الجزاء' : 'Penalty rejected successfully');
       fetchPenalties();
     } catch (error) {
-      console.error('Error rejecting penalty:', error);
+      logError(error, 'medium', { component: 'Penalties', action: 'rejectPenalty' });
+      showToast('error', language === 'ar' ? 'فشل في رفض الجزاء' : 'Failed to reject penalty');
     } finally {
       setActionLoading(null);
     }
@@ -363,6 +378,8 @@ export default function Penalties() {
 
       if (error) throw error;
 
+      logActivity('create', 'penaltyType', { name: newPenaltyType.name_en });
+      showToast('success', language === 'ar' ? 'تم إضافة نوع الجزاء' : 'Penalty type added successfully');
       setNewPenaltyType({
         name_en: '',
         name_ar: '',
@@ -372,7 +389,8 @@ export default function Penalties() {
       });
       fetchPenaltyTypes();
     } catch (error) {
-      console.error('Error adding penalty type:', error);
+      logError(error, 'medium', { component: 'Penalties', action: 'addPenaltyType' });
+      showToast('error', language === 'ar' ? 'فشل في إضافة نوع الجزاء' : 'Failed to add penalty type');
     }
   }
 
@@ -389,9 +407,12 @@ export default function Penalties() {
 
       const { error } = await supabase.from('penalty_types').insert(typesToInsert);
       if (error) throw error;
+      logActivity('create', 'penaltyTypes', { action: 'seedDefaults' });
+      showToast('success', language === 'ar' ? 'تم إضافة الأنواع الافتراضية' : 'Default types added successfully');
       fetchPenaltyTypes();
     } catch (error) {
-      console.error('Error seeding penalty types:', error);
+      logError(error, 'medium', { component: 'Penalties', action: 'seedDefaultTypes' });
+      showToast('error', language === 'ar' ? 'فشل في إضافة الأنواع الافتراضية' : 'Failed to seed default types');
     }
   }
 
@@ -409,6 +430,8 @@ export default function Penalties() {
 
     return matchesSearch && matchesStatus;
   });
+
+  const penaltyPagination = usePagination(filteredPenalties, { initialPageSize: 25 });
 
   const getStatusBadge = (status: string) => {
     const styles: Record<string, string> = {
@@ -802,21 +825,32 @@ export default function Penalties() {
             </p>
           </div>
         ) : (
-          filteredPenalties.map((penalty) => (
-            <PenaltyCard
-              key={penalty.id}
-              penalty={penalty}
-              language={language}
+          <>
+            {penaltyPagination.paginatedData.map((penalty) => (
+              <PenaltyCard
+                key={penalty.id}
+                penalty={penalty}
+                language={language}
+                isRTL={isRTL}
+                canApprove={canApprove}
+                actionLoading={actionLoading}
+                onApprove={handleApprove}
+                onReject={handleReject}
+                getStatusBadge={getStatusBadge}
+                getSLAIndicator={getSLAIndicator}
+                onViewHistory={() => setSelectedEmployeeHistory(penalty.employee_id)}
+              />
+            ))}
+            <Pagination
+              currentPage={penaltyPagination.currentPage}
+              totalPages={penaltyPagination.totalPages}
+              totalItems={penaltyPagination.totalItems}
+              pageSize={penaltyPagination.pageSize}
+              onPageChange={penaltyPagination.goToPage}
+              onPageSizeChange={penaltyPagination.setPageSize}
               isRTL={isRTL}
-              canApprove={canApprove}
-              actionLoading={actionLoading}
-              onApprove={handleApprove}
-              onReject={handleReject}
-              getStatusBadge={getStatusBadge}
-              getSLAIndicator={getSLAIndicator}
-              onViewHistory={() => setSelectedEmployeeHistory(penalty.employee_id)}
             />
-          ))
+          </>
         )}
       </div>
         </>

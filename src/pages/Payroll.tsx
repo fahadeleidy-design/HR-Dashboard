@@ -3,6 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatInteger, formatDate } from '@/lib/formatters';
 import {
@@ -24,6 +26,9 @@ import {
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { PayslipViewer } from '@/components/PayslipViewer';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { usePagination } from '@/hooks/usePagination';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface PayrollBatch {
   id: string;
@@ -107,6 +112,8 @@ export function Payroll() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const { userRole } = useAuth();
+  const { showToast } = useToast();
+  const { logError, logActivity } = useErrorHandler();
   const [searchParams] = useSearchParams();
   const employeeIdParam = searchParams.get('employee_id');
   const isEmployee = userRole?.role === 'employee';
@@ -124,6 +131,8 @@ export function Payroll() {
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [showPayslip, setShowPayslip] = useState(false);
   const [selectedPayrollItem, setSelectedPayrollItem] = useState<{ itemId: string; employeeId: string } | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const pagination = usePagination({ totalItems: filteredPayrollItems.length, itemsPerPage: 10 });
 
   useEffect(() => {
     if (currentCompany) {
@@ -183,7 +192,7 @@ export function Payroll() {
       if (error) throw error;
       setBatches(data || []);
     } catch (error) {
-      console.error('Error fetching batches:', error);
+      logError(error, 'medium', { component: 'Payroll', action: 'fetchBatches' });
     } finally {
       setLoading(false);
     }
@@ -204,7 +213,7 @@ export function Payroll() {
       if (error) throw error;
       setPayrollItems(data || []);
     } catch (error) {
-      console.error('Error fetching payroll items:', error);
+      logError(error, 'medium', { component: 'Payroll', action: 'fetchPayrollItems' });
     }
   };
 
@@ -221,7 +230,7 @@ export function Payroll() {
       if (error) throw error;
       setEmployees(data || []);
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      logError(error, 'medium', { component: 'Payroll', action: 'fetchEmployees' });
     }
   };
 
@@ -237,7 +246,7 @@ export function Payroll() {
       if (error) throw error;
       setLoans(data || []);
     } catch (error) {
-      console.error('Error fetching loans:', error);
+      logError(error, 'medium', { component: 'Payroll', action: 'fetchLoans' });
     }
   };
 
@@ -253,7 +262,7 @@ export function Payroll() {
       if (error) throw error;
       setAdvances(data || []);
     } catch (error) {
-      console.error('Error fetching advances:', error);
+      logError(error, 'medium', { component: 'Payroll', action: 'fetchAdvances' });
     }
   };
 
@@ -267,7 +276,7 @@ export function Payroll() {
       });
 
       if (error) {
-        console.error('Error fetching GOSI rates:', error);
+        logError(error, 'medium', { component: 'Payroll', action: 'fetchGOSIRates' });
         return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
       }
 
@@ -277,7 +286,7 @@ export function Payroll() {
 
       return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
     } catch (error) {
-      console.error('Error in getEmployeeGOSIRates:', error);
+      logError(error, 'medium', { component: 'Payroll', action: 'getEmployeeGOSIRates' });
       return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
     }
   };
@@ -308,7 +317,7 @@ export function Payroll() {
         .maybeSingle();
 
       if (existingBatch) {
-        alert('A payroll batch already exists for this month.');
+        showToast('A payroll batch already exists for this month.', 'warning');
         return;
       }
 
@@ -339,6 +348,37 @@ export function Payroll() {
         }
       });
 
+      const periodStartStr = periodStart.toISOString().split('T')[0];
+      const periodEndStr = periodEnd.toISOString().split('T')[0];
+      const daysInMonth = periodEnd.getDate();
+
+      const { data: approvedLeaves } = await supabase
+        .from('leave_requests')
+        .select('employee_id, total_days, leave_type:leave_types!leave_requests_leave_type_id_fkey(paid)')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'approved')
+        .gte('start_date', periodStartStr)
+        .lte('end_date', periodEndStr);
+
+      const unpaidLeaveMap: Record<string, number> = {};
+      (approvedLeaves || []).forEach((l: any) => {
+        if (l.leave_type && !l.leave_type.paid) {
+          unpaidLeaveMap[l.employee_id] = (unpaidLeaveMap[l.employee_id] || 0) + (l.total_days || 0);
+        }
+      });
+
+      const { data: approvedPenalties } = await supabase
+        .from('penalties')
+        .select('employee_id, deduction_amount')
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'approved')
+        .eq('payroll_applied', false);
+
+      const penaltyMap: Record<string, number> = {};
+      (approvedPenalties || []).forEach((p: any) => {
+        penaltyMap[p.employee_id] = (penaltyMap[p.employee_id] || 0) + (p.deduction_amount || 0);
+      });
+
       const payrollItemsToInsert = [];
       for (const emp of employees) {
         const latestSalary = employeeLatestSalaries.get(emp.id);
@@ -350,11 +390,16 @@ export function Payroll() {
         const loan = loans.find(l => l.employee_id === emp.id && l.status === 'active');
         const advance = advances.find(a => a.employee_id === emp.id && a.status === 'approved');
 
+        const unpaidDays = unpaidLeaveMap[emp.id] || 0;
+        const penaltyDeduction = penaltyMap[emp.id] || 0;
+        const dailyRate = basicSalary / daysInMonth;
+        const absenceDeduction = dailyRate * unpaidDays;
+
         const totalEarnings = basicSalary + housingAllowance + transportationAllowance + otherAllowances;
         const gosi = await calculateGOSI(basicSalary, housingAllowance, emp.id);
         const loanDeduction = loan?.monthly_installment || 0;
         const advanceDeduction = advance?.deduction_amount || 0;
-        const totalDeductions = gosi.employee + loanDeduction + advanceDeduction;
+        const totalDeductions = gosi.employee + loanDeduction + advanceDeduction + absenceDeduction + penaltyDeduction;
         const netSalary = totalEarnings - totalDeductions;
 
         payrollItemsToInsert.push({
@@ -370,9 +415,12 @@ export function Payroll() {
           gosi_employer: gosi.employer,
           loan_deduction: loanDeduction,
           advance_deduction: advanceDeduction,
+          absence_deduction: absenceDeduction,
+          other_deductions: penaltyDeduction,
           total_deductions: totalDeductions,
           net_salary: netSalary,
-          days_worked: 30,
+          days_worked: daysInMonth - unpaidDays,
+          absence_days: unpaidDays,
           payment_method: 'wps',
           payment_status: 'pending'
         });
@@ -402,14 +450,24 @@ export function Payroll() {
         .select()
         .single();
 
-      alert(`Payroll batch created successfully with ${payrollItemsToInsert.length} employees!`);
+      if (approvedPenalties && approvedPenalties.length > 0) {
+        await supabase
+          .from('penalties')
+          .update({ payroll_applied: true, payroll_applied_at: new Date().toISOString() })
+          .eq('company_id', currentCompany.id)
+          .eq('status', 'approved')
+          .eq('payroll_applied', false);
+      }
+
+      showToast(`Payroll batch created successfully with ${payrollItemsToInsert.length} employees!`, 'success');
+      logActivity('payroll_batch_created', { month, employeeCount: payrollItemsToInsert.length });
       await fetchBatches();
       setSelectedBatch(updatedBatch || batch);
       await fetchPayrollItems(batch.id);
       setView('items');
     } catch (error: any) {
-      console.error('Error creating batch:', error);
-      alert('Failed to create payroll batch: ' + error.message);
+      logError(error, 'medium', { component: 'Payroll', action: 'createBatch' });
+      showToast('Failed to create payroll batch: ' + error.message, 'error');
     }
   };
 
@@ -425,18 +483,19 @@ export function Payroll() {
 
       if (error) throw error;
 
-      alert(`Batch status updated to ${status}`);
+      showToast(`Batch status updated to ${status}`, 'success');
+      logActivity('payroll_batch_status_updated', { batchId, status });
       fetchBatches();
     } catch (error: any) {
-      console.error('Error updating batch status:', error);
-      alert('Failed to update batch status: ' + error.message);
+      logError(error, 'medium', { component: 'Payroll', action: 'updateBatchStatus' });
+      showToast('Failed to update batch status: ' + error.message, 'error');
     }
   };
 
-  const deleteBatch = async (batchId: string) => {
-    if (!confirm('Are you sure you want to delete this draft batch? This action cannot be undone.')) {
-      return;
-    }
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
+    const batchId = deleteConfirm;
+    setDeleteConfirm(null);
 
     try {
       const { error: itemsError } = await supabase
@@ -453,11 +512,12 @@ export function Payroll() {
 
       if (batchError) throw batchError;
 
-      alert('Batch deleted successfully');
+      showToast('Batch deleted successfully', 'success');
+      logActivity('payroll_batch_deleted', { batchId });
       fetchBatches();
     } catch (error: any) {
-      console.error('Error deleting batch:', error);
-      alert('Failed to delete batch: ' + error.message);
+      logError(error, 'medium', { component: 'Payroll', action: 'deleteBatch' });
+      showToast('Failed to delete batch: ' + error.message, 'error');
     }
   };
 
@@ -482,10 +542,11 @@ export function Payroll() {
 
       if (error) throw error;
 
-      alert(`Generated ${payslipsToInsert.length} payslips!`);
+      showToast(`Generated ${payslipsToInsert.length} payslips!`, 'success');
+      logActivity('payslips_generated', { batchId, count: payslipsToInsert.length });
     } catch (error: any) {
-      console.error('Error generating payslips:', error);
-      alert('Failed to generate payslips: ' + error.message);
+      logError(error, 'medium', { component: 'Payroll', action: 'generatePayslips' });
+      showToast('Failed to generate payslips: ' + error.message, 'error');
     }
   };
 
@@ -751,7 +812,7 @@ export function Payroll() {
                                   <Send className="h-4 w-4" />
                                 </button>
                                 <button
-                                  onClick={() => deleteBatch(batch.id)}
+                                  onClick={() => setDeleteConfirm(batch.id)}
                                   className="text-red-600 hover:text-red-800"
                                   title="Delete Draft"
                                 >
@@ -919,7 +980,7 @@ export function Payroll() {
                       </td>
                     </tr>
                   ) : (
-                    filteredPayrollItems.map((item) => (
+                    filteredPayrollItems.slice(pagination.startIndex, pagination.endIndex).map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50">
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
@@ -976,6 +1037,9 @@ export function Payroll() {
                 </tbody>
               </table>
             </div>
+            {filteredPayrollItems.length > 0 && (
+              <Pagination {...pagination} />
+            )}
           </div>
         </div>
       )}
@@ -1118,6 +1182,16 @@ export function Payroll() {
           }}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Payroll Batch"
+        message="Are you sure you want to delete this draft batch? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

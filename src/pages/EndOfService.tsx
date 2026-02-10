@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { Calculator, Plus, FileText, CheckCircle, XCircle, Clock, AlertCircle, DollarSign, Calendar, User } from 'lucide-react';
 import { format, differenceInYears, differenceInMonths, differenceInDays } from 'date-fns';
 
@@ -62,6 +64,8 @@ const TERMINATION_REASONS_DATA = {
 export function EndOfService() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const { showToast } = useToast();
+  const { logError, logActivity } = useErrorHandler();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [calculations, setCalculations] = useState<EOSCalculation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -161,7 +165,7 @@ export function EndOfService() {
 
   const calculateEOS = async () => {
     if (!selectedEmployee || !terminationDate || !terminationReason || !currentCompany) {
-      alert(t.endOfService.fillAllRequired);
+      showToast({ type: 'warning', title: t.endOfService.fillAllRequired });
       return;
     }
 
@@ -300,6 +304,7 @@ export function EndOfService() {
 
     setCalculationResult(result);
     setCalculating(false);
+    logActivity('eos_calculated', { employeeId: selectedEmployee, terminationReason, serviceYears: totalYears, grossBenefit, netBenefit });
   };
 
   const saveCalculation = async () => {
@@ -348,7 +353,8 @@ export function EndOfService() {
           .insert(detailsToInsert);
       }
 
-      alert(t.endOfService.calculationSavedSuccess);
+      showToast({ type: 'success', title: t.endOfService.calculationSavedSuccess });
+      logActivity('eos_calculation_saved', { calculationId: data.id, employeeId: selectedEmployee, netBenefit: calculationResult.netBenefit });
       setShowCalculator(false);
       setCalculationResult(null);
       setSelectedEmployee('');
@@ -356,7 +362,8 @@ export function EndOfService() {
       setTerminationReason('');
       loadCalculations();
     } else {
-      alert(t.endOfService.errorSavingCalculation);
+      showToast({ type: 'error', title: t.endOfService.errorSavingCalculation });
+      logError(error, 'medium', { component: 'EndOfService', action: 'saveCalculation' });
     }
   };
 

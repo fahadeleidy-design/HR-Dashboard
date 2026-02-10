@@ -10,10 +10,18 @@ import {
 } from 'lucide-react';
 import { ScrollableTable } from '@/components/ScrollableTable';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
+import { usePagination } from '@/hooks/usePagination';
+import { Pagination } from '@/components/ui/Pagination';
 import { EmptyState } from '@/components/EmptyState';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import { ExpenseDashboard } from '@/components/expenses/ExpenseDashboard';
+import { ExpenseReports } from '@/components/expenses/ExpenseReports';
+import { ExpenseAnalytics } from '@/components/expenses/ExpenseAnalytics';
+import { ExpenseSettings } from '@/components/expenses/ExpenseSettings';
 import * as XLSX from 'xlsx';
+import { useToast } from '@/contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 
 interface ExpenseClaim {
   id: string;
@@ -58,6 +66,9 @@ export function Expenses() {
   const { currentCompany } = useCompany();
   const { t, isRTL } = useLanguage();
   const { userRole } = useAuth();
+  const { showToast } = useToast();
+  const { logError, logActivity } = useErrorHandler();
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [claims, setClaims] = useState<ExpenseClaim[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,7 +127,7 @@ export function Expenses() {
       if (error) throw error;
       setClaims(data || []);
     } catch (error) {
-      console.error('Error fetching claims:', error);
+      logError(error, 'medium', { component: 'Expenses', action: 'fetchClaims' });
     } finally {
       setLoading(false);
     }
@@ -136,7 +147,7 @@ export function Expenses() {
       if (error) throw error;
       setEmployees(data || []);
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      logError(error, 'medium', { component: 'Expenses', action: 'fetchEmployees' });
     }
   };
 
@@ -175,9 +186,12 @@ export function Expenses() {
         .eq('id', id);
 
       if (error) throw error;
+      showToast({ type: 'success', title: 'Expense claim approved successfully' });
+      logActivity('info', 'expenses', 'approveClaim', `Approved expense claim ${id}`);
       fetchClaims();
     } catch (error) {
-      console.error('Error approving claim:', error);
+      logError(error, 'medium', { component: 'Expenses', action: 'handleApprove' });
+      showToast({ type: 'error', title: 'Failed to approve claim', message: error instanceof Error ? error.message : 'An unexpected error occurred' });
     }
   };
 
@@ -193,9 +207,32 @@ export function Expenses() {
         .eq('id', id);
 
       if (error) throw error;
+      showToast({ type: 'success', title: 'Expense claim rejected' });
+      logActivity('info', 'expenses', 'rejectClaim', `Rejected expense claim ${id}`);
       fetchClaims();
     } catch (error) {
-      console.error('Error rejecting claim:', error);
+      logError(error, 'medium', { component: 'Expenses', action: 'handleReject' });
+      showToast({ type: 'error', title: 'Failed to reject claim', message: error instanceof Error ? error.message : 'An unexpected error occurred' });
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
+    try {
+      const { error } = await supabase
+        .from('expense_claims')
+        .delete()
+        .eq('id', deleteConfirm);
+
+      if (error) throw error;
+      showToast({ type: 'success', title: 'Expense claim deleted successfully' });
+      logActivity('info', 'expenses', 'deleteClaim', `Deleted expense claim ${deleteConfirm}`);
+      fetchClaims();
+    } catch (error) {
+      logError(error, 'medium', { component: 'Expenses', action: 'handleDeleteConfirm' });
+      showToast({ type: 'error', title: 'Failed to delete claim', message: error instanceof Error ? error.message : 'An unexpected error occurred' });
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -219,7 +256,7 @@ export function Expenses() {
     if (!currentCompany) return;
 
     if (!invoiceFile) {
-      alert(t.expenses.pleaseUploadReceipt);
+      showToast({ type: 'warning', title: t.expenses.pleaseUploadReceipt });
       return;
     }
 
@@ -279,11 +316,13 @@ export function Expenses() {
 
       if (receiptError) throw receiptError;
 
+      showToast({ type: 'success', title: 'Expense claim submitted successfully' });
+      logActivity('info', 'expenses', 'submitClaim', `Submitted expense claim`);
       handleCloseModal();
       fetchClaims();
     } catch (error) {
-      console.error('Error creating expense claim:', error);
-      alert(t.expenses.failedToCreate);
+      logError(error, 'medium', { component: 'Expenses', action: 'handleSubmitClaim' });
+      showToast({ type: 'error', title: t.expenses.failedToCreate, message: error instanceof Error ? error.message : 'An unexpected error occurred' });
     } finally {
       setSubmitting(false);
     }
@@ -319,6 +358,7 @@ export function Expenses() {
   });
 
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredClaims);
+  const pagination = usePagination(sortedData, { initialPageSize: 25 });
 
   const stats = {
     total: claims.length,
@@ -520,6 +560,7 @@ export function Expenses() {
                   description="Expense claims will appear here once they are submitted"
                 />
               ) : (
+                <>
                 <ScrollableTable maxHeight="calc(100vh - 450px)">
                   <table className="w-full">
                     <thead className="bg-gray-50">
@@ -565,7 +606,7 @@ export function Expenses() {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {sortedData.map((claim) => (
+                      {pagination.paginatedData.map((claim) => (
                         <tr key={claim.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                             {claim.claim_number || `#${claim.id.slice(0, 8)}`}
@@ -641,32 +682,38 @@ export function Expenses() {
                     </tbody>
                   </table>
                 </ScrollableTable>
+
+                <Pagination
+                  currentPage={pagination.currentPage}
+                  totalPages={pagination.totalPages}
+                  totalItems={pagination.totalItems}
+                  startIndex={pagination.startIndex}
+                  endIndex={pagination.endIndex}
+                  pageSize={pagination.pageSize}
+                  pageSizeOptions={pagination.pageSizeOptions}
+                  onPageChange={pagination.setPage}
+                  onPageSizeChange={pagination.setPageSize}
+                  onNext={pagination.nextPage}
+                  onPrev={pagination.prevPage}
+                  onFirst={pagination.goToFirst}
+                  onLast={pagination.goToLast}
+                  isRTL={isRTL}
+                />
+                </>
               )}
             </div>
           )}
 
           {activeTab === 'reports' && (
-            <div className="text-center py-12">
-              <FileText className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Expense Reports</h3>
-              <p className="text-gray-600">Group multiple expenses into comprehensive reports</p>
-            </div>
+            <ExpenseReports claims={claims} />
           )}
 
           {activeTab === 'analytics' && (
-            <div className="text-center py-12">
-              <BarChart3 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Advanced Analytics</h3>
-              <p className="text-gray-600">Detailed spending analysis and trends</p>
-            </div>
+            <ExpenseAnalytics claims={claims} />
           )}
 
           {activeTab === 'settings' && (
-            <div className="text-center py-12">
-              <Settings className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Expense Settings</h3>
-              <p className="text-gray-600">Configure policies, categories, and approval workflows</p>
-            </div>
+            <ExpenseSettings isAdmin={userRole?.role === 'super_admin' || userRole?.role === 'admin'} />
           )}
         </div>
       </div>
@@ -883,7 +930,7 @@ export function Expenses() {
                                   const file = e.target.files?.[0];
                                   if (file) {
                                     if (file.size > 10485760) {
-                                      alert(t.expenses.fileSizeError);
+                                      showToast({ type: 'warning', title: t.expenses.fileSizeError });
                                       e.target.value = '';
                                       return;
                                     }
@@ -923,6 +970,16 @@ export function Expenses() {
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={deleteConfirm !== null}
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Expense Claim"
+        message="Are you sure you want to delete this expense claim? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

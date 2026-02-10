@@ -2,12 +2,19 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, DollarSign, Clock, CheckCircle, XCircle, Edit, Trash2, Eye, Users } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { validateSync } from '@/lib/validation/validator';
+import { advanceRequestSchema } from '@/lib/validation/schemas';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { usePagination } from '@/hooks/usePagination';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface Advance {
   id: string;
@@ -55,6 +62,8 @@ export function Advances() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const { userRole } = useAuth();
+  const { showToast } = useToast();
+  const { logError, logActivity } = useErrorHandler();
   const [advances, setAdvances] = useState<Advance[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [advanceEligibility, setAdvanceEligibility] = useState<AdvanceEligibility | null>(null);
@@ -63,6 +72,7 @@ export function Advances() {
   const [editingAdvance, setEditingAdvance] = useState<Advance | null>(null);
   const [selectedAdvanceId, setSelectedAdvanceId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     employee_id: '',
@@ -72,6 +82,7 @@ export function Advances() {
   });
 
   const { sortedData, sortConfig, requestSort } = useSortableData(advances);
+  const pagination = usePagination(sortedData, { initialPageSize: 25 });
 
   useEffect(() => {
     if (currentCompany) {
@@ -104,7 +115,7 @@ export function Advances() {
       if (error) throw error;
       setAdvances(data || []);
     } catch (error) {
-      console.error('Error fetching advances:', error);
+      logError(error, 'medium', { component: 'Advances', action: 'fetchAdvances' });
     } finally {
       setLoading(false);
     }
@@ -123,7 +134,7 @@ export function Advances() {
       if (error) throw error;
       setEmployees(data || []);
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      logError(error, 'medium', { component: 'Advances', action: 'fetchEmployees' });
     }
   };
 
@@ -136,13 +147,13 @@ export function Advances() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching advance eligibility:', error);
+        logError(error, 'medium', { component: 'Advances', action: 'fetchAdvanceEligibility' });
         return;
       }
 
       setAdvanceEligibility(data);
     } catch (error: any) {
-      console.error('Exception fetching advance eligibility:', error);
+      logError(error, 'medium', { component: 'Advances', action: 'fetchAdvanceEligibility' });
     }
   };
 
@@ -151,17 +162,17 @@ export function Advances() {
     if (!currentCompany) return;
 
     if (!formData.employee_id) {
-      alert(t.advances.pleaseSelectEmployee);
+      showToast({ type: 'warning', title: t.advances.pleaseSelectEmployee });
       return;
     }
 
     if (advanceEligibility && formData.amount > advanceEligibility.max_advance_amount) {
-      alert(`${t.advances.advanceExceedsSalary}: ${formatCurrency(formData.amount, language)} > ${formatCurrency(advanceEligibility.max_advance_amount, language)}`);
+      showToast({ type: 'warning', title: `${t.advances.advanceExceedsSalary}: ${formatCurrency(formData.amount, language)} > ${formatCurrency(advanceEligibility.max_advance_amount, language)}` });
       return;
     }
 
     if (advanceEligibility && !advanceEligibility.is_eligible) {
-      alert(`${t.advances.cannotCreateAdvance}: ${advanceEligibility.eligibility_status}`);
+      showToast({ type: 'warning', title: `${t.advances.cannotCreateAdvance}: ${advanceEligibility.eligibility_status}` });
       return;
     }
 
@@ -182,21 +193,23 @@ export function Advances() {
           .eq('id', editingAdvance.id);
 
         if (error) throw error;
-        alert(t.advances.advanceUpdatedSuccess);
+        showToast({ type: 'success', title: t.advances.advanceUpdatedSuccess });
+        logActivity('advance_updated', { component: 'Advances', advanceId: editingAdvance.id });
       } else {
         const { error } = await supabase
           .from('advances')
           .insert([advanceData]);
 
         if (error) throw error;
-        alert(t.advances.advanceCreatedSuccess);
+        showToast({ type: 'success', title: t.advances.advanceCreatedSuccess });
+        logActivity('advance_created', { component: 'Advances', employeeId: formData.employee_id });
       }
 
       resetForm();
       fetchAdvances();
     } catch (error: any) {
-      console.error('Error saving advance:', error);
-      alert(`${t.advances.failedToSave}: ${error.message}`);
+      logError(error, 'medium', { component: 'Advances', action: 'saveAdvance' });
+      showToast({ type: 'error', title: `${t.advances.failedToSave}: ${error.message}` });
     }
   };
 
@@ -211,21 +224,28 @@ export function Advances() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t.advances.advanceDeleteConfirm)) return;
+  const handleDelete = (id: string) => {
+    setDeleteConfirm(id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
 
     try {
       const { error } = await supabase
         .from('advances')
         .delete()
-        .eq('id', id);
+        .eq('id', deleteConfirm);
 
       if (error) throw error;
-      alert(t.advances.advanceDeletedSuccess);
+      showToast({ type: 'success', title: t.advances.advanceDeletedSuccess });
+      logActivity('advance_deleted', { component: 'Advances', advanceId: deleteConfirm });
       fetchAdvances();
     } catch (error: any) {
-      console.error('Error deleting advance:', error);
-      alert(`${t.advances.failedToDelete}: ${error.message}`);
+      logError(error, 'medium', { component: 'Advances', action: 'deleteAdvance' });
+      showToast({ type: 'error', title: `${t.advances.failedToDelete}: ${error.message}` });
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -240,11 +260,12 @@ export function Advances() {
         .eq('id', id);
 
       if (error) throw error;
-      alert(t.advances.advanceApprovedSuccess);
+      showToast({ type: 'success', title: t.advances.advanceApprovedSuccess });
+      logActivity('advance_approved', { component: 'Advances', advanceId: id });
       fetchAdvances();
     } catch (error: any) {
-      console.error('Error approving advance:', error);
-      alert(`${t.advances.failedToApprove}: ${error.message}`);
+      logError(error, 'medium', { component: 'Advances', action: 'approveAdvance' });
+      showToast({ type: 'error', title: `${t.advances.failedToApprove}: ${error.message}` });
     }
   };
 
@@ -256,11 +277,12 @@ export function Advances() {
         .eq('id', id);
 
       if (error) throw error;
-      alert(t.advances.advanceRejectedSuccess);
+      showToast({ type: 'success', title: t.advances.advanceRejectedSuccess });
+      logActivity('advance_rejected', { component: 'Advances', advanceId: id });
       fetchAdvances();
     } catch (error: any) {
-      console.error('Error rejecting advance:', error);
-      alert(`${t.advances.failedToReject}: ${error.message}`);
+      logError(error, 'medium', { component: 'Advances', action: 'rejectAdvance' });
+      showToast({ type: 'error', title: `${t.advances.failedToReject}: ${error.message}` });
     }
   };
 
@@ -419,14 +441,14 @@ export function Advances() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedData.length === 0 ? (
+              {pagination.paginatedData.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
                     {t.messages.noResults}
                   </td>
                 </tr>
               ) : (
-                sortedData.map((advance) => {
+                pagination.paginatedData.map((advance) => {
                   const progress = ((advance.amount - advance.remaining_amount) / advance.amount) * 100;
                   return (
                     <tr key={advance.id} className="hover:bg-gray-50">
@@ -522,6 +544,23 @@ export function Advances() {
           </table>
         </div>
       </div>
+
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.totalPages}
+        totalItems={pagination.totalItems}
+        startIndex={pagination.startIndex}
+        endIndex={pagination.endIndex}
+        pageSize={pagination.pageSize}
+        pageSizeOptions={pagination.pageSizeOptions}
+        onPageChange={pagination.setPage}
+        onPageSizeChange={pagination.setPageSize}
+        onNext={pagination.nextPage}
+        onPrev={pagination.prevPage}
+        onFirst={pagination.goToFirst}
+        onLast={pagination.goToLast}
+        isRTL={isRTL}
+      />
 
       {showForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -675,6 +714,16 @@ export function Advances() {
           onStatusChange={fetchAdvances}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={deleteConfirm !== null}
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteConfirm}
+        title={t.advances.advanceDeleteConfirm}
+        message={t.advances.advanceDeleteConfirm}
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 }

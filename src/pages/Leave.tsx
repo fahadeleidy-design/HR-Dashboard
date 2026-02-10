@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Calendar, Check, X, Clock, Settings, DollarSign, AlertTriangle, TrendingUp, Eye, Users } from 'lucide-react';
 import { ScrollableTable } from '@/components/ScrollableTable';
@@ -9,6 +10,11 @@ import { useSortableData, SortableTableHeader } from '@/components/SortableTable
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { LeaveConfiguration } from '@/components/leave/LeaveConfiguration';
 import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { validateSync } from '@/lib/validation/validator';
+import { leaveRequestSchema } from '@/lib/validation/schemas';
+import { usePagination } from '@/hooks/usePagination';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface LeaveRequest {
   id: string;
@@ -92,6 +98,8 @@ export function Leave() {
   const { currentCompany } = useCompany();
   const { user } = useAuth();
   const { t, isRTL } = useLanguage();
+  const { showToast } = useToast();
+  const { logError, logActivity } = useErrorHandler();
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -106,6 +114,8 @@ export function Leave() {
   const [blackoutWarning, setBlackoutWarning] = useState<string | null>(null);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const [requestForm, setRequestForm] = useState({
     employee_id: '',
@@ -158,7 +168,7 @@ export function Leave() {
       if (error) throw error;
       setLeaveRequests(data || []);
     } catch (error) {
-      console.error('Error fetching leave requests:', error);
+      logError(error, 'medium', { component: 'Leave', action: 'fetchLeaveRequests' });
     } finally {
       setLoading(false);
     }
@@ -176,7 +186,7 @@ export function Leave() {
       if (error) throw error;
       setLeaveTypes(data || []);
     } catch (error) {
-      console.error('Error fetching leave types:', error);
+      logError(error, 'medium', { component: 'Leave', action: 'fetchLeaveTypes' });
     }
   };
 
@@ -194,7 +204,7 @@ export function Leave() {
       if (error) throw error;
       setEmployees(data || []);
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      logError(error, 'medium', { component: 'Leave', action: 'fetchEmployees' });
     }
   };
 
@@ -217,7 +227,7 @@ export function Leave() {
       if (error) throw error;
       setLeaveBalances(data || []);
     } catch (error) {
-      console.error('Error fetching leave balances:', error);
+      logError(error, 'medium', { component: 'Leave', action: 'fetchLeaveBalances' });
     }
   };
 
@@ -234,7 +244,7 @@ export function Leave() {
       if (error) throw error;
       setEncashmentRequests(data || []);
     } catch (error) {
-      console.error('Error fetching encashment requests:', error);
+      logError(error, 'medium', { component: 'Leave', action: 'fetchEncashmentRequests' });
     }
   };
 
@@ -261,7 +271,7 @@ export function Leave() {
         setBlackoutWarning(null);
       }
     } catch (error) {
-      console.error('Error checking blackout dates:', error);
+      logError(error, 'medium', { component: 'Leave', action: 'checkBlackoutDates' });
     }
   };
 
@@ -292,12 +302,16 @@ export function Leave() {
 
   const calculateDays = (start: string, end: string, isHalfDay: boolean) => {
     if (isHalfDay) return 0.5;
-
     const startDate = new Date(start);
     const endDate = new Date(end);
-    const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
+    let count = 0;
+    const current = new Date(startDate);
+    while (current <= endDate) {
+      const day = current.getDay();
+      if (day !== 5 && day !== 6) { count++; }
+      current.setDate(current.getDate() + 1);
+    }
+    return count || 1;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -306,6 +320,30 @@ export function Leave() {
 
     try {
       const days = calculateDays(requestForm.start_date, requestForm.end_date, requestForm.is_half_day);
+
+      const balance = leaveBalances.find(
+        b => b.employee_id === requestForm.employee_id && b.leave_type_id === requestForm.leave_type_id
+      );
+      if (balance && balance.remaining_days < days) {
+        showToast(`Insufficient leave balance. ${balance.remaining_days} days remaining but ${days} requested.`, 'warning');
+        return;
+      }
+
+      const effectiveEnd = requestForm.is_half_day ? requestForm.start_date : requestForm.end_date;
+      const { data: overlapping, error: overlapError } = await supabase
+        .from('leave_requests')
+        .select('id')
+        .eq('employee_id', requestForm.employee_id)
+        .neq('status', 'rejected')
+        .lte('start_date', effectiveEnd)
+        .gte('end_date', requestForm.start_date);
+
+      if (overlapError) throw overlapError;
+
+      if (overlapping && overlapping.length > 0) {
+        showToast('This leave request overlaps with an existing request.', 'warning');
+        return;
+      }
 
       const { error } = await supabase.from('leave_requests').insert([{
         company_id: currentCompany.id,
@@ -335,11 +373,13 @@ export function Leave() {
       });
       setBlackoutWarning(null);
 
+      logActivity('leave_request_created', { employeeId: requestForm.employee_id, leaveTypeId: requestForm.leave_type_id });
+      showToast('Leave request submitted successfully', 'success');
       await fetchLeaveRequests();
       await fetchLeaveBalances();
     } catch (error: any) {
-      console.error('Error creating leave request:', error);
-      alert(error.message || 'Failed to create leave request');
+      logError(error, 'medium', { component: 'Leave', action: 'createLeaveRequest' });
+      showToast(error.message || 'Failed to create leave request', 'error');
     }
   };
 
@@ -370,10 +410,12 @@ export function Leave() {
 
       setShowEncashmentForm(false);
       setEncashmentForm({ employee_id: '', leave_type_id: '', days_to_encash: 0 });
+      logActivity('encashment_request_created', { employeeId: encashmentForm.employee_id, days: encashmentForm.days_to_encash });
+      showToast('Encashment request submitted successfully', 'success');
       await fetchEncashmentRequests();
     } catch (error: any) {
-      console.error('Error creating encashment request:', error);
-      alert(error.message || 'Failed to create encashment request');
+      logError(error, 'medium', { component: 'Leave', action: 'createEncashmentRequest' });
+      showToast(error.message || 'Failed to create encashment request', 'error');
     }
   };
 
@@ -390,17 +432,23 @@ export function Leave() {
 
       if (error) throw error;
 
+      logActivity('leave_request_approved', { requestId });
+      showToast('Leave request approved', 'success');
       await fetchLeaveRequests();
       await fetchLeaveBalances();
     } catch (error: any) {
-      console.error('Error approving leave:', error);
-      alert(error.message || 'Failed to approve leave request');
+      logError(error, 'medium', { component: 'Leave', action: 'approveLeaveRequest' });
+      showToast(error.message || 'Failed to approve leave request', 'error');
     }
   };
 
-  const handleReject = async (requestId: string) => {
-    const reason = prompt('Please provide a reason for rejection:');
-    if (!reason) return;
+  const handleReject = (requestId: string) => {
+    setRejectTarget(requestId);
+    setRejectionReason('');
+  };
+
+  const confirmReject = async () => {
+    if (!rejectTarget || !rejectionReason.trim()) return;
 
     try {
       const { error } = await supabase
@@ -409,17 +457,21 @@ export function Leave() {
           status: 'rejected',
           approved_by: user?.id,
           approved_at: new Date().toISOString(),
-          rejection_reason: reason,
+          rejection_reason: rejectionReason,
         })
-        .eq('id', requestId);
+        .eq('id', rejectTarget);
 
       if (error) throw error;
 
+      logActivity('leave_request_rejected', { requestId: rejectTarget });
+      showToast('Leave request rejected', 'success');
+      setRejectTarget(null);
+      setRejectionReason('');
       await fetchLeaveRequests();
       await fetchLeaveBalances();
     } catch (error: any) {
-      console.error('Error rejecting leave:', error);
-      alert(error.message || 'Failed to reject leave request');
+      logError(error, 'medium', { component: 'Leave', action: 'rejectLeaveRequest' });
+      showToast(error.message || 'Failed to reject leave request', 'error');
     }
   };
 
@@ -450,6 +502,7 @@ export function Leave() {
   };
 
   const { sortedData, sortConfig, requestSort } = useSortableData(filteredRequests);
+  const { paginatedData, currentPage, totalPages, setCurrentPage } = usePagination(sortedData, 10);
 
   const selectedLeaveType = leaveTypes.find(lt => lt.id === requestForm.leave_type_id);
 
@@ -713,14 +766,14 @@ export function Leave() {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {sortedData.length === 0 ? (
+              {paginatedData.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                     No leave requests found.
                   </td>
                 </tr>
               ) : (
-                sortedData.map((request) => (
+                paginatedData.map((request) => (
                   <tr key={request.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
@@ -811,6 +864,15 @@ export function Leave() {
             </tbody>
           </table>
         </ScrollableTable>
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-gray-200">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+            />
+          </div>
+        )}
       </div>
 
       {showForm && (
@@ -1116,6 +1178,50 @@ export function Leave() {
             fetchLeaveBalances();
           }}
         />
+      )}
+
+      {rejectTarget && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6 border-b border-gray-200">
+              <h2 className="text-lg font-semibold text-gray-900">Reject Leave Request</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Reason for Rejection *
+                </label>
+                <textarea
+                  rows={3}
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  placeholder="Please provide a reason for rejection"
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRejectTarget(null);
+                    setRejectionReason('');
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmReject}
+                  disabled={!rejectionReason.trim()}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Confirm Rejection
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

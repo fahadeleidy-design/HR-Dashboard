@@ -2,12 +2,19 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/contexts/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { Plus, DollarSign, TrendingDown, CheckCircle, XCircle, Edit, Trash2, Eye, Clock, Users } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { validateSync } from '@/lib/validation/validator';
+import { loanRequestSchema } from '@/lib/validation/schemas';
+import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { usePagination } from '@/hooks/usePagination';
+import { Pagination } from '@/components/ui/Pagination';
 
 interface Loan {
   id: string;
@@ -59,6 +66,8 @@ export function Loans() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const { userRole } = useAuth();
+  const { showToast } = useToast();
+  const { logError, logActivity } = useErrorHandler();
   const [loans, setLoans] = useState<Loan[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loanEligibility, setLoanEligibility] = useState<LoanEligibility | null>(null);
@@ -76,8 +85,10 @@ export function Loans() {
   });
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const { sortedData, sortConfig, requestSort } = useSortableData(loans);
+  const pagination = usePagination(sortedData, { initialPageSize: 25 });
 
   useEffect(() => {
     if (currentCompany) {
@@ -110,7 +121,7 @@ export function Loans() {
       if (error) throw error;
       setLoans(data || []);
     } catch (error) {
-      console.error('Error fetching loans:', error);
+      logError(error, 'medium', { component: 'Loans', action: 'fetchLoans' });
     } finally {
       setLoading(false);
     }
@@ -142,13 +153,13 @@ export function Loans() {
         .order('employee_number');
 
       if (error) {
-        console.error('Error fetching employees:', error);
+        logError(error, 'medium', { component: 'Loans', action: 'fetchEmployees' });
         return;
       }
 
       setEmployees(data || []);
     } catch (error: any) {
-      console.error('Exception fetching employees:', error);
+      logError(error, 'medium', { component: 'Loans', action: 'fetchEmployees' });
     }
   };
 
@@ -161,13 +172,13 @@ export function Loans() {
         .maybeSingle();
 
       if (error) {
-        console.error('Error fetching loan eligibility:', error);
+        logError(error, 'medium', { component: 'Loans', action: 'fetchLoanEligibility' });
         return;
       }
 
       setLoanEligibility(data);
     } catch (error: any) {
-      console.error('Exception fetching loan eligibility:', error);
+      logError(error, 'medium', { component: 'Loans', action: 'fetchLoanEligibility' });
     }
   };
 
@@ -176,17 +187,17 @@ export function Loans() {
     if (!currentCompany) return;
 
     if (!formData.employee_id) {
-      alert(t.loans.pleaseSelectEmployee);
+      showToast({ type: 'warning', title: t.loans.pleaseSelectEmployee });
       return;
     }
 
     if (formData.number_of_installments > 6 || formData.number_of_installments < 1) {
-      alert(t.loans.installmentsBetween1And6);
+      showToast({ type: 'warning', title: t.loans.installmentsBetween1And6 });
       return;
     }
 
     if (loanEligibility && formData.loan_amount > loanEligibility.available_loan_amount) {
-      alert(`${t.loans.loanExceedsAvailable} (${formatCurrency(loanEligibility.available_loan_amount, language)})`);
+      showToast({ type: 'warning', title: `${t.loans.loanExceedsAvailable} (${formatCurrency(loanEligibility.available_loan_amount, language)})` });
       return;
     }
 
@@ -209,7 +220,8 @@ export function Loans() {
           .eq('id', editingLoan.id);
 
         if (error) throw error;
-        alert(t.loans.loanUpdatedSuccess);
+        showToast({ type: 'success', title: t.loans.loanUpdatedSuccess });
+        logActivity('loan_updated', { component: 'Loans', loanId: editingLoan.id });
       } else {
         const { data, error } = await supabase
           .from('loans')
@@ -219,14 +231,15 @@ export function Loans() {
         if (error) {
           throw error;
         }
-        alert(t.loans.loanCreatedSuccess);
+        showToast({ type: 'success', title: t.loans.loanCreatedSuccess });
+        logActivity('loan_created', { component: 'Loans', employeeId: formData.employee_id });
       }
 
       resetForm();
       fetchLoans();
     } catch (error: any) {
-      console.error('Error saving loan:', error);
-      alert(t.loans.failedToSave + ': ' + error.message);
+      logError(error, 'medium', { component: 'Loans', action: 'saveLoan' });
+      showToast({ type: 'error', title: t.loans.failedToSave + ': ' + error.message });
     }
   };
 
@@ -243,21 +256,28 @@ export function Loans() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm(t.loans.loanDeleteConfirm)) return;
+  const handleDelete = (id: string) => {
+    setDeleteConfirm(id);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteConfirm) return;
 
     try {
       const { error } = await supabase
         .from('loans')
         .delete()
-        .eq('id', id);
+        .eq('id', deleteConfirm);
 
       if (error) throw error;
-      alert(t.loans.loanDeletedSuccess);
+      showToast({ type: 'success', title: t.loans.loanDeletedSuccess });
+      logActivity('loan_deleted', { component: 'Loans', loanId: deleteConfirm });
       fetchLoans();
     } catch (error: any) {
-      console.error('Error deleting loan:', error);
-      alert(t.loans.failedToDelete + ': ' + error.message);
+      logError(error, 'medium', { component: 'Loans', action: 'deleteLoan' });
+      showToast({ type: 'error', title: t.loans.failedToDelete + ': ' + error.message });
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -269,11 +289,12 @@ export function Loans() {
         .eq('id', id);
 
       if (error) throw error;
-      alert(t.loans.loanStatusUpdated);
+      showToast({ type: 'success', title: t.loans.loanStatusUpdated });
+      logActivity('loan_status_changed', { component: 'Loans', loanId: id, newStatus: status });
       fetchLoans();
     } catch (error: any) {
-      console.error('Error updating loan status:', error);
-      alert(t.loans.failedToUpdateStatus + ': ' + error.message);
+      logError(error, 'medium', { component: 'Loans', action: 'updateLoanStatus' });
+      showToast({ type: 'error', title: t.loans.failedToUpdateStatus + ': ' + error.message });
     }
   };
 
@@ -445,7 +466,7 @@ export function Loans() {
                   </td>
                 </tr>
               ) : (
-                sortedData.map((loan) => {
+                pagination.paginatedData.map((loan) => {
                   const progress = ((loan.loan_amount - loan.remaining_amount) / loan.loan_amount) * 100;
                   return (
                     <tr key={loan.id} className="hover:bg-gray-50">
@@ -542,6 +563,22 @@ export function Loans() {
             </tbody>
           </table>
         </div>
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.totalPages}
+          totalItems={pagination.totalItems}
+          startIndex={pagination.startIndex}
+          endIndex={pagination.endIndex}
+          pageSize={pagination.pageSize}
+          pageSizeOptions={pagination.pageSizeOptions}
+          onPageChange={pagination.setPage}
+          onPageSizeChange={pagination.setPageSize}
+          onNext={pagination.nextPage}
+          onPrev={pagination.prevPage}
+          onFirst={pagination.goToFirst}
+          onLast={pagination.goToLast}
+          isRTL={isRTL}
+        />
       </div>
 
       {showForm && (
@@ -757,6 +794,16 @@ export function Loans() {
           onStatusChange={fetchLoans}
         />
       )}
+
+      <ConfirmationModal
+        isOpen={deleteConfirm !== null}
+        onCancel={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Loan"
+        message="Are you sure you want to delete this loan? This action cannot be undone."
+        confirmLabel="Delete"
+        variant="danger"
+      />
     </div>
   );
 }
