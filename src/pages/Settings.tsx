@@ -47,10 +47,10 @@ interface Company {
 }
 
 export function Settings() {
-  const { currentCompany, companies } = useCompany();
+  const { currentCompany, companies, loading: companyContextLoading } = useCompany();
   const { t, isRTL } = useLanguage();
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [showDeptForm, setShowDeptForm] = useState(false);
   const [gosiConfig, setGosiConfig] = useState<GOSIConfig | null>(null);
   const [gosiLoading, setGosiLoading] = useState(false);
@@ -88,6 +88,8 @@ export function Settings() {
         establishment_date: currentCompany.establishment_date || '',
         nitaqat_calculation_method: currentCompany.nitaqat_calculation_method || 'average_26_weeks',
       });
+    } else {
+      setLoading(false);
     }
   }, [currentCompany]);
 
@@ -299,10 +301,25 @@ export function Settings() {
     }
   };
 
-  if (loading) {
+  if (loading || companyContextLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
+
+  if (!currentCompany) {
+    return (
+      <div className={`space-y-6 ${isRTL ? 'rtl' : 'ltr'}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{t.settings.title}</h1>
+          <p className="text-gray-600 mt-1">{t.settings.subtitle}</p>
+        </div>
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <Building2 className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <p className="text-gray-500 text-lg">Please select a company to view settings.</p>
+        </div>
       </div>
     );
   }
