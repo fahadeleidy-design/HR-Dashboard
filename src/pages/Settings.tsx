@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { Building2, Users, Plus, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { UserRoleManagement } from '@/components/UserRoleManagement';
+import { EmailSettings } from '@/components/settings/EmailSettings';
 
 interface Department {
   id: string;
@@ -806,6 +807,8 @@ export function Settings() {
           </div>
         </div>
       )}
+
+      <EmailSettings />
 
       <div className="mt-6">
         <UserRoleManagement />
