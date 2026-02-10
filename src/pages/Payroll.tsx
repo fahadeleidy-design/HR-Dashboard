@@ -132,7 +132,7 @@ export function Payroll() {
   const [showPayslip, setShowPayslip] = useState(false);
   const [selectedPayrollItem, setSelectedPayrollItem] = useState<{ itemId: string; employeeId: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const pagination = usePagination({ totalItems: filteredPayrollItems.length, itemsPerPage: 10 });
+  const pagination = usePagination(filteredPayrollItems, { initialPageSize: 10 });
 
   useEffect(() => {
     if (currentCompany) {
@@ -1038,7 +1038,22 @@ export function Payroll() {
               </table>
             </div>
             {filteredPayrollItems.length > 0 && (
-              <Pagination {...pagination} />
+              <Pagination
+                currentPage={pagination.currentPage}
+                totalPages={pagination.totalPages}
+                totalItems={pagination.totalItems}
+                startIndex={pagination.startIndex}
+                endIndex={pagination.endIndex}
+                pageSize={pagination.pageSize}
+                pageSizeOptions={pagination.pageSizeOptions}
+                onPageChange={pagination.setPage}
+                onPageSizeChange={pagination.setPageSize}
+                onNext={pagination.nextPage}
+                onPrev={pagination.prevPage}
+                onFirst={pagination.goToFirst}
+                onLast={pagination.goToLast}
+                isRTL={isRTL}
+              />
             )}
           </div>
         </div>
