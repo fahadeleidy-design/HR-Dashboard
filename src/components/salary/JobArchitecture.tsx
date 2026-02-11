@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
-import { Plus, Edit, Trash2, Layers, Award, Briefcase } from 'lucide-react';
+import { Plus, Edit, Trash2, Layers, Award, Briefcase, X } from 'lucide-react';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { useToast } from '@/contexts/ToastContext';
 
 interface JobFamily {
   id: string;
@@ -37,20 +38,67 @@ interface JobPosition {
 
 export function JobArchitecture() {
   const { currentCompany } = useCompany();
+  const { showToast } = useToast();
   const [activeView, setActiveView] = useState<'families' | 'grades' | 'positions'>('grades');
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const { logError } = useErrorHandler();
 
   const [families, setFamilies] = useState<JobFamily[]>([]);
   const [grades, setGrades] = useState<JobGrade[]>([]);
   const [positions, setPositions] = useState<JobPosition[]>([]);
 
+  const [formData, setFormData] = useState({
+    family_code: '',
+    family_name: '',
+    description: '',
+    icon: '💼',
+    color_code: '#3B82F6',
+    grade_code: '',
+    grade_level: 1,
+    grade_name: '',
+    minimum_years_experience: 0,
+    is_leadership: false,
+    position_code: '',
+    position_title: '',
+    position_title_ar: '',
+    grade_id: '',
+    job_family_id: ''
+  });
+
   useEffect(() => {
     if (currentCompany) {
       fetchData();
+      if (activeView === 'positions') {
+        fetchFamiliesAndGrades();
+      }
     }
   }, [currentCompany, activeView]);
+
+  const fetchFamiliesAndGrades = async () => {
+    if (!currentCompany) return;
+
+    try {
+      const [familiesData, gradesData] = await Promise.all([
+        supabase
+          .from('job_families')
+          .select('*')
+          .eq('company_id', currentCompany.id)
+          .order('family_code'),
+        supabase
+          .from('job_grades')
+          .select('*')
+          .eq('company_id', currentCompany.id)
+          .order('grade_level')
+      ]);
+
+      if (familiesData.data) setFamilies(familiesData.data);
+      if (gradesData.data) setGrades(gradesData.data);
+    } catch (error) {
+      logError(error, 'medium', { component: 'JobArchitecture', action: 'fetchFamiliesAndGrades' });
+    }
+  };
 
   const fetchData = async () => {
     if (!currentCompany) return;
@@ -87,6 +135,91 @@ export function JobArchitecture() {
       logError(error, 'medium', { component: 'JobArchitecture', action: 'fetchData' });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      family_code: '',
+      family_name: '',
+      description: '',
+      icon: '💼',
+      color_code: '#3B82F6',
+      grade_code: '',
+      grade_level: 1,
+      grade_name: '',
+      minimum_years_experience: 0,
+      is_leadership: false,
+      position_code: '',
+      position_title: '',
+      position_title_ar: '',
+      grade_id: '',
+      job_family_id: ''
+    });
+  };
+
+  const handleSubmit = async () => {
+    if (!currentCompany) return;
+
+    setSubmitting(true);
+    try {
+      if (activeView === 'families') {
+        const { error } = await supabase
+          .from('job_families')
+          .insert({
+            company_id: currentCompany.id,
+            family_code: formData.family_code,
+            family_name: formData.family_name,
+            description: formData.description,
+            icon: formData.icon,
+            color_code: formData.color_code,
+            is_active: true
+          });
+
+        if (error) throw error;
+        showToast('Job family created successfully', 'success');
+      } else if (activeView === 'grades') {
+        const { error } = await supabase
+          .from('job_grades')
+          .insert({
+            company_id: currentCompany.id,
+            grade_code: formData.grade_code,
+            grade_level: formData.grade_level,
+            grade_name: formData.grade_name,
+            description: formData.description,
+            minimum_years_experience: formData.minimum_years_experience,
+            is_leadership: formData.is_leadership,
+            is_active: true
+          });
+
+        if (error) throw error;
+        showToast('Job grade created successfully', 'success');
+      } else {
+        const { error } = await supabase
+          .from('job_positions')
+          .insert({
+            company_id: currentCompany.id,
+            position_code: formData.position_code,
+            position_title: formData.position_title,
+            position_title_ar: formData.position_title_ar,
+            description: formData.description,
+            grade_id: formData.grade_id,
+            job_family_id: formData.job_family_id || null,
+            is_active: true
+          });
+
+        if (error) throw error;
+        showToast('Job position created successfully', 'success');
+      }
+
+      setShowAddModal(false);
+      resetForm();
+      fetchData();
+    } catch (error: any) {
+      logError(error, 'medium', { component: 'JobArchitecture', action: 'handleSubmit' });
+      showToast(error.message || 'Error saving data', 'error');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -405,38 +538,309 @@ export function JobArchitecture() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
-            <div className="p-6">
-              <h3 className="text-xl font-bold text-gray-900 mb-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">
                 {activeView === 'families' && 'Add Job Family'}
                 {activeView === 'grades' && 'Add Job Grade'}
                 {activeView === 'positions' && 'Add Job Position'}
               </h3>
-              <p className="text-gray-600 mb-6">
-                This feature allows you to create and manage {activeView === 'families' ? 'job families' : activeView === 'grades' ? 'job grades' : 'job positions'}.
-                The system comes pre-configured with Saudi market standards.
-              </p>
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> The system includes 8 job families, 15 job grades (aligned with Saudi labor market),
-                  and positions can be created based on your organizational structure.
-                </p>
-              </div>
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                >
-                  Close
-                </button>
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  resetForm();
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {activeView === 'families' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Family Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.family_code}
+                      onChange={(e) => setFormData({ ...formData, family_code: e.target.value })}
+                      placeholder="e.g., IT, HR, FIN"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Family Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.family_name}
+                      onChange={(e) => setFormData({ ...formData, family_name: e.target.value })}
+                      placeholder="e.g., Information Technology"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Brief description of this job family"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Icon (Emoji)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.icon}
+                        onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                        placeholder="💼"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Color Code
+                      </label>
+                      <input
+                        type="color"
+                        value={formData.color_code}
+                        onChange={(e) => setFormData({ ...formData, color_code: e.target.value })}
+                        className="w-full h-10 px-1 py-1 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeView === 'grades' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Grade Code <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.grade_code}
+                        onChange={(e) => setFormData({ ...formData, grade_code: e.target.value })}
+                        placeholder="e.g., GRD-01"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Grade Level <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.grade_level}
+                        onChange={(e) => setFormData({ ...formData, grade_level: parseInt(e.target.value) })}
+                        min="1"
+                        max="20"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Grade Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.grade_name}
+                      onChange={(e) => setFormData({ ...formData, grade_name: e.target.value })}
+                      placeholder="e.g., Junior Professional"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Brief description of this grade level"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Minimum Years of Experience
+                    </label>
+                    <input
+                      type="number"
+                      value={formData.minimum_years_experience}
+                      onChange={(e) => setFormData({ ...formData, minimum_years_experience: parseInt(e.target.value) })}
+                      min="0"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.is_leadership}
+                        onChange={(e) => setFormData({ ...formData, is_leadership: e.target.checked })}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm font-medium text-gray-700">Leadership Role</span>
+                    </label>
+                  </div>
+                </div>
+              )}
+
+              {activeView === 'positions' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Position Code <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.position_code}
+                      onChange={(e) => setFormData({ ...formData, position_code: e.target.value })}
+                      placeholder="e.g., POS-001"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Position Title (English) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.position_title}
+                        onChange={(e) => setFormData({ ...formData, position_title: e.target.value })}
+                        placeholder="e.g., Software Engineer"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        required
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Position Title (Arabic)
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.position_title_ar}
+                        onChange={(e) => setFormData({ ...formData, position_title_ar: e.target.value })}
+                        placeholder="e.g., مهندس برمجيات"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        dir="rtl"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Job Grade <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={formData.grade_id}
+                      onChange={(e) => setFormData({ ...formData, grade_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      required
+                    >
+                      <option value="">Select a grade</option>
+                      {grades.map((grade) => (
+                        <option key={grade.id} value={grade.id}>
+                          {grade.grade_code} - {grade.grade_name} (Level {grade.grade_level})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Job Family (Optional)
+                    </label>
+                    <select
+                      value={formData.job_family_id}
+                      onChange={(e) => setFormData({ ...formData, job_family_id: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select a family (optional)</option>
+                      {families.map((family) => (
+                        <option key={family.id} value={family.id}>
+                          {family.family_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      placeholder="Brief description of this position"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      rows={3}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
                 <button
                   onClick={() => {
-                    alert('Full CRUD functionality for creating ' + activeView + ' will be implemented here.\n\nFor now, the system uses pre-seeded data from the database migrations.');
                     setShowAddModal(false);
+                    resetForm();
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={submitting}
+                  className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
                 >
-                  Continue
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+                >
+                  {submitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      Create {activeView === 'families' ? 'Family' : activeView === 'grades' ? 'Grade' : 'Position'}
+                    </>
+                  )}
                 </button>
               </div>
             </div>
