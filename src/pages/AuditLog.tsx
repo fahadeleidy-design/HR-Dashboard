@@ -192,7 +192,7 @@ export function AuditLog() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 mb-6 p-4 relative z-10">
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 mb-6 p-4 relative z-50">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-5 w-5 text-gray-500" />
           <h3 className="font-semibold text-gray-900">{t.common.filter}</h3>
@@ -205,7 +205,7 @@ export function AuditLog() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="relative z-10">
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Search className="h-4 w-4 inline mr-1" />
               {t.common.search}
@@ -219,13 +219,12 @@ export function AuditLog() {
             />
           </div>
 
-          <div className="relative z-20">
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">{t.auditLog.actionType}</label>
             <select
               value={filters.action}
               onChange={(e) => setFilters({ ...filters, action: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white appearance-none cursor-pointer"
-              style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white cursor-pointer"
             >
               <option value="">{t.auditLog.allActions}</option>
               <option value="INSERT">{t.auditLog.insert}</option>
@@ -234,13 +233,12 @@ export function AuditLog() {
             </select>
           </div>
 
-          <div className="relative z-20">
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">{t.auditLog.table}</label>
             <select
               value={filters.table}
               onChange={(e) => setFilters({ ...filters, table: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white appearance-none cursor-pointer"
-              style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' fill=\'none\' viewBox=\'0 0 20 20\'%3e%3cpath stroke=\'%236b7280\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'1.5\' d=\'M6 8l4 4 4-4\'/%3e%3c/svg%3e")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 bg-white cursor-pointer"
             >
               <option value="">{t.auditLog.allTables}</option>
               {availableTables.map(table => (
@@ -249,7 +247,7 @@ export function AuditLog() {
             </select>
           </div>
 
-          <div className="relative z-10">
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Calendar className="h-4 w-4 inline mr-1" />
               {t.auditLog.fromDate}
@@ -262,7 +260,7 @@ export function AuditLog() {
             />
           </div>
 
-          <div className="relative z-10">
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               <Calendar className="h-4 w-4 inline mr-1" />
               {t.auditLog.toDate}
