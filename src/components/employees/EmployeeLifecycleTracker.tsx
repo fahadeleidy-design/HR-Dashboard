@@ -3,6 +3,7 @@ import { Calendar, Clock, CheckCircle, AlertTriangle, XCircle, Plus, X, User, Ed
 import { supabase } from '@/lib/supabase';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface LifecycleEvent {
   id: string;
@@ -32,6 +33,7 @@ export function EmployeeLifecycleTracker({ employeeId, onClose }: EmployeeLifecy
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'pending' | 'overdue' | 'completed'>('all');
   const [showAddForm, setShowAddForm] = useState(false);
+  const { logError } = useErrorHandler();
   const [formData, setFormData] = useState({
     event_type: 'onboarding',
     event_date: new Date().toISOString().split('T')[0],
@@ -74,7 +76,7 @@ export function EmployeeLifecycleTracker({ employeeId, onClose }: EmployeeLifecy
       if (error) throw error;
       setEvents(data || []);
     } catch (error) {
-      console.error('Error fetching lifecycle events:', error);
+      logError(error, 'medium', { component: 'EmployeeLifecycleTracker', action: 'fetchLifecycleEvents' });
     } finally {
       setLoading(false);
     }
@@ -104,7 +106,7 @@ export function EmployeeLifecycleTracker({ employeeId, onClose }: EmployeeLifecy
         notes: ''
       });
     } catch (error) {
-      console.error('Error adding lifecycle event:', error);
+      logError(error, 'medium', { component: 'EmployeeLifecycleTracker', action: 'addLifecycleEvent' });
       alert('Failed to add lifecycle event');
     }
   };
@@ -129,7 +131,7 @@ export function EmployeeLifecycleTracker({ employeeId, onClose }: EmployeeLifecy
       if (error) throw error;
       await fetchEvents();
     } catch (error) {
-      console.error('Error updating status:', error);
+      logError(error, 'medium', { component: 'EmployeeLifecycleTracker', action: 'updateStatus' });
       alert('Failed to update status');
     }
   };
@@ -146,7 +148,7 @@ export function EmployeeLifecycleTracker({ employeeId, onClose }: EmployeeLifecy
       if (error) throw error;
       await fetchEvents();
     } catch (error) {
-      console.error('Error deleting event:', error);
+      logError(error, 'medium', { component: 'EmployeeLifecycleTracker', action: 'deleteEvent' });
       alert('Failed to delete event');
     }
   };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Search, Mail, Phone, Building2, MapPin, Calendar, Award, Users, Filter, Grid, List } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface EmployeeDirectoryProps {
   companyId: string;
@@ -30,6 +31,7 @@ export function EmployeeDirectory({ companyId, onEmployeeSelect }: EmployeeDirec
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
+  const { logError } = useErrorHandler();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [departments, setDepartments] = useState<any[]>([]);
 
@@ -66,7 +68,7 @@ export function EmployeeDirectory({ companyId, onEmployeeSelect }: EmployeeDirec
       if (error) throw error;
       setEmployees(data || []);
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      logError(error, 'medium', { component: 'EmployeeDirectory', action: 'fetchEmployees' });
     } finally {
       setLoading(false);
     }
@@ -83,7 +85,7 @@ export function EmployeeDirectory({ companyId, onEmployeeSelect }: EmployeeDirec
       if (error) throw error;
       setDepartments(data || []);
     } catch (error) {
-      console.error('Error fetching departments:', error);
+      logError(error, 'medium', { component: 'EmployeeDirectory', action: 'fetchDepartments' });
     }
   };
 

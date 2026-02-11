@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useToast } from '../contexts/ToastContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Users, Search, Building2, UserCheck, Save, X } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Employee {
   id: string;
@@ -43,6 +44,7 @@ export default function ManagerAssignment() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const { logError } = useErrorHandler();
   const [selectedCompany, setSelectedCompany] = useState<string>('all');
   const [companies, setCompanies] = useState<Array<{ id: string; name_en: string; name_ar: string }>>([]);
   const [editingEmployee, setEditingEmployee] = useState<string | null>(null);
@@ -75,7 +77,7 @@ export default function ManagerAssignment() {
         .order('name_en');
 
       if (companiesError) {
-        console.error('Error loading companies:', companiesError);
+        logError(companiesError, 'medium', { component: 'ManagerAssignment', action: 'loadCompanies' });
         throw companiesError;
       }
       console.log('Loaded companies:', companiesData?.length || 0);
@@ -98,7 +100,7 @@ export default function ManagerAssignment() {
       const { data: employeesData, error: employeesError } = await query;
 
       if (employeesError) {
-        console.error('Error loading employees:', employeesError);
+        logError(employeesError, 'medium', { component: 'ManagerAssignment', action: 'loadEmployees' });
         throw employeesError;
       }
 
@@ -150,9 +152,8 @@ export default function ManagerAssignment() {
       setManagers(employeesWithManagers);
       console.log('Data load complete');
     } catch (error: any) {
-      console.error('Error loading data:', error);
+      logError(error, 'medium', { component: 'ManagerAssignment', action: 'loadData' });
       const errorMessage = error.message || 'Failed to load data';
-      console.error('Full error details:', JSON.stringify(error, null, 2));
       showToast(
         `${language === 'ar' ? 'خطأ في تحميل البيانات' : 'Error loading data'}: ${errorMessage}`,
         'error'
@@ -197,7 +198,7 @@ export default function ManagerAssignment() {
       setSelectedManager('');
       await loadData();
     } catch (error: any) {
-      console.error('Error updating manager:', error);
+      logError(error, 'medium', { component: 'ManagerAssignment', action: 'updateManager' });
       showToast(error.message, 'error');
     } finally {
       setSaving(null);

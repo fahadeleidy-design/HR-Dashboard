@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 import { Calendar, Clock, MapPin, Users, Video, Save, X } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Application {
   id: string;
@@ -44,6 +45,7 @@ export function InterviewScheduleForm({ companyId, onSuccess, onCancel }: Interv
     interviewer_ids: [] as string[],
     notes: ''
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchApplications();
@@ -67,7 +69,7 @@ export function InterviewScheduleForm({ companyId, onSuccess, onCancel }: Interv
         setApplications(data as any);
       }
     } catch (error) {
-      console.error('Error fetching applications:', error);
+      logError(error, 'medium', { component: 'InterviewScheduleForm', action: 'fetchApplications' });
     }
   };
 
@@ -84,7 +86,7 @@ export function InterviewScheduleForm({ companyId, onSuccess, onCancel }: Interv
         setEmployees(data);
       }
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      logError(error, 'medium', { component: 'InterviewScheduleForm', action: 'fetchEmployees' });
     }
   };
 
@@ -116,7 +118,7 @@ export function InterviewScheduleForm({ companyId, onSuccess, onCancel }: Interv
       showToast('Interview scheduled successfully', 'success');
       onSuccess();
     } catch (error: any) {
-      console.error('Error scheduling interview:', error);
+      logError(error, 'medium', { component: 'InterviewScheduleForm', action: 'scheduleInterview' });
       showToast(error.message || 'Failed to schedule interview', 'error');
     } finally {
       setLoading(false);

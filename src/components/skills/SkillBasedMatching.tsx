@@ -3,6 +3,7 @@ import { Users, Search, Target, CheckCircle, XCircle, Clock, Plus } from 'lucide
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface MatchRequest {
   id: string;
@@ -41,6 +42,7 @@ export default function SkillBasedMatching() {
     needed_by_date: '',
     duration_weeks: 4,
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (selectedCompany) {
@@ -59,7 +61,7 @@ export default function SkillBasedMatching() {
 
       setRequests(data || []);
     } catch (error) {
-      console.error('Error loading requests:', error);
+      logError(error, 'medium', { component: 'SkillBasedMatching', action: 'loadRequests' });
       showToast('Failed to load matching requests', 'error');
     } finally {
       setLoading(false);
@@ -79,7 +81,7 @@ export default function SkillBasedMatching() {
 
       setMatches(data || []);
     } catch (error) {
-      console.error('Error loading matches:', error);
+      logError(error, 'medium', { component: 'SkillBasedMatching', action: 'loadMatches' });
       showToast('Failed to load matches', 'error');
     }
   };
@@ -114,7 +116,7 @@ export default function SkillBasedMatching() {
       });
       loadRequests();
     } catch (error: any) {
-      console.error('Error creating request:', error);
+      logError(error, 'medium', { component: 'SkillBasedMatching', action: 'createRequest' });
       showToast(error.message || 'Failed to create request', 'error');
     }
   };
@@ -209,7 +211,7 @@ export default function SkillBasedMatching() {
         showToast('No matches found', 'info');
       }
     } catch (error: any) {
-      console.error('Error finding matches:', error);
+      logError(error, 'medium', { component: 'SkillBasedMatching', action: 'findMatches' });
       showToast(error.message || 'Failed to find matches', 'error');
     }
   };

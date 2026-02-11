@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Award, Trophy, Star, DollarSign, ThumbsUp, TrendingUp } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Recognition {
   id: string;
@@ -27,6 +28,7 @@ export function RecognitionCenter() {
     totalValue: 0,
     topRecognized: ''
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -74,7 +76,7 @@ export function RecognitionCenter() {
         });
       }
     } catch (error) {
-      console.error('Error fetching recognitions:', error);
+      logError(error, 'medium', { component: 'RecognitionCenter', action: 'fetchRecognitions' });
     } finally {
       setLoading(false);
     }

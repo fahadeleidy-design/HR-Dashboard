@@ -5,6 +5,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { Plus, Search, Eye, Edit, Mail, Phone, MapPin, Briefcase, FileText, X } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 import { CandidateRegistrationForm } from './CandidateRegistrationForm';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Candidate {
   id: string;
@@ -28,6 +29,7 @@ export function CandidateManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filter, setFilter] = useState('all');
   const [showModal, setShowModal] = useState(false);
+  const { logError } = useErrorHandler();
   const [viewingCandidate, setViewingCandidate] = useState<Candidate | null>(null);
 
   useEffect(() => {
@@ -56,7 +58,7 @@ export function CandidateManagement() {
         setCandidates(data);
       }
     } catch (error) {
-      console.error('Error fetching candidates:', error);
+      logError(error, 'medium', { component: 'CandidateManagement', action: 'fetchCandidates' });
     } finally {
       setLoading(false);
     }

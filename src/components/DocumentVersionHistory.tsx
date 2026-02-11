@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Clock, Download, Eye, RotateCcw, FileText, User } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Version {
   id: string;
@@ -23,6 +24,7 @@ interface DocumentVersionHistoryProps {
 export function DocumentVersionHistory({ documentId, onRestore }: DocumentVersionHistoryProps) {
   const [versions, setVersions] = useState<Version[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchVersions();
@@ -44,7 +46,7 @@ export function DocumentVersionHistory({ documentId, onRestore }: DocumentVersio
         setVersions(data);
       }
     } catch (error) {
-      console.error('Error fetching versions:', error);
+      logError(error, 'medium', { component: 'DocumentVersionHistory', action: 'fetchVersions' });
     } finally {
       setLoading(false);
     }

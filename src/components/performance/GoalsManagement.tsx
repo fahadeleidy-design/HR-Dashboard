@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   Target,
   Plus,
@@ -112,6 +113,7 @@ export function GoalsManagement() {
     support_needed: '',
     next_steps: ''
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany && user) {
@@ -144,7 +146,7 @@ export function GoalsManagement() {
         }
       }
     } catch (error: any) {
-      console.error('Error fetching user role:', error);
+      logError(error, 'medium', { component: 'GoalsManagement', action: 'fetchUserRole' });
     }
   };
 
@@ -161,7 +163,7 @@ export function GoalsManagement() {
       if (error) throw error;
       setCategories(data || []);
     } catch (error: any) {
-      console.error('Error fetching categories:', error);
+      logError(error, 'medium', { component: 'GoalsManagement', action: 'fetchCategories' });
     }
   };
 
@@ -198,7 +200,7 @@ export function GoalsManagement() {
       if (error) throw error;
       setGoals(data || []);
     } catch (error: any) {
-      console.error('Error fetching goals:', error);
+      logError(error, 'medium', { component: 'GoalsManagement', action: 'fetchGoals' });
       showToast(error.message, 'error');
     } finally {
       setLoading(false);
@@ -216,7 +218,7 @@ export function GoalsManagement() {
       if (error) throw error;
       setCheckIns(data || []);
     } catch (error: any) {
-      console.error('Error fetching check-ins:', error);
+      logError(error, 'medium', { component: 'GoalsManagement', action: 'fetchCheckins' });
     }
   };
 
@@ -271,7 +273,7 @@ export function GoalsManagement() {
       resetForm();
       fetchGoals();
     } catch (error: any) {
-      console.error('Error saving goal:', error);
+      logError(error, 'medium', { component: 'GoalsManagement', action: 'saveGoal' });
       showToast(error.message, 'error');
     }
   };
@@ -322,7 +324,7 @@ export function GoalsManagement() {
       resetCheckInForm();
       fetchGoals();
     } catch (error: any) {
-      console.error('Error recording check-in:', error);
+      logError(error, 'medium', { component: 'GoalsManagement', action: 'recordCheckin' });
       showToast(error.message, 'error');
     }
   };
@@ -346,7 +348,7 @@ export function GoalsManagement() {
       );
       fetchGoals();
     } catch (error: any) {
-      console.error('Error deleting goal:', error);
+      logError(error, 'medium', { component: 'GoalsManagement', action: 'deleteGoal' });
       showToast(error.message, 'error');
     }
   };

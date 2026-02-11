@@ -3,6 +3,7 @@ import { Save, Bookmark, Star, Share2, Trash2, Edit2, Check, X, Plus } from 'luc
 import { supabase } from '@/lib/supabase';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface SavedView {
   id: string;
@@ -42,6 +43,7 @@ export function SavedViewsManager({
     is_default: false,
     is_shared: false
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany && user) {
@@ -64,7 +66,7 @@ export function SavedViewsManager({
       if (error) throw error;
       setViews(data || []);
     } catch (error) {
-      console.error('Error fetching views:', error);
+      logError(error, 'medium', { component: 'SavedViewsManager', action: 'fetchViews' });
     } finally {
       setLoading(false);
     }
@@ -118,7 +120,7 @@ export function SavedViewsManager({
       setEditingView(null);
       setFormData({ name: '', description: '', is_default: false, is_shared: false });
     } catch (error: any) {
-      console.error('Error saving view:', error);
+      logError(error, 'medium', { component: 'SavedViewsManager', action: 'saveView' });
 
       const errorCode = error?.code || error?.error?.code;
       const errorMessage = error?.message || error?.error?.message || 'Unknown error';
@@ -147,7 +149,7 @@ export function SavedViewsManager({
       if (error) throw error;
       await fetchViews();
     } catch (error) {
-      console.error('Error deleting view:', error);
+      logError(error, 'medium', { component: 'SavedViewsManager', action: 'deleteView' });
       alert('Failed to delete view');
     }
   };
@@ -170,7 +172,7 @@ export function SavedViewsManager({
       if (error) throw error;
       await fetchViews();
     } catch (error) {
-      console.error('Error setting default view:', error);
+      logError(error, 'medium', { component: 'SavedViewsManager', action: 'setDefaultView' });
       alert('Failed to set default view');
     }
   };

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Building2, Plus, Edit, Trash2, DollarSign, Users, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface CostCenterManagerProps {
   companyId: string;
@@ -38,6 +39,7 @@ export function CostCenterManager({ companyId }: CostCenterManagerProps) {
     manager_id: '',
     is_active: true
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchCostCenters();
@@ -59,7 +61,7 @@ export function CostCenterManager({ companyId }: CostCenterManagerProps) {
       if (error) throw error;
       setCostCenters(data || []);
     } catch (error) {
-      console.error('Error fetching cost centers:', error);
+      logError(error, 'medium', { component: 'CostCenterManager', action: 'fetchCostCenters' });
     } finally {
       setLoading(false);
     }
@@ -77,7 +79,7 @@ export function CostCenterManager({ companyId }: CostCenterManagerProps) {
       if (error) throw error;
       setEmployees(data || []);
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      logError(error, 'medium', { component: 'CostCenterManager', action: 'fetchEmployees' });
     }
   };
 
@@ -112,7 +114,7 @@ export function CostCenterManager({ companyId }: CostCenterManagerProps) {
       resetForm();
       fetchCostCenters();
     } catch (error: any) {
-      console.error('Error saving cost center:', error);
+      logError(error, 'medium', { component: 'CostCenterManager', action: 'saveCostCenter' });
       alert('Failed to save cost center: ' + error.message);
     }
   };
@@ -133,7 +135,7 @@ export function CostCenterManager({ companyId }: CostCenterManagerProps) {
       alert('Cost center deleted successfully!');
       fetchCostCenters();
     } catch (error: any) {
-      console.error('Error deleting cost center:', error);
+      logError(error, 'medium', { component: 'CostCenterManager', action: 'deleteCostCenter' });
       alert('Failed to delete cost center: ' + error.message);
     }
   };

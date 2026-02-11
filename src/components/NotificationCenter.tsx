@@ -3,6 +3,7 @@ import { Bell, Check, X, AlertCircle, Info, CheckCircle, AlertTriangle } from 'l
 import { supabase } from '@/lib/supabase';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Notification {
   id: string;
@@ -23,6 +24,7 @@ export function NotificationCenter() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -48,7 +50,7 @@ export function NotificationCenter() {
       setNotifications(data || []);
       setUnreadCount(data?.filter(n => !n.is_read).length || 0);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      logError(error, 'medium', { component: 'NotificationCenter', action: 'fetchNotifications' });
     } finally {
       setLoading(false);
     }
@@ -88,7 +90,7 @@ export function NotificationCenter() {
       if (error) throw error;
       fetchNotifications();
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      logError(error, 'medium', { component: 'NotificationCenter', action: 'markNotificationAsRead' });
     }
   };
 
@@ -106,7 +108,7 @@ export function NotificationCenter() {
       if (error) throw error;
       fetchNotifications();
     } catch (error) {
-      console.error('Error marking all as read:', error);
+      logError(error, 'medium', { component: 'NotificationCenter', action: 'markAllAsRead' });
     }
   };
 
@@ -120,7 +122,7 @@ export function NotificationCenter() {
       if (error) throw error;
       fetchNotifications();
     } catch (error) {
-      console.error('Error dismissing notification:', error);
+      logError(error, 'medium', { component: 'NotificationCenter', action: 'dismissNotification' });
     }
   };
 

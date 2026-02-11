@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { X, Download, Send, Eye, Calendar, User, Building2, Hash, DollarSign } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface PayslipViewerProps {
   payrollItemId: string;
@@ -57,6 +58,7 @@ interface PayslipData {
 export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }: PayslipViewerProps) {
   const [payslipData, setPayslipData] = useState<PayslipData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }:
         batch: payrollItem.batch
       });
     } catch (error) {
-      console.error('Error fetching payslip data:', error);
+      logError(error, 'medium', { component: 'PayslipViewer', action: 'fetchPayslipData' });
       alert('Failed to load payslip data');
     } finally {
       setLoading(false);
@@ -123,7 +125,7 @@ export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }:
           .eq('id', existingPayslip.id);
       }
     } catch (error) {
-      console.error('Error tracking view:', error);
+      logError(error, 'medium', { component: 'PayslipViewer', action: 'trackView' });
     }
   };
 
@@ -145,7 +147,7 @@ export function PayslipViewer({ payrollItemId, employeeId, companyId, onClose }:
             .eq('id', existingPayslip.id);
         }
       } catch (error) {
-        console.error('Error tracking download:', error);
+        logError(error, 'medium', { component: 'PayslipViewer', action: 'trackDownload' });
       }
     }
   };

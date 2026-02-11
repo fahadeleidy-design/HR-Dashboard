@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/formatters';
 import { OfferManagementForm } from './OfferManagementForm';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface JobOffer {
   id: string;
@@ -83,6 +84,7 @@ export function EnhancedOfferManagement() {
     response_deadline: '',
     notes: ''
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -112,7 +114,7 @@ export function EnhancedOfferManagement() {
       const { data, error } = await query;
       if (!error && data) setOffers(data);
     } catch (error) {
-      console.error('Error fetching offers:', error);
+      logError(error, 'medium', { component: 'EnhancedOfferManagement', action: 'fetchOffers' });
     } finally {
       setLoading(false);
     }
@@ -136,7 +138,7 @@ export function EnhancedOfferManagement() {
 
       if (!error && data) setNegotiations(data);
     } catch (error) {
-      console.error('Error fetching negotiations:', error);
+      logError(error, 'medium', { component: 'EnhancedOfferManagement', action: 'fetchNegotiations' });
     } finally {
       setLoading(false);
     }
@@ -158,7 +160,7 @@ export function EnhancedOfferManagement() {
       showToast('Offer sent successfully', 'success');
       fetchOffers();
     } catch (error: any) {
-      console.error('Error sending offer:', error);
+      logError(error, 'medium', { component: 'EnhancedOfferManagement', action: 'sendOffer' });
       showToast(error.message || 'Failed to send offer', 'error');
     }
   };
@@ -176,7 +178,7 @@ export function EnhancedOfferManagement() {
       showToast('Offer deleted successfully', 'success');
       fetchOffers();
     } catch (error: any) {
-      console.error('Error deleting offer:', error);
+      logError(error, 'medium', { component: 'EnhancedOfferManagement', action: 'deleteOffer' });
       showToast(error.message || 'Failed to delete offer', 'error');
     }
   };
@@ -194,7 +196,7 @@ export function EnhancedOfferManagement() {
       showToast('Offer withdrawn successfully', 'success');
       fetchOffers();
     } catch (error: any) {
-      console.error('Error withdrawing offer:', error);
+      logError(error, 'medium', { component: 'EnhancedOfferManagement', action: 'withdrawOffer' });
       showToast(error.message || 'Failed to withdraw offer', 'error');
     }
   };

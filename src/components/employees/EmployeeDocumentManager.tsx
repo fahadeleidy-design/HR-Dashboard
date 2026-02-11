@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FileText, Upload, Download, Eye, Trash2, AlertCircle, CheckCircle, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface EmployeeDocumentManagerProps {
   employeeId: string;
@@ -31,6 +32,7 @@ export function EmployeeDocumentManager({ employeeId, companyId }: EmployeeDocum
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('all');
   const [showExpiring, setShowExpiring] = useState(false);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchDocuments();
@@ -49,7 +51,7 @@ export function EmployeeDocumentManager({ employeeId, companyId }: EmployeeDocum
       if (error) throw error;
       setDocuments(data || []);
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      logError(error, 'medium', { component: 'EmployeeDocumentManager', action: 'fetchDocuments' });
     } finally {
       setLoading(false);
     }
@@ -71,7 +73,7 @@ export function EmployeeDocumentManager({ employeeId, companyId }: EmployeeDocum
       alert('Document deleted successfully!');
       fetchDocuments();
     } catch (error: any) {
-      console.error('Error deleting document:', error);
+      logError(error, 'medium', { component: 'EmployeeDocumentManager', action: 'deleteDocument' });
       alert('Failed to delete document: ' + error.message);
     }
   };

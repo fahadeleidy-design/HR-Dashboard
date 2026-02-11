@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Shield, Plus, Trash2, AlertCircle, CheckCircle, X, Users, Edit2 } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Employee {
   id: string;
@@ -82,6 +83,7 @@ export function UserRoleManagement() {
     employee_id: '',
     role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'manager' | 'employee'
   });
+  const { logError } = useErrorHandler();
 
   // Filter available roles based on current user's role
   const isSuperAdmin = userRole?.role === 'super_admin';
@@ -137,7 +139,7 @@ export function UserRoleManagement() {
         throw new Error(result.error || 'Failed to load user roles');
       }
     } catch (error: any) {
-      console.error('Failed to load user roles:', error);
+      logError(error, 'medium', { component: 'UserRoleManagement', action: 'failedLoadUserRoles' });
       setMessage({ type: 'error', text: error.message || 'Failed to load user roles' });
     }
     setLoading(false);
@@ -339,7 +341,7 @@ export function UserRoleManagement() {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Response error:', errorText);
+        logError(errorText, 'medium', { component: 'UserRoleManagement', action: 'responseError' });
         throw new Error(`Server error: ${response.status} - ${errorText}`);
       }
 
@@ -357,7 +359,7 @@ export function UserRoleManagement() {
       });
       loadUserRoles();
     } catch (error: any) {
-      console.error('Bulk create error:', error);
+      logError(error, 'medium', { component: 'UserRoleManagement', action: 'bulkCreateError' });
       const errorMessage = error.message || 'Failed to create employee accounts';
       setMessage({
         type: 'error',

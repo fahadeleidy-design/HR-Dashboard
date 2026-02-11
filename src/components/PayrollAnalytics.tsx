@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, TrendingUp, Users, DollarSign, PieChart, Calendar } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface PayrollAnalyticsProps {
   companyId: string;
@@ -26,6 +27,7 @@ interface AnalyticsData {
 export function PayrollAnalytics({ companyId, batches }: PayrollAnalyticsProps) {
   const [analytics, setAnalytics] = useState<AnalyticsData[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [timeRange, setTimeRange] = useState<'6months' | '12months' | 'all'>('6months');
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export function PayrollAnalytics({ companyId, batches }: PayrollAnalyticsProps) 
       if (error) throw error;
       setAnalytics(data || []);
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      logError(error, 'medium', { component: 'PayrollAnalytics', action: 'fetchAnalytics' });
     } finally {
       setLoading(false);
     }

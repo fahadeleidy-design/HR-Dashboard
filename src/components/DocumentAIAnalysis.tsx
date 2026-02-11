@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Brain, Loader2, AlertTriangle, CheckCircle, Info, Sparkles, Calendar, FileText, User, CreditCard, Zap, TrendingUp, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface DocumentAIAnalysisProps {
   documentId: string;
@@ -37,6 +38,7 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
   const [expanded, setExpanded] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     loadExistingAnalysis();
@@ -67,7 +69,7 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
         setExpanded(true);
       }
     } catch (err) {
-      console.error('Failed to load existing analysis:', err);
+      logError(err, 'medium', { component: 'DocumentAIAnalysis', action: 'failedLoadExistingAnalysis' });
     }
   };
 
@@ -225,7 +227,7 @@ export function DocumentAIAnalysis({ documentId, documentType, fileUrl, onAnalys
       if (onAnalysisComplete) onAnalysisComplete();
 
     } catch (err: any) {
-      console.error('Analysis error:', err);
+      logError(err, 'medium', { component: 'DocumentAIAnalysis', action: 'analysisError' });
       setError(err.message || 'Analysis failed');
     } finally {
       setIsAnalyzing(false);

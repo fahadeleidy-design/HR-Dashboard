@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useToast } from '@/contexts/ToastContext';
 import { DollarSign, Award, TrendingUp, AlertCircle } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface AssignCompensationFormProps {
   employeeId: string;
@@ -53,6 +54,7 @@ export function AssignCompensationForm({ employeeId, onSuccess }: AssignCompensa
     mobile_allowance: 0,
     other_allowances: 0,
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -100,7 +102,7 @@ export function AssignCompensationForm({ employeeId, onSuccess }: AssignCompensa
       if (!positionsData.error) setPositions(positionsData.data || []);
       if (!bandsData.error) setBands(bandsData.data || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logError(error, 'medium', { component: 'AssignCompensationForm', action: 'fetchData' });
       showToast('Error loading compensation data', 'error');
     } finally {
       setLoading(false);
@@ -129,7 +131,7 @@ export function AssignCompensationForm({ employeeId, onSuccess }: AssignCompensa
         });
       }
     } catch (error) {
-      console.error('Error fetching current compensation:', error);
+      logError(error, 'medium', { component: 'AssignCompensationForm', action: 'fetchCurrentCompensation' });
     }
   };
 
@@ -163,7 +165,7 @@ export function AssignCompensationForm({ employeeId, onSuccess }: AssignCompensa
       showToast('Compensation assigned successfully', 'success');
       if (onSuccess) onSuccess();
     } catch (error: any) {
-      console.error('Error saving compensation:', error);
+      logError(error, 'medium', { component: 'AssignCompensationForm', action: 'saveCompensation' });
       showToast(error.message || 'Error saving compensation', 'error');
     } finally {
       setSaving(false);

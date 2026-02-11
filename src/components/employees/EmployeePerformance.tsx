@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TrendingUp, Award, Target, AlertCircle, Plus, Eye, Star, ThumbsUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface EmployeePerformanceProps {
   employeeId: string;
@@ -53,6 +54,7 @@ export function EmployeePerformance({ employeeId, companyId }: EmployeePerforman
   const [goals, setGoals] = useState<Goal[]>([]);
   const [recognitions, setRecognitions] = useState<Recognition[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [activeTab, setActiveTab] = useState<'assessments' | 'goals' | 'recognitions'>('assessments');
 
   useEffect(() => {
@@ -92,7 +94,7 @@ export function EmployeePerformance({ employeeId, companyId }: EmployeePerforman
       setGoals(goalsData.data || []);
       setRecognitions(recognitionsData.data || []);
     } catch (error) {
-      console.error('Error fetching performance data:', error);
+      logError(error, 'medium', { component: 'EmployeePerformance', action: 'fetchPerformanceData' });
     } finally {
       setLoading(false);
     }

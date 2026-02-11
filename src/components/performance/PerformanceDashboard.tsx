@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Target, TrendingUp, Users, Award, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export function PerformanceDashboard() {
   const { currentCompany } = useCompany();
@@ -16,6 +17,7 @@ export function PerformanceDashboard() {
     activePIPs: 0,
     recognitions: 0
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -69,7 +71,7 @@ export function PerformanceDashboard() {
         recognitions: recognitions.length
       });
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
+      logError(error, 'medium', { component: 'PerformanceDashboard', action: 'fetchDashboardStats' });
     } finally {
       setLoading(false);
     }

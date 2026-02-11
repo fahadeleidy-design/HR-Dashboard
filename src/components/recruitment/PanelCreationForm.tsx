@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 import { Users, Plus, X, Save, Trash2 } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Employee {
   id: string;
@@ -34,6 +35,7 @@ export function PanelCreationForm({ companyId, onSuccess, onCancel }: PanelCreat
     description: '',
     is_active: true
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchEmployees();
@@ -52,7 +54,7 @@ export function PanelCreationForm({ companyId, onSuccess, onCancel }: PanelCreat
         setEmployees(data);
       }
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      logError(error, 'medium', { component: 'PanelCreationForm', action: 'fetchEmployees' });
     }
   };
 
@@ -107,7 +109,7 @@ export function PanelCreationForm({ companyId, onSuccess, onCancel }: PanelCreat
       showToast('Interview panel created successfully', 'success');
       onSuccess();
     } catch (error: any) {
-      console.error('Error creating panel:', error);
+      logError(error, 'medium', { component: 'PanelCreationForm', action: 'createPanel' });
       showToast(error.message || 'Failed to create interview panel', 'error');
     } finally {
       setLoading(false);

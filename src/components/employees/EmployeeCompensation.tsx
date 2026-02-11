@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useCompany } from '@/contexts/CompanyContext';
 import { DollarSign, TrendingUp, Award, AlertCircle, Edit, History, Plus } from 'lucide-react';
 import { formatNumber, formatDate } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface EmployeeCompensation {
   id: string;
@@ -41,6 +42,7 @@ interface EmployeeCompensationProps {
 export function EmployeeCompensation({ employeeId }: EmployeeCompensationProps) {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [employees, setEmployees] = useState<EmployeeCompensation[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeCompensation | null>(null);
 
@@ -73,7 +75,7 @@ export function EmployeeCompensation({ employeeId }: EmployeeCompensationProps) 
         }
       }
     } catch (error) {
-      console.error('Error fetching employee compensation:', error);
+      logError(error, 'medium', { component: 'EmployeeCompensation', action: 'fetchEmployeeCompensation' });
     } finally {
       setLoading(false);
     }

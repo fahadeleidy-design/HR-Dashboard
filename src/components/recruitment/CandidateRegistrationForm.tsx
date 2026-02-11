@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Upload, Plus, Trash2, Send, Briefcase, GraduationCap, User, Phone, Mail, MapPin, Globe } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface JobPosting {
   id: string;
@@ -67,6 +68,7 @@ export function CandidateRegistrationForm({
     source: 'direct_application',
     selected_job_posting: jobPostingId || ''
   });
+  const { logError } = useErrorHandler();
 
   const [education, setEducation] = useState<Education[]>([{
     degree: '',
@@ -180,7 +182,7 @@ export function CandidateRegistrationForm({
       .upload(filePath, resumeFile);
 
     if (uploadError) {
-      console.error('Resume upload error:', uploadError);
+      logError(uploadError, 'medium', { component: 'CandidateRegistrationForm', action: 'resumeUploadError' });
       return null;
     }
 
@@ -284,7 +286,7 @@ export function CandidateRegistrationForm({
       }, 2000);
 
     } catch (error: any) {
-      console.error('Application error:', error);
+      logError(error, 'medium', { component: 'CandidateRegistrationForm', action: 'applicationError' });
       setMessage({
         type: 'error',
         text: error.message || 'Failed to submit application. Please try again.'

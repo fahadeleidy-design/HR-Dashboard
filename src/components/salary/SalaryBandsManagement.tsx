@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Edit, DollarSign, TrendingUp, AlertCircle } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface SalaryBand {
   id: string;
@@ -19,6 +20,7 @@ export function SalaryBandsManagement() {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const { logError } = useErrorHandler();
   const [bands, setBands] = useState<SalaryBand[]>([]);
 
   useEffect(() => {
@@ -46,7 +48,7 @@ export function SalaryBandsManagement() {
         setBands(data);
       }
     } catch (error) {
-      console.error('Error fetching salary bands:', error);
+      logError(error, 'medium', { component: 'SalaryBandsManagement', action: 'fetchSalaryBands' });
     } finally {
       setLoading(false);
     }

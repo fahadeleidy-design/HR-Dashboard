@@ -3,6 +3,7 @@ import { Plus, MapPin, Calendar, DollarSign, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export default function ExpatriateManagement() {
   const { selectedCompany } = useCompany();
@@ -28,6 +29,7 @@ export default function ExpatriateManagement() {
     international_health_insurance: true,
     assignment_reason: '',
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (selectedCompany) {
@@ -68,7 +70,7 @@ export default function ExpatriateManagement() {
 
       setCountries(countriesData || []);
     } catch (error) {
-      console.error('Error loading data:', error);
+      logError(error, 'medium', { component: 'ExpatriateManagement', action: 'loadData' });
     } finally {
       setLoading(false);
     }

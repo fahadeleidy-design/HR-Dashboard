@@ -3,6 +3,7 @@ import { Shield, AlertCircle, CheckCircle, Clock, Calendar } from 'lucide-react'
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface ComplianceAssignment {
   id: string;
@@ -23,6 +24,7 @@ export default function ComplianceTracking() {
   const { showToast } = useToast();
   const [assignments, setAssignments] = useState<ComplianceAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [filter, setFilter] = useState<string>('all');
 
   useEffect(() => {
@@ -50,7 +52,7 @@ export default function ComplianceTracking() {
 
       setAssignments(data || []);
     } catch (error) {
-      console.error('Error loading compliance assignments:', error);
+      logError(error, 'medium', { component: 'ComplianceTracking', action: 'loadComplianceAssignments' });
       showToast('Failed to load compliance assignments', 'error');
     } finally {
       setLoading(false);

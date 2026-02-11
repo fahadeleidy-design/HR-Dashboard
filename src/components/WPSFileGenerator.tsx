@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FileText, Download, Send, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface WPSFileGeneratorProps {
   batch: any;
@@ -12,6 +13,7 @@ export function WPSFileGenerator({ batch, payrollItems, onComplete }: WPSFileGen
   const [generating, setGenerating] = useState(false);
   const [employerId, setEmployerId] = useState('');
   const [establishmentId, setEstablishmentId] = useState('');
+  const { logError } = useErrorHandler();
 
   const generateWPSFile = async () => {
     if (!employerId || !establishmentId) {
@@ -95,7 +97,7 @@ export function WPSFileGenerator({ batch, payrollItems, onComplete }: WPSFileGen
       alert('WPS file generated and downloaded successfully!');
       onComplete();
     } catch (error: any) {
-      console.error('Error generating WPS file:', error);
+      logError(error, 'medium', { component: 'WPSFileGenerator', action: 'generateWPSFile' });
       alert('Failed to generate WPS file: ' + error.message);
     } finally {
       setGenerating(false);

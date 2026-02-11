@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Employee, Department } from '@/types/database';
 import { X } from 'lucide-react';
 import { SearchableSelect } from '@/components/SearchableSelect';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface EmployeeFormProps {
   employee: Employee | null;
@@ -61,6 +62,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
     iban: '',
     bank_name: '',
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchCompanies();
@@ -86,7 +88,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       if (error) throw error;
       setCompanies(data || []);
     } catch (error) {
-      console.error('Error fetching companies:', error);
+      logError(error, 'medium', { component: 'EmployeeForm', action: 'fetchCompanies' });
     }
   };
 
@@ -103,7 +105,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       if (error) throw error;
       setDepartments(data || []);
     } catch (error) {
-      console.error('Error fetching departments:', error);
+      logError(error, 'medium', { component: 'EmployeeForm', action: 'fetchDepartments' });
     }
   };
 
@@ -121,7 +123,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       if (error) throw error;
       setManagers(data || []);
     } catch (error) {
-      console.error('Error fetching managers:', error);
+      logError(error, 'medium', { component: 'EmployeeForm', action: 'fetchManagers' });
     }
   };
 
@@ -150,7 +152,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
         });
       }
     } catch (error) {
-      console.error('Error fetching payroll:', error);
+      logError(error, 'medium', { component: 'EmployeeForm', action: 'fetchPayroll' });
     }
   };
 
@@ -167,7 +169,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       console.log('Session check:', { hasSession: !!session, error: sessionError });
 
       if (sessionError) {
-        console.error('Session error:', sessionError);
+        logError(sessionError, 'medium', { component: 'EmployeeForm', action: 'sessionError' });
         alert(`Session error: ${sessionError.message}`);
         setLoading(false);
         return;
@@ -189,7 +191,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       console.log('User role check:', { role: userRoles?.role, error: roleError });
 
       if (roleError) {
-        console.error('Error checking user role:', roleError);
+        logError(roleError, 'medium', { component: 'EmployeeForm', action: 'checkUserRole' });
         alert(`Error checking permissions: ${roleError.message}`);
         setLoading(false);
         return;
@@ -308,10 +310,7 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
       onSuccess();
       onClose();
     } catch (error: any) {
-      console.error('Error saving employee:', error);
-      console.error('Error type:', typeof error);
-      console.error('Error name:', error?.name);
-      console.error('Error stack:', error?.stack);
+      logError(error, 'medium', { component: 'EmployeeForm', action: 'saveEmployee' });
 
       let errorMessage = 'Failed to save employee';
 
@@ -333,9 +332,6 @@ export function EmployeeForm({ employee, onClose, onSuccess }: EmployeeFormProps
         errorMessage = 'Permission denied. You may not have the required role to create employees. Please contact your system administrator.';
       }
 
-      if (error?.code) {
-        console.error('Error code:', error.code);
-      }
 
       alert(errorMessage);
     } finally {

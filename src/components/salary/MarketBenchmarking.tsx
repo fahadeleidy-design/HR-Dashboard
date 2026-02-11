@@ -5,6 +5,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { TrendingUp, TrendingDown, Minus, BarChart3, Download, AlertCircle, Upload, X } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
 import * as XLSX from 'xlsx';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface MarketData {
   id: string;
@@ -31,6 +32,7 @@ export function MarketBenchmarking() {
     aboveMarket: 0,
     avgRatio: 100
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -71,7 +73,7 @@ export function MarketBenchmarking() {
         });
       }
     } catch (error) {
-      console.error('Error fetching market data:', error);
+      logError(error, 'medium', { component: 'MarketBenchmarking', action: 'fetchMarketData' });
     } finally {
       setLoading(false);
     }
@@ -125,7 +127,7 @@ export function MarketBenchmarking() {
       setShowImportModal(false);
       fetchMarketData();
     } catch (error: any) {
-      console.error('Error importing market data:', error);
+      logError(error, 'medium', { component: 'MarketBenchmarking', action: 'importDataMarketData' });
       showToast(error.message || 'Error importing market data', 'error');
     } finally {
       setImporting(false);

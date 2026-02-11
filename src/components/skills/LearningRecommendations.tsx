@@ -3,6 +3,7 @@ import { BookOpen, Target, TrendingUp, CheckCircle, X, Star, Clock, DollarSign }
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Recommendation {
   id: string;
@@ -21,6 +22,7 @@ export default function LearningRecommendations() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [filter, setFilter] = useState<string>('suggested');
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (user) {
@@ -52,7 +54,7 @@ export default function LearningRecommendations() {
 
       setRecommendations(data || []);
     } catch (error) {
-      console.error('Error loading recommendations:', error);
+      logError(error, 'medium', { component: 'LearningRecommendations', action: 'loadRecommendations' });
     } finally {
       setLoading(false);
     }
@@ -101,7 +103,7 @@ export default function LearningRecommendations() {
 
       loadRecommendations();
     } catch (error) {
-      console.error('Error generating recommendations:', error);
+      logError(error, 'medium', { component: 'LearningRecommendations', action: 'generateRecommendations' });
     }
   };
 
@@ -117,7 +119,7 @@ export default function LearningRecommendations() {
       showToast(`Recommendation ${status}`, 'success');
       loadRecommendations();
     } catch (error: any) {
-      console.error('Error updating recommendation:', error);
+      logError(error, 'medium', { component: 'LearningRecommendations', action: 'updateRecommendation' });
       showToast(error.message || 'Failed to update recommendation', 'error');
     }
   };

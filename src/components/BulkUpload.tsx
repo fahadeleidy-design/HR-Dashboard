@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { X, Upload, Download, AlertCircle, CheckCircle } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface BulkUploadProps {
   onClose: () => void;
@@ -58,6 +59,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
   const [errors, setErrors] = useState<ValidationError[]>([]);
   const [successCount, setSuccessCount] = useState(0);
   const [updateMode, setUpdateMode] = useState(false);
+  const { logError } = useErrorHandler();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const downloadTemplate = () => {
@@ -634,7 +636,7 @@ export function BulkUpload({ onClose, onSuccess }: BulkUploadProps) {
         }, 2000);
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      logError(error, 'medium', { component: 'BulkUpload', action: 'uploadError' });
       setErrors([{ row: 0, field: 'File', message: 'Failed to process file' }]);
     } finally {
       setUploading(false);

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { X, User, Briefcase, Calendar, FileText, DollarSign, Clock, Edit3 } from 'lucide-react';
 import { AssignCompensationForm } from './employees/AssignCompensationForm';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface EmployeeDetailProps {
   employeeId: string;
@@ -41,6 +42,7 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCompensationModal, setShowCompensationModal] = useState(false);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchEmployeeData();
@@ -104,7 +106,7 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
 
       setLeaveBalance(balances);
     } catch (error) {
-      console.error('Error fetching employee data:', error);
+      logError(error, 'medium', { component: 'EmployeeDetail', action: 'fetchEmployeeData' });
     } finally {
       setLoading(false);
     }

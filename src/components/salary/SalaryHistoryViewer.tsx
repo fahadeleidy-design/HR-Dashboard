@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { History, TrendingUp, TrendingDown, Calendar, User } from 'lucide-react';
 import { formatNumber, formatDate } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface SalaryHistory {
   id: string;
@@ -34,6 +35,7 @@ interface SalaryHistoryViewerProps {
 
 export function SalaryHistoryViewer({ employeeId, employeeName }: SalaryHistoryViewerProps) {
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [history, setHistory] = useState<SalaryHistory[]>([]);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export function SalaryHistoryViewer({ employeeId, employeeName }: SalaryHistoryV
         setHistory(data);
       }
     } catch (error) {
-      console.error('Error fetching salary history:', error);
+      logError(error, 'medium', { component: 'SalaryHistoryViewer', action: 'fetchSalaryHistory' });
     } finally {
       setLoading(false);
     }

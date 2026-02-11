@@ -3,6 +3,7 @@ import { TrendingUp, Users, BookOpen, Award, Clock, Target } from 'lucide-react'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export default function LearningAnalytics() {
   const { selectedCompany } = useCompany();
@@ -15,6 +16,7 @@ export default function LearningAnalytics() {
     totalLearningHours: 0,
     certificatesIssued: 0,
   });
+  const { logError } = useErrorHandler();
 
   const [enrollmentTrend, setEnrollmentTrend] = useState<any[]>([]);
   const [topCourses, setTopCourses] = useState<any[]>([]);
@@ -86,7 +88,7 @@ export default function LearningAnalytics() {
       setCategoryDistribution(categoryDist);
 
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      logError(error, 'medium', { component: 'LearningAnalytics', action: 'loadAnalytics' });
     } finally {
       setLoading(false);
     }

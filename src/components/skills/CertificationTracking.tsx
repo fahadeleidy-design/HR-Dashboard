@@ -3,6 +3,7 @@ import { Award, AlertCircle, CheckCircle, Clock, Plus, FileText, Calendar } from
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Certification {
   id: string;
@@ -35,6 +36,7 @@ export default function CertificationTracking() {
     expiry_date: '',
     ce_hours_required: 0,
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (selectedCompany) {
@@ -65,7 +67,7 @@ export default function CertificationTracking() {
 
       setCatalog(catalogData || []);
     } catch (error) {
-      console.error('Error loading certifications:', error);
+      logError(error, 'medium', { component: 'CertificationTracking', action: 'loadCertifications' });
       showToast('Failed to load certifications', 'error');
     } finally {
       setLoading(false);
@@ -96,7 +98,7 @@ export default function CertificationTracking() {
       });
       loadData();
     } catch (error: any) {
-      console.error('Error adding certification:', error);
+      logError(error, 'medium', { component: 'CertificationTracking', action: 'addCertification' });
       showToast(error.message || 'Failed to add certification', 'error');
     }
   };
@@ -117,7 +119,7 @@ export default function CertificationTracking() {
       showToast('Certification verified', 'success');
       loadData();
     } catch (error: any) {
-      console.error('Error verifying certification:', error);
+      logError(error, 'medium', { component: 'CertificationTracking', action: 'verifyCertification' });
       showToast(error.message || 'Failed to verify certification', 'error');
     }
   };

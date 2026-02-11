@@ -5,6 +5,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { Plus, Filter, Search, Edit, Eye, CheckCircle, XCircle, Clock, X, Send, Ban, Play } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
 import { JobRequisitionForm } from './JobRequisitionForm';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface JobRequisition {
   id: string;
@@ -28,6 +29,7 @@ export function JobRequisitions() {
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
+  const { logError } = useErrorHandler();
   const [viewingReq, setViewingReq] = useState<JobRequisition | null>(null);
   const [editingReq, setEditingReq] = useState<JobRequisition | null>(null);
 
@@ -60,7 +62,7 @@ export function JobRequisitions() {
         setRequisitions(data);
       }
     } catch (error) {
-      console.error('Error fetching requisitions:', error);
+      logError(error, 'medium', { component: 'JobRequisitions', action: 'fetchRequisitions' });
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 import { X } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Application {
   id: string;
@@ -38,6 +39,7 @@ export function OfferManagementForm({ offer, onClose, onSuccess }: OfferFormProp
     response_deadline: '',
     notes: ''
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchApplications();
@@ -71,7 +73,7 @@ export function OfferManagementForm({ offer, onClose, onSuccess }: OfferFormProp
 
       if (!error && data) setApplications(data as Application[]);
     } catch (error) {
-      console.error('Error fetching applications:', error);
+      logError(error, 'medium', { component: 'OfferManagementForm', action: 'fetchApplications' });
     }
   };
 
@@ -123,7 +125,7 @@ export function OfferManagementForm({ offer, onClose, onSuccess }: OfferFormProp
       onSuccess();
       onClose();
     } catch (error: any) {
-      console.error('Error saving offer:', error);
+      logError(error, 'medium', { component: 'OfferManagementForm', action: 'saveOffer' });
       showToast(error.message || 'Failed to save offer', 'error');
     } finally {
       setLoading(false);

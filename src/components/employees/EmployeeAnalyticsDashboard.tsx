@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, TrendingUp, TrendingDown, UserPlus, UserMinus, Award, GraduationCap, BarChart3 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface EmployeeAnalyticsDashboardProps {
   companyId: string;
@@ -23,6 +24,7 @@ export function EmployeeAnalyticsDashboard({ companyId }: EmployeeAnalyticsDashb
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [historicalData, setHistoricalData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [timeRange, setTimeRange] = useState<'6months' | '12months'>('6months');
 
   useEffect(() => {
@@ -67,7 +69,7 @@ export function EmployeeAnalyticsDashboard({ companyId }: EmployeeAnalyticsDashb
         setAnalytics(data);
       }
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      logError(error, 'medium', { component: 'EmployeeAnalyticsDashboard', action: 'fetchAnalytics' });
     } finally {
       setLoading(false);
     }
@@ -88,7 +90,7 @@ export function EmployeeAnalyticsDashboard({ companyId }: EmployeeAnalyticsDashb
       if (error) throw error;
       setHistoricalData(data || []);
     } catch (error) {
-      console.error('Error fetching historical data:', error);
+      logError(error, 'medium', { component: 'EmployeeAnalyticsDashboard', action: 'fetchHistoricalData' });
     }
   };
 

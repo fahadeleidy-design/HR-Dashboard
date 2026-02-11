@@ -14,6 +14,7 @@ import {
   XCircle
 } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface DashboardStats {
   openPositions: number;
@@ -42,6 +43,7 @@ interface RecentActivity {
 export function RecruitmentDashboard() {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [stats, setStats] = useState<DashboardStats>({
     openPositions: 0,
     totalCandidates: 0,
@@ -171,7 +173,7 @@ export function RecruitmentDashboard() {
       ];
       setRecentActivities(activities);
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
+      logError(error, 'medium', { component: 'RecruitmentDashboard', action: 'fetchDashboardStats' });
     } finally {
       setLoading(false);
     }

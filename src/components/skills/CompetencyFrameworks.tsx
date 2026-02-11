@@ -3,6 +3,7 @@ import { Plus, Edit2, Trash2, Award, Users, CheckCircle } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Framework {
   id: string;
@@ -27,6 +28,7 @@ export default function CompetencyFrameworks() {
     description: '',
     framework_type: 'technical',
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (selectedCompany) {
@@ -54,7 +56,7 @@ export default function CompetencyFrameworks() {
 
       setFrameworks(frameworksWithCounts);
     } catch (error) {
-      console.error('Error loading frameworks:', error);
+      logError(error, 'medium', { component: 'CompetencyFrameworks', action: 'loadFrameworks' });
       showToast('Failed to load frameworks', 'error');
     } finally {
       setLoading(false);
@@ -82,7 +84,7 @@ export default function CompetencyFrameworks() {
       });
       loadFrameworks();
     } catch (error: any) {
-      console.error('Error adding framework:', error);
+      logError(error, 'medium', { component: 'CompetencyFrameworks', action: 'addFramework' });
       showToast(error.message || 'Failed to create framework', 'error');
     }
   };
@@ -102,7 +104,7 @@ export default function CompetencyFrameworks() {
       showToast(`Framework ${!currentStatus ? 'published' : 'unpublished'}`, 'success');
       loadFrameworks();
     } catch (error: any) {
-      console.error('Error updating framework:', error);
+      logError(error, 'medium', { component: 'CompetencyFrameworks', action: 'updateFramework' });
       showToast(error.message || 'Failed to update framework', 'error');
     }
   };

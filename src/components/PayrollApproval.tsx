@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CheckCircle, XCircle, MessageSquare, Clock, User, ChevronRight } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface PayrollApprovalProps {
   batch: any;
@@ -19,6 +20,7 @@ interface ApprovalLevel {
 export function PayrollApproval({ batch, onApprovalComplete }: PayrollApprovalProps) {
   const [comments, setComments] = useState('');
   const [loading, setLoading] = useState(false);
+  const { logError } = useErrorHandler();
 
   const approvalLevels: ApprovalLevel[] = [
     {
@@ -85,7 +87,7 @@ export function PayrollApproval({ batch, onApprovalComplete }: PayrollApprovalPr
       alert(`Batch ${newStatus === 'pending_approval' ? 'submitted for approval' : newStatus}!`);
       onApprovalComplete();
     } catch (error: any) {
-      console.error('Error approving batch:', error);
+      logError(error, 'medium', { component: 'PayrollApproval', action: 'approveBatch' });
       alert('Failed to approve batch: ' + error.message);
     } finally {
       setLoading(false);
@@ -125,7 +127,7 @@ export function PayrollApproval({ batch, onApprovalComplete }: PayrollApprovalPr
       alert('Batch rejected and returned to draft status');
       onApprovalComplete();
     } catch (error: any) {
-      console.error('Error rejecting batch:', error);
+      logError(error, 'medium', { component: 'PayrollApproval', action: 'rejectBatch' });
       alert('Failed to reject batch: ' + error.message);
     } finally {
       setLoading(false);

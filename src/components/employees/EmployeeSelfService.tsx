@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { User, FileText, Calendar, Clock, Award, Target, TrendingUp, Bell, Settings } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface EmployeeSelfServiceProps {
   employeeId: string;
@@ -38,6 +39,7 @@ export function EmployeeSelfService({ employeeId, companyId }: EmployeeSelfServi
     documents_expiring: 0
   });
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [activeTab, setActiveTab] = useState<'overview' | 'documents' | 'goals' | 'time'>('overview');
 
   useEffect(() => {
@@ -68,7 +70,7 @@ export function EmployeeSelfService({ employeeId, companyId }: EmployeeSelfServi
       if (error) throw error;
       setEmployee(data);
     } catch (error) {
-      console.error('Error fetching employee:', error);
+      logError(error, 'medium', { component: 'EmployeeSelfService', action: 'fetchEmployee' });
     } finally {
       setLoading(false);
     }
@@ -110,7 +112,7 @@ export function EmployeeSelfService({ employeeId, companyId }: EmployeeSelfServi
         documents_expiring: documentsData.data?.length || 0
       });
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      logError(error, 'medium', { component: 'EmployeeSelfService', action: 'fetchStats' });
     }
   };
 

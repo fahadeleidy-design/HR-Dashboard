@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Plus, Edit, Lock, Unlock, CheckCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface PayrollCalendarManagerProps {
   companyId: string;
@@ -26,6 +27,7 @@ export function PayrollCalendarManager({ companyId }: PayrollCalendarManagerProp
   const [calendars, setCalendars] = useState<PayrollCalendar[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const { logError } = useErrorHandler();
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [formData, setFormData] = useState({
     year: new Date().getFullYear(),
@@ -56,7 +58,7 @@ export function PayrollCalendarManager({ companyId }: PayrollCalendarManagerProp
       if (error) throw error;
       setCalendars(data || []);
     } catch (error) {
-      console.error('Error fetching calendars:', error);
+      logError(error, 'medium', { component: 'PayrollCalendarManager', action: 'fetchCalendars' });
     } finally {
       setLoading(false);
     }
@@ -99,7 +101,7 @@ export function PayrollCalendarManager({ companyId }: PayrollCalendarManagerProp
       alert(`Successfully generated calendar for ${selectedYear}!`);
       fetchCalendars();
     } catch (error: any) {
-      console.error('Error generating calendar:', error);
+      logError(error, 'medium', { component: 'PayrollCalendarManager', action: 'generateCalendar' });
       alert('Failed to generate calendar: ' + error.message);
     }
   };
@@ -116,7 +118,7 @@ export function PayrollCalendarManager({ companyId }: PayrollCalendarManagerProp
       alert(`Calendar status updated to ${newStatus}`);
       fetchCalendars();
     } catch (error: any) {
-      console.error('Error updating calendar:', error);
+      logError(error, 'medium', { component: 'PayrollCalendarManager', action: 'updateCalendar' });
       alert('Failed to update calendar: ' + error.message);
     }
   };
@@ -139,7 +141,7 @@ export function PayrollCalendarManager({ companyId }: PayrollCalendarManagerProp
       setShowForm(false);
       fetchCalendars();
     } catch (error: any) {
-      console.error('Error saving calendar:', error);
+      logError(error, 'medium', { component: 'PayrollCalendarManager', action: 'saveCalendar' });
       alert('Failed to save calendar: ' + error.message);
     }
   };

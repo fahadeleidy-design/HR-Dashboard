@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, Circle, Users, FileText, Laptop, GraduationCap, Clock, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface EmployeeOnboardingProps {
   employeeId: string;
@@ -37,6 +38,7 @@ export function EmployeeOnboarding({ employeeId, companyId }: EmployeeOnboarding
   const [onboarding, setOnboarding] = useState<OnboardingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchOnboarding();
@@ -61,7 +63,7 @@ export function EmployeeOnboarding({ employeeId, companyId }: EmployeeOnboarding
         setOnboarding(data);
       }
     } catch (error) {
-      console.error('Error fetching onboarding:', error);
+      logError(error, 'medium', { component: 'EmployeeOnboarding', action: 'fetchOnboarding' });
     } finally {
       setLoading(false);
     }
@@ -82,7 +84,7 @@ export function EmployeeOnboarding({ employeeId, companyId }: EmployeeOnboarding
       await fetchOnboarding();
       alert('Onboarding status updated!');
     } catch (error: any) {
-      console.error('Error updating onboarding:', error);
+      logError(error, 'medium', { component: 'EmployeeOnboarding', action: 'updateOnboarding' });
       alert('Failed to update: ' + error.message);
     } finally {
       setUpdating(false);

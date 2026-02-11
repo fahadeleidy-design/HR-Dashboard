@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   Mail, Send, CheckCircle, AlertCircle, RefreshCw,
   Eye, EyeOff, Loader2
@@ -50,6 +51,7 @@ export function EmailSettings() {
     default_from_name: '',
     is_active: false,
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -84,7 +86,7 @@ export function EmailSettings() {
         });
       }
     } catch (error) {
-      console.error('Error fetching SMTP config:', error);
+      logError(error, 'medium', { component: 'EmailSettings', action: 'fetchSMTPConfig' });
     } finally {
       setLoading(false);
     }
@@ -114,7 +116,7 @@ export function EmailSettings() {
         setQueueStats(result.stats);
       }
     } catch (error) {
-      console.error('Error fetching queue stats:', error);
+      logError(error, 'medium', { component: 'EmailSettings', action: 'fetchQueueStats' });
     }
   };
 
@@ -214,7 +216,7 @@ export function EmailSettings() {
 
       await fetchQueueStats();
     } catch (error) {
-      console.error('Error processing queue:', error);
+      logError(error, 'medium', { component: 'EmailSettings', action: 'processQueue' });
     }
   };
 

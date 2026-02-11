@@ -3,6 +3,7 @@ import { BookOpen, Clock, Award, Star, Filter, Search, Plus, Play } from 'lucide
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Course {
   id: string;
@@ -28,6 +29,7 @@ export default function CourseCatalog() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const { logError } = useErrorHandler();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedLevel, setSelectedLevel] = useState<string>('all');
 
@@ -61,7 +63,7 @@ export default function CourseCatalog() {
 
       setCourses(coursesData || []);
     } catch (error) {
-      console.error('Error loading courses:', error);
+      logError(error, 'medium', { component: 'CourseCatalog', action: 'loadCourses' });
       showToast('Failed to load courses', 'error');
     } finally {
       setLoading(false);

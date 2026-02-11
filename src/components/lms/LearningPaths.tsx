@@ -3,6 +3,7 @@ import { Map, TrendingUp, Award, CheckCircle, Clock } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface LearningPath {
   id: string;
@@ -24,6 +25,7 @@ export default function LearningPaths() {
   const [paths, setPaths] = useState<LearningPath[]>([]);
   const [enrollments, setEnrollments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (selectedCompany) {
@@ -58,7 +60,7 @@ export default function LearningPaths() {
 
       setEnrollments(enrollmentsData || []);
     } catch (error) {
-      console.error('Error loading learning paths:', error);
+      logError(error, 'medium', { component: 'LearningPaths', action: 'loadLearningPaths' });
       showToast('Failed to load learning paths', 'error');
     } finally {
       setLoading(false);

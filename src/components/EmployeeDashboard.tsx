@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
 import { format, differenceInDays, differenceInMonths, differenceInYears, parseISO } from 'date-fns';
 import { ar, enUS } from 'date-fns/locale';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   User, Calendar, Clock, FileText, Award, DollarSign, AlertCircle,
   CheckCircle, Briefcase, GraduationCap, Activity, Building2,
@@ -125,6 +126,7 @@ export function EmployeeDashboard() {
     attendance: { present: 0, late: 0, absent: 0 }
   });
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [error, setError] = useState<string | null>(null);
 
   const employeeId = userRole?.employee_id;
@@ -319,7 +321,7 @@ export function EmployeeDashboard() {
 
       } catch (err: any) {
         if (!cancelled) {
-          console.error('Error loading employee data:', err);
+          logError(err, 'medium', { component: 'EmployeeDashboard', action: 'loadEmployeeData' });
           setError(err?.message || 'Failed to load employee data');
         }
       } finally {

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Award, TrendingUp, Target, Plus, Star, ThumbsUp } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Props {
   employeeId: string;
@@ -13,6 +14,7 @@ export default function EmployeeSkillsProfile({ employeeId }: Props) {
   const [developmentPlans, setDevelopmentPlans] = useState<any[]>([]);
   const [endorsements, setEndorsements] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (employeeId) {
@@ -54,7 +56,7 @@ export default function EmployeeSkillsProfile({ employeeId }: Props) {
 
       setEndorsements(endorsementsData || []);
     } catch (error) {
-      console.error('Error loading skills profile:', error);
+      logError(error, 'medium', { component: 'EmployeeSkillsProfile', action: 'loadSkillsProfile' });
       showToast('Failed to load skills profile', 'error');
     } finally {
       setLoading(false);

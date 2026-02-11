@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Calendar, Users, DollarSign, CheckCircle, Clock, AlertCircle, XCircle } from 'lucide-react';
 import { formatDate, formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface ReviewCycle {
   id: string;
@@ -22,6 +23,7 @@ interface ReviewCycle {
 export function SalaryReviewCycles() {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [cycles, setCycles] = useState<ReviewCycle[]>([]);
 
   useEffect(() => {
@@ -45,7 +47,7 @@ export function SalaryReviewCycles() {
         setCycles(data);
       }
     } catch (error) {
-      console.error('Error fetching cycles:', error);
+      logError(error, 'medium', { component: 'SalaryReviewCycles', action: 'fetchCycles' });
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Shield, CheckCircle, AlertTriangle, AlertCircle, Activity, TrendingUp, RefreshCw } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { useCompany } from '@/contexts/CompanyContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface HealthMetric {
   category: string;
@@ -14,6 +15,7 @@ export function SystemHealthDashboard() {
   const { currentCompany } = useCompany();
   const [metrics, setMetrics] = useState<HealthMetric[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -35,7 +37,7 @@ export function SystemHealthDashboard() {
       setMetrics(data || []);
       setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error checking system health:', error);
+      logError(error, 'medium', { component: 'SystemHealthDashboard', action: 'checkSystemHealth' });
     } finally {
       setLoading(false);
     }

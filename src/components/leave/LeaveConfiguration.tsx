@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   Settings,
   Calendar,
@@ -89,6 +90,7 @@ export function LeaveConfiguration() {
     reason: '',
     allow_emergency_override: false,
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -117,7 +119,7 @@ export function LeaveConfiguration() {
       if (probationRes.data) setProbationRules(probationRes.data);
       if (blackoutRes.data) setBlackoutDates(blackoutRes.data);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logError(error, 'medium', { component: 'LeaveConfiguration', action: 'fetchData' });
     } finally {
       setLoading(false);
     }

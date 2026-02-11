@@ -3,6 +3,7 @@ import { Plus, Search, Filter, Award, TrendingUp, Users, Edit2, Trash2 } from 'l
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Skill {
   id: string;
@@ -34,6 +35,7 @@ export default function SkillsInventory() {
     skill_type: 'technical',
     is_core_skill: false,
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (selectedCompany) {
@@ -60,7 +62,7 @@ export default function SkillsInventory() {
 
       setSkills(skillsData || []);
     } catch (error) {
-      console.error('Error loading skills:', error);
+      logError(error, 'medium', { component: 'SkillsInventory', action: 'loadSkills' });
       showToast('Failed to load skills', 'error');
     } finally {
       setLoading(false);
@@ -90,7 +92,7 @@ export default function SkillsInventory() {
       });
       loadData();
     } catch (error: any) {
-      console.error('Error adding skill:', error);
+      logError(error, 'medium', { component: 'SkillsInventory', action: 'addSkill' });
       showToast(error.message || 'Failed to add skill', 'error');
     }
   };

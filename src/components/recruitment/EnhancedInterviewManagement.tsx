@@ -9,6 +9,7 @@ import { formatDate } from '@/lib/formatters';
 import { InterviewScheduleForm } from './InterviewScheduleForm';
 import { PanelCreationForm } from './PanelCreationForm';
 import { InterviewScorecardForm } from './InterviewScorecardForm';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Interview {
   id: string;
@@ -64,6 +65,7 @@ export function EnhancedInterviewManagement() {
   const [showScorecardModal, setShowScorecardModal] = useState(false);
   const [selectedInterview, setSelectedInterview] = useState<Interview | null>(null);
   const [filter, setFilter] = useState('all');
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -96,7 +98,7 @@ export function EnhancedInterviewManagement() {
       const { data, error } = await query;
       if (!error && data) setInterviews(data);
     } catch (error) {
-      console.error('Error fetching interviews:', error);
+      logError(error, 'medium', { component: 'EnhancedInterviewManagement', action: 'fetchInterviews' });
     } finally {
       setLoading(false);
     }
@@ -114,7 +116,7 @@ export function EnhancedInterviewManagement() {
 
       if (!error && data) setPanels(data);
     } catch (error) {
-      console.error('Error fetching panels:', error);
+      logError(error, 'medium', { component: 'EnhancedInterviewManagement', action: 'fetchPanels' });
     } finally {
       setLoading(false);
     }
@@ -141,7 +143,7 @@ export function EnhancedInterviewManagement() {
 
       if (!error && data) setScorecards(data);
     } catch (error) {
-      console.error('Error fetching scorecards:', error);
+      logError(error, 'medium', { component: 'EnhancedInterviewManagement', action: 'fetchScorecards' });
     } finally {
       setLoading(false);
     }

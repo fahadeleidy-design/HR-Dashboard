@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Edit, Trash2, Layers, Award, Briefcase } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface JobFamily {
   id: string;
@@ -39,6 +40,7 @@ export function JobArchitecture() {
   const [activeView, setActiveView] = useState<'families' | 'grades' | 'positions'>('grades');
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const { logError } = useErrorHandler();
 
   const [families, setFamilies] = useState<JobFamily[]>([]);
   const [grades, setGrades] = useState<JobGrade[]>([]);
@@ -82,7 +84,7 @@ export function JobArchitecture() {
         if (!error) setPositions(data || []);
       }
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logError(error, 'medium', { component: 'JobArchitecture', action: 'fetchData' });
     } finally {
       setLoading(false);
     }

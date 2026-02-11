@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { DollarSign, TrendingUp, Users, Briefcase, BarChart3, AlertCircle } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface DashboardStats {
   totalGrades: number;
@@ -25,6 +26,7 @@ interface DashboardStats {
 export function SalaryScaleDashboard() {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [stats, setStats] = useState<DashboardStats>({
     totalGrades: 0,
     totalPositions: 0,
@@ -104,7 +106,7 @@ export function SalaryScaleDashboard() {
         positionCoverage: totalPositionCoverage
       });
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
+      logError(error, 'medium', { component: 'SalaryScaleDashboard', action: 'fetchDashboardStats' });
     } finally {
       setLoading(false);
     }

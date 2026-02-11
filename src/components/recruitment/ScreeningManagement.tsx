@@ -7,6 +7,7 @@ import {
   XCircle, Clock, AlertCircle, ThumbsUp, ThumbsDown
 } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Screening {
   id: string;
@@ -54,6 +55,7 @@ export function ScreeningManagement() {
   const [searchTerm, setSearchTerm] = useState('');
   const [viewingScreening, setViewingScreening] = useState<Screening | null>(null);
   const [evaluating, setEvaluating] = useState(false);
+  const { logError } = useErrorHandler();
   const [evaluations, setEvaluations] = useState<Record<string, ScreeningEvaluation>>({});
 
   useEffect(() => {
@@ -87,7 +89,7 @@ export function ScreeningManagement() {
         setScreenings(data);
       }
     } catch (error) {
-      console.error('Error fetching screenings:', error);
+      logError(error, 'medium', { component: 'ScreeningManagement', action: 'fetchScreenings' });
     } finally {
       setLoading(false);
     }
@@ -119,7 +121,7 @@ export function ScreeningManagement() {
         setEvaluations(initialEvals);
       }
     } catch (error) {
-      console.error('Error fetching criteria:', error);
+      logError(error, 'medium', { component: 'ScreeningManagement', action: 'fetchCriteria' });
     }
   };
 
@@ -215,7 +217,7 @@ export function ScreeningManagement() {
       setViewingScreening(null);
       fetchScreenings();
     } catch (error: any) {
-      console.error('Error submitting screening:', error);
+      logError(error, 'medium', { component: 'ScreeningManagement', action: 'submitScreening' });
       showToast(error.message || 'Error submitting screening', 'error');
     } finally {
       setEvaluating(false);

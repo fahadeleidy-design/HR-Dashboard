@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { useToast } from '@/contexts/ToastContext';
 import { X, Star } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface InterviewScorecardFormProps {
   interview: any;
@@ -24,6 +25,7 @@ export function InterviewScorecardForm({ interview, onClose, onSuccess }: Interv
     weaknesses: '',
     detailed_feedback: ''
   });
+  const { logError } = useErrorHandler();
 
   const getRatingLabel = (rating: number) => {
     const labels: Record<number, string> = {
@@ -105,13 +107,13 @@ export function InterviewScorecardForm({ interview, onClose, onSuccess }: Interv
         .update({ status: 'completed' })
         .eq('id', interview.id);
 
-      if (updateError) console.error('Error updating interview status:', updateError);
+      if (updateError) logError(updateError, 'medium', { component: 'InterviewScorecardForm', action: 'updateInterviewStatus' });
 
       showToast('Interview scorecard submitted successfully', 'success');
       onSuccess();
       onClose();
     } catch (error: any) {
-      console.error('Error submitting scorecard:', error);
+      logError(error, 'medium', { component: 'InterviewScorecardForm', action: 'submitScorecard' });
       showToast(error.message || 'Failed to submit scorecard', 'error');
     } finally {
       setLoading(false);

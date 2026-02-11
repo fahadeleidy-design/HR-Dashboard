@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { formatDate } from '@/lib/formatters';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CheckCircle, XCircle, Clock, User, FileText, AlertCircle } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface AuditTrailEntry {
   id: string;
@@ -27,6 +28,7 @@ export function ApprovalTimeline({ requestType, requestId, companyId }: Approval
   const { language } = useLanguage();
   const [auditTrail, setAuditTrail] = useState<AuditTrailEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchAuditTrail();
@@ -67,7 +69,7 @@ export function ApprovalTimeline({ requestType, requestId, companyId }: Approval
 
       setAuditTrail(formattedData);
     } catch (error) {
-      console.error('Error fetching audit trail:', error);
+      logError(error, 'medium', { component: 'ApprovalTimeline', action: 'fetchAuditTrail' });
     } finally {
       setLoading(false);
     }

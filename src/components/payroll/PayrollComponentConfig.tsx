@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Settings, Plus, Edit, Trash2, DollarSign, TrendingDown, Gift } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface PayrollComponentConfigProps {
   companyId: string;
@@ -51,6 +52,7 @@ export function PayrollComponentConfig({ companyId }: PayrollComponentConfigProp
     min_days_worked: 0,
     max_absence_days: 30
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchComponents();
@@ -68,7 +70,7 @@ export function PayrollComponentConfig({ companyId }: PayrollComponentConfigProp
       if (error) throw error;
       setComponents(data || []);
     } catch (error) {
-      console.error('Error fetching components:', error);
+      logError(error, 'medium', { component: 'PayrollComponentConfig', action: 'fetchComponents' });
     } finally {
       setLoading(false);
     }
@@ -104,7 +106,7 @@ export function PayrollComponentConfig({ companyId }: PayrollComponentConfigProp
       resetForm();
       fetchComponents();
     } catch (error: any) {
-      console.error('Error saving component:', error);
+      logError(error, 'medium', { component: 'PayrollComponentConfig', action: 'saveComponent' });
       alert('Failed to save component: ' + error.message);
     }
   };
@@ -130,7 +132,7 @@ export function PayrollComponentConfig({ companyId }: PayrollComponentConfigProp
       alert('Component deleted successfully!');
       fetchComponents();
     } catch (error: any) {
-      console.error('Error deleting component:', error);
+      logError(error, 'medium', { component: 'PayrollComponentConfig', action: 'deleteComponent' });
       alert('Failed to delete component: ' + error.message);
     }
   };

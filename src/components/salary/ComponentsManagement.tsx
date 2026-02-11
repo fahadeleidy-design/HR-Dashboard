@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, Edit, Layers, DollarSign, Percent, CheckCircle, XCircle } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface SalaryComponent {
   id: string;
@@ -24,6 +25,7 @@ export function ComponentsManagement() {
   const [loading, setLoading] = useState(true);
   const [components, setComponents] = useState<SalaryComponent[]>([]);
   const [filterType, setFilterType] = useState('all');
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -51,7 +53,7 @@ export function ComponentsManagement() {
         setComponents(data);
       }
     } catch (error) {
-      console.error('Error fetching components:', error);
+      logError(error, 'medium', { component: 'ComponentsManagement', action: 'fetchComponents' });
     } finally {
       setLoading(false);
     }

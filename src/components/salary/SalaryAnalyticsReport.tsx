@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useCompany } from '@/contexts/CompanyContext';
 import { BarChart3, TrendingUp, Users, DollarSign, Download, Filter } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface SalaryAnalytics {
   totalEmployees: number;
@@ -35,6 +36,7 @@ interface DepartmentAnalytics {
 export function SalaryAnalyticsReport() {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [analytics, setAnalytics] = useState<SalaryAnalytics>({
     totalEmployees: 0,
     avgBasicSalary: 0,
@@ -117,7 +119,7 @@ export function SalaryAnalyticsReport() {
         setGradeAnalytics(gradeStats as GradeAnalytics[]);
       }
     } catch (error) {
-      console.error('Error fetching analytics:', error);
+      logError(error, 'medium', { component: 'SalaryAnalyticsReport', action: 'fetchAnalytics' });
     } finally {
       setLoading(false);
     }

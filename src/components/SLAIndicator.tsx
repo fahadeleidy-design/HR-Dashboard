@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { Clock, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface SLAData {
   id: string;
@@ -21,6 +22,7 @@ interface SLAIndicatorProps {
 export function SLAIndicator({ requestType, requestId, compact = false }: SLAIndicatorProps) {
   const [slaData, setSlaData] = useState<SLAData[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     fetchSLAData();
@@ -40,7 +42,7 @@ export function SLAIndicator({ requestType, requestId, compact = false }: SLAInd
       if (error) throw error;
       setSlaData(data || []);
     } catch (error) {
-      console.error('Error fetching SLA data:', error);
+      logError(error, 'medium', { component: 'SLAIndicator', action: 'fetchSLAData' });
     } finally {
       setLoading(false);
     }

@@ -1,3 +1,4 @@
+import { lazy, Suspense, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CompanyProvider } from './contexts/CompanyContext';
@@ -5,48 +6,65 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { Layout } from './components/Layout';
-import { Login } from './pages/Login';
-import { Register } from './pages/Register';
-import { Dashboard } from './pages/Dashboard';
-import { Employees } from './pages/Employees';
-import { Payroll } from './pages/Payroll';
-import { Leave } from './pages/Leave';
-import { Attendance } from './pages/Attendance';
-import { Performance } from './pages/Performance';
-import { Training } from './pages/Training';
-import { Documents } from './pages/Documents';
-import { Nitaqat } from './pages/Nitaqat';
-import { GOSI } from './pages/GOSI';
-import { Vehicles } from './pages/Vehicles';
-import { GovernmentalDocs } from './pages/GovernmentalDocs';
-import { RealEstate } from './pages/RealEstate';
-import { Contracts } from './pages/Contracts';
-import { Insurance } from './pages/Insurance';
-import { Travel } from './pages/Travel';
-import { Expenses } from './pages/Expenses';
-import { Visas } from './pages/Visas';
-import { Settings } from './pages/Settings';
-import { Loans } from './pages/Loans';
-import { Advances } from './pages/Advances';
-import { GovSubscriptions } from './pages/GovSubscriptions';
-import { EndOfService } from './pages/EndOfService';
-import { AuditLog } from './pages/AuditLog';
-import { OrgChart } from './pages/OrgChart';
-import { EmployeeHandbook } from './pages/EmployeeHandbook';
-import { EmployeeContracts } from './pages/EmployeeContracts';
-import { ComplianceDashboard } from './pages/ComplianceDashboard';
-import { SalaryScale } from './pages/SalaryScale';
-import { Recruitment } from './pages/Recruitment';
-import { PendingRequests } from './pages/PendingRequests';
-import ManagerAssignment from './components/ManagerAssignment';
-import TenantAdministration from './pages/TenantAdministration';
-import TenantConfiguration from './pages/TenantConfiguration';
-import CrossCompanyAnalytics from './pages/CrossCompanyAnalytics';
-import PermissionsManagement from './pages/PermissionsManagement';
-import WorkflowManagement from './pages/WorkflowManagement';
-import GlobalHR from './pages/GlobalHR';
-import SkillsManagement from './pages/SkillsManagement';
-import Penalties from './pages/Penalties';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { PageLoadingFallback } from './components/PageLoadingFallback';
+
+const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
+const Register = lazy(() => import('./pages/Register').then(m => ({ default: m.Register })));
+const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const Employees = lazy(() => import('./pages/Employees').then(m => ({ default: m.Employees })));
+const Payroll = lazy(() => import('./pages/Payroll').then(m => ({ default: m.Payroll })));
+const Leave = lazy(() => import('./pages/Leave').then(m => ({ default: m.Leave })));
+const Attendance = lazy(() => import('./pages/Attendance').then(m => ({ default: m.Attendance })));
+const Performance = lazy(() => import('./pages/Performance').then(m => ({ default: m.Performance })));
+const Training = lazy(() => import('./pages/Training').then(m => ({ default: m.Training })));
+const Documents = lazy(() => import('./pages/Documents').then(m => ({ default: m.Documents })));
+const Nitaqat = lazy(() => import('./pages/Nitaqat').then(m => ({ default: m.Nitaqat })));
+const GOSI = lazy(() => import('./pages/GOSI').then(m => ({ default: m.GOSI })));
+const Vehicles = lazy(() => import('./pages/Vehicles').then(m => ({ default: m.Vehicles })));
+const GovernmentalDocs = lazy(() => import('./pages/GovernmentalDocs').then(m => ({ default: m.GovernmentalDocs })));
+const RealEstate = lazy(() => import('./pages/RealEstate').then(m => ({ default: m.RealEstate })));
+const Contracts = lazy(() => import('./pages/Contracts').then(m => ({ default: m.Contracts })));
+const Insurance = lazy(() => import('./pages/Insurance').then(m => ({ default: m.Insurance })));
+const Travel = lazy(() => import('./pages/Travel').then(m => ({ default: m.Travel })));
+const Expenses = lazy(() => import('./pages/Expenses').then(m => ({ default: m.Expenses })));
+const Visas = lazy(() => import('./pages/Visas').then(m => ({ default: m.Visas })));
+const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
+const Loans = lazy(() => import('./pages/Loans').then(m => ({ default: m.Loans })));
+const Advances = lazy(() => import('./pages/Advances').then(m => ({ default: m.Advances })));
+const GovSubscriptions = lazy(() => import('./pages/GovSubscriptions').then(m => ({ default: m.GovSubscriptions })));
+const EndOfService = lazy(() => import('./pages/EndOfService').then(m => ({ default: m.EndOfService })));
+const AuditLog = lazy(() => import('./pages/AuditLog').then(m => ({ default: m.AuditLog })));
+const OrgChart = lazy(() => import('./pages/OrgChart').then(m => ({ default: m.OrgChart })));
+const EmployeeHandbook = lazy(() => import('./pages/EmployeeHandbook').then(m => ({ default: m.EmployeeHandbook })));
+const EmployeeContracts = lazy(() => import('./pages/EmployeeContracts').then(m => ({ default: m.EmployeeContracts })));
+const ComplianceDashboard = lazy(() => import('./pages/ComplianceDashboard').then(m => ({ default: m.ComplianceDashboard })));
+const SalaryScale = lazy(() => import('./pages/SalaryScale').then(m => ({ default: m.SalaryScale })));
+const Recruitment = lazy(() => import('./pages/Recruitment').then(m => ({ default: m.Recruitment })));
+const PendingRequests = lazy(() => import('./pages/PendingRequests').then(m => ({ default: m.PendingRequests })));
+const ManagerAssignment = lazy(() => import('./components/ManagerAssignment'));
+const TenantAdministration = lazy(() => import('./pages/TenantAdministration'));
+const TenantConfiguration = lazy(() => import('./pages/TenantConfiguration'));
+const CrossCompanyAnalytics = lazy(() => import('./pages/CrossCompanyAnalytics'));
+const PermissionsManagement = lazy(() => import('./pages/PermissionsManagement'));
+const WorkflowManagement = lazy(() => import('./pages/WorkflowManagement'));
+const GlobalHR = lazy(() => import('./pages/GlobalHR'));
+const SkillsManagement = lazy(() => import('./pages/SkillsManagement'));
+const Penalties = lazy(() => import('./pages/Penalties'));
+
+function ProtectedPage({ children, allowedRoles }: { children: ReactNode; allowedRoles?: string[] }) {
+  return (
+    <ProtectedRoute allowedRoles={allowedRoles}>
+      <Layout>
+        <ErrorBoundary>
+          <Suspense fallback={<PageLoadingFallback />}>
+            {children}
+          </Suspense>
+        </ErrorBoundary>
+      </Layout>
+    </ProtectedRoute>
+  );
+}
 
 function App() {
   return (
@@ -55,168 +73,55 @@ function App() {
         <AuthProvider>
           <CompanyProvider>
             <ToastProvider>
-            <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Dashboard />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/employees"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Employees />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/org-chart"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <OrgChart />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/handbook"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <EmployeeHandbook />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/payroll"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Payroll />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/leave"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Leave />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/pending-requests"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <PendingRequests />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/attendance"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Attendance />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/performance"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Performance />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/training"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Training />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/documents"
-              element={
-                <ProtectedRoute>
-                  <Layout>
-                    <Documents />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/nitaqat"
-              element={
-                <ProtectedRoute allowedRoles={['hr', 'super_admin']}>
-                  <Layout>
-                    <Nitaqat />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/gosi"
-              element={
-                <ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}>
-                  <Layout>
-                    <GOSI />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-            <Route path="/vehicles" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Vehicles /></Layout></ProtectedRoute>} />
-            <Route path="/gov-docs" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><GovernmentalDocs /></Layout></ProtectedRoute>} />
-            <Route path="/real-estate" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><RealEstate /></Layout></ProtectedRoute>} />
-            <Route path="/contracts" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Contracts /></Layout></ProtectedRoute>} />
-            <Route path="/employee-contracts" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><EmployeeContracts /></Layout></ProtectedRoute>} />
-            <Route path="/insurance" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Insurance /></Layout></ProtectedRoute>} />
-            <Route path="/travel" element={<ProtectedRoute><Layout><Travel /></Layout></ProtectedRoute>} />
-            <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
-            <Route path="/visas" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><Visas /></Layout></ProtectedRoute>} />
-            <Route path="/loans" element={<ProtectedRoute><Layout><Loans /></Layout></ProtectedRoute>} />
-            <Route path="/advances" element={<ProtectedRoute><Layout><Advances /></Layout></ProtectedRoute>} />
-            <Route path="/gov-subscriptions" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><GovSubscriptions /></Layout></ProtectedRoute>} />
-            <Route path="/end-of-service" element={<ProtectedRoute><Layout><EndOfService /></Layout></ProtectedRoute>} />
-            <Route path="/audit-log" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><AuditLog /></Layout></ProtectedRoute>} />
-            <Route path="/compliance" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><ComplianceDashboard /></Layout></ProtectedRoute>} />
-            <Route path="/salary-scale" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><SalaryScale /></Layout></ProtectedRoute>} />
-            <Route path="/recruitment" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'super_admin']}><Layout><Recruitment /></Layout></ProtectedRoute>} />
-            <Route path="/managers" element={<ProtectedRoute allowedRoles={['hr', 'super_admin']}><Layout><ManagerAssignment /></Layout></ProtectedRoute>} />
-            <Route path="/tenant-administration" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><TenantAdministration /></Layout></ProtectedRoute>} />
-            <Route path="/tenant-configuration" element={<ProtectedRoute allowedRoles={['super_admin', 'admin']}><Layout><TenantConfiguration /></Layout></ProtectedRoute>} />
-            <Route path="/cross-company-analytics" element={<ProtectedRoute allowedRoles={['super_admin']}><Layout><CrossCompanyAnalytics /></Layout></ProtectedRoute>} />
-            <Route path="/permissions" element={<ProtectedRoute allowedRoles={['super_admin', 'admin', 'tenant_admin']}><Layout><PermissionsManagement /></Layout></ProtectedRoute>} />
-            <Route path="/workflow" element={<ProtectedRoute allowedRoles={['super_admin', 'admin', 'hr_manager']}><Layout><WorkflowManagement /></Layout></ProtectedRoute>} />
-            <Route path="/global-hr" element={<ProtectedRoute allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager']}><Layout><GlobalHR /></Layout></ProtectedRoute>} />
-            <Route path="/skills" element={<ProtectedRoute><Layout><SkillsManagement /></Layout></ProtectedRoute>} />
-            <Route path="/penalties" element={<ProtectedRoute allowedRoles={['hr', 'finance', 'admin', 'super_admin']}><Layout><Penalties /></Layout></ProtectedRoute>} />
-            <Route path="/settings" element={<ProtectedRoute allowedRoles={['super_admin', 'hr']}><Layout><Settings /></Layout></ProtectedRoute>} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoadingFallback />}>
+                  <Routes>
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
+                    <Route path="/" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
+                    <Route path="/employees" element={<ProtectedPage><Employees /></ProtectedPage>} />
+                    <Route path="/org-chart" element={<ProtectedPage><OrgChart /></ProtectedPage>} />
+                    <Route path="/handbook" element={<ProtectedPage><EmployeeHandbook /></ProtectedPage>} />
+                    <Route path="/payroll" element={<ProtectedPage><Payroll /></ProtectedPage>} />
+                    <Route path="/leave" element={<ProtectedPage><Leave /></ProtectedPage>} />
+                    <Route path="/pending-requests" element={<ProtectedPage><PendingRequests /></ProtectedPage>} />
+                    <Route path="/attendance" element={<ProtectedPage><Attendance /></ProtectedPage>} />
+                    <Route path="/performance" element={<ProtectedPage><Performance /></ProtectedPage>} />
+                    <Route path="/training" element={<ProtectedPage><Training /></ProtectedPage>} />
+                    <Route path="/documents" element={<ProtectedPage><Documents /></ProtectedPage>} />
+                    <Route path="/nitaqat" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><Nitaqat /></ProtectedPage>} />
+                    <Route path="/gosi" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><GOSI /></ProtectedPage>} />
+                    <Route path="/vehicles" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Vehicles /></ProtectedPage>} />
+                    <Route path="/gov-docs" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><GovernmentalDocs /></ProtectedPage>} />
+                    <Route path="/real-estate" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><RealEstate /></ProtectedPage>} />
+                    <Route path="/contracts" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Contracts /></ProtectedPage>} />
+                    <Route path="/employee-contracts" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><EmployeeContracts /></ProtectedPage>} />
+                    <Route path="/insurance" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Insurance /></ProtectedPage>} />
+                    <Route path="/travel" element={<ProtectedPage><Travel /></ProtectedPage>} />
+                    <Route path="/expenses" element={<ProtectedPage><Expenses /></ProtectedPage>} />
+                    <Route path="/visas" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><Visas /></ProtectedPage>} />
+                    <Route path="/loans" element={<ProtectedPage><Loans /></ProtectedPage>} />
+                    <Route path="/advances" element={<ProtectedPage><Advances /></ProtectedPage>} />
+                    <Route path="/gov-subscriptions" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><GovSubscriptions /></ProtectedPage>} />
+                    <Route path="/end-of-service" element={<ProtectedPage><EndOfService /></ProtectedPage>} />
+                    <Route path="/audit-log" element={<ProtectedPage allowedRoles={['super_admin']}><AuditLog /></ProtectedPage>} />
+                    <Route path="/compliance" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><ComplianceDashboard /></ProtectedPage>} />
+                    <Route path="/salary-scale" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><SalaryScale /></ProtectedPage>} />
+                    <Route path="/recruitment" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Recruitment /></ProtectedPage>} />
+                    <Route path="/managers" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><ManagerAssignment /></ProtectedPage>} />
+                    <Route path="/tenant-administration" element={<ProtectedPage allowedRoles={['super_admin']}><TenantAdministration /></ProtectedPage>} />
+                    <Route path="/tenant-configuration" element={<ProtectedPage allowedRoles={['super_admin', 'admin']}><TenantConfiguration /></ProtectedPage>} />
+                    <Route path="/cross-company-analytics" element={<ProtectedPage allowedRoles={['super_admin']}><CrossCompanyAnalytics /></ProtectedPage>} />
+                    <Route path="/permissions" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'tenant_admin']}><PermissionsManagement /></ProtectedPage>} />
+                    <Route path="/workflow" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager']}><WorkflowManagement /></ProtectedPage>} />
+                    <Route path="/global-hr" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager']}><GlobalHR /></ProtectedPage>} />
+                    <Route path="/skills" element={<ProtectedPage><SkillsManagement /></ProtectedPage>} />
+                    <Route path="/penalties" element={<ProtectedPage allowedRoles={['hr', 'finance', 'admin', 'super_admin']}><Penalties /></ProtectedPage>} />
+                    <Route path="/settings" element={<ProtectedPage allowedRoles={['super_admin', 'hr']}><Settings /></ProtectedPage>} />
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
             </ToastProvider>
           </CompanyProvider>
         </AuthProvider>

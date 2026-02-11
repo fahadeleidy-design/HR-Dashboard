@@ -6,6 +6,7 @@ import {
   BarChart3, PieChart
 } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface RecruitmentMetrics {
   totalRequisitions: number;
@@ -26,6 +27,7 @@ interface RecruitmentMetrics {
 export function EnhancedRecruitmentAnalytics() {
   const { currentCompany } = useCompany();
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [metrics, setMetrics] = useState<RecruitmentMetrics>({
     totalRequisitions: 0,
     openPositions: 0,
@@ -105,7 +107,7 @@ export function EnhancedRecruitmentAnalytics() {
         monthlyHiring: []
       });
     } catch (error) {
-      console.error('Error fetching metrics:', error);
+      logError(error, 'medium', { component: 'EnhancedRecruitmentAnalytics', action: 'fetchMetrics' });
     } finally {
       setLoading(false);
     }

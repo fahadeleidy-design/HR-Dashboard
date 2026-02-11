@@ -4,6 +4,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { X, DollarSign, TrendingUp, Calendar, AlertCircle, Save } from 'lucide-react';
 import { formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface SalaryAdjustmentModalProps {
   employeeId: string;
@@ -45,6 +46,7 @@ export function SalaryAdjustmentModal({
 
   const [effectiveDate, setEffectiveDate] = useState(new Date().toISOString().split('T')[0]);
   const [reason, setReason] = useState('');
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (adjustmentType === 'percentage' && increasePercentage !== 0) {
@@ -111,7 +113,7 @@ export function SalaryAdjustmentModal({
       onSuccess();
       onClose();
     } catch (error) {
-      console.error('Error adjusting salary:', error);
+      logError(error, 'medium', { component: 'SalaryAdjustmentModal', action: 'adjustSalary' });
       alert('Failed to adjust salary. Please try again.');
     } finally {
       setLoading(false);

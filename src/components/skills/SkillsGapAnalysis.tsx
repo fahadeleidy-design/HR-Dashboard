@@ -3,6 +3,7 @@ import { AlertTriangle, TrendingUp, Target, Search, Filter, Plus } from 'lucide-
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface GapAnalysis {
   id: string;
@@ -25,6 +26,7 @@ export default function SkillsGapAnalysis() {
   const [employees, setEmployees] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [filter, setFilter] = useState<string>('all');
   const [selectedDepartment, setSelectedDepartment] = useState<string>('all');
 
@@ -64,7 +66,7 @@ export default function SkillsGapAnalysis() {
 
       setDepartments(departmentsData || []);
     } catch (error) {
-      console.error('Error loading gap analysis:', error);
+      logError(error, 'medium', { component: 'SkillsGapAnalysis', action: 'loadGapAnalysis' });
       showToast('Failed to load gap analysis', 'error');
     } finally {
       setLoading(false);
@@ -121,7 +123,7 @@ export default function SkillsGapAnalysis() {
         showToast('No gaps found', 'info');
       }
     } catch (error: any) {
-      console.error('Error calculating gaps:', error);
+      logError(error, 'medium', { component: 'SkillsGapAnalysis', action: 'calculateGaps' });
       showToast(error.message || 'Failed to calculate gaps', 'error');
     }
   };

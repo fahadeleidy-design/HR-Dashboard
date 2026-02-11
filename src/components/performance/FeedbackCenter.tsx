@@ -3,6 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { supabase } from '@/lib/supabase';
 import { Plus, MessageCircle, Send, Users, CheckCircle, Clock, Eye } from 'lucide-react';
 import { formatDate } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface FeedbackRequest {
   id: string;
@@ -22,6 +23,7 @@ export function FeedbackCenter() {
   const [loading, setLoading] = useState(true);
   const [requests, setRequests] = useState<FeedbackRequest[]>([]);
   const [filterType, setFilterType] = useState('all');
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -52,7 +54,7 @@ export function FeedbackCenter() {
         setRequests(data);
       }
     } catch (error) {
-      console.error('Error fetching feedback requests:', error);
+      logError(error, 'medium', { component: 'FeedbackCenter', action: 'fetchFeedbackRequests' });
     } finally {
       setLoading(false);
     }
