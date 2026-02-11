@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Car, Plus, AlertTriangle, Wrench, DollarSign } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Vehicle {
   id: string;
@@ -34,6 +35,7 @@ export function Vehicles() {
   const [maintenanceDue, setMaintenanceDue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const { logError } = useErrorHandler();
   const [formData, setFormData] = useState({
     vehicle_number: '',
     plate_number: '',
@@ -93,7 +95,7 @@ export function Vehicles() {
 
       setMaintenanceDue((maintenanceData || []).length);
     } catch (error) {
-      console.error('Error fetching vehicle data:', error);
+      logError(error, 'medium', { component: 'Vehicles', action: 'fetchVehicleData' });
     } finally {
       setLoading(false);
     }
@@ -344,7 +346,7 @@ export function Vehicles() {
                 });
                 fetchData();
               } catch (error: any) {
-                console.error('Error adding vehicle:', error);
+                logError(error, 'medium', { component: 'Vehicles', action: 'addVehicle' });
                 alert('Failed to add vehicle: ' + error.message);
               }
             }} className="p-6 overflow-y-auto flex-1">

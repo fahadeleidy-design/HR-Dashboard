@@ -12,6 +12,7 @@ import { EmployeeDetail } from '@/components/EmployeeDetail';
 import { ScrollableTable } from '@/components/ScrollableTable';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import * as XLSX from 'xlsx';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Department {
   id: string;
@@ -73,6 +74,7 @@ export function Employees() {
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table');
   const [showColumnSettings, setShowColumnSettings] = useState(false);
   const [showStats, setShowStats] = useState(true);
+  const { logError } = useErrorHandler();
 
   const [columns, setColumns] = useState<ColumnConfig[]>([
     { key: 'employee_number', label: 'Employee Number', visible: true },
@@ -121,7 +123,7 @@ export function Employees() {
         .select('employee_id, basic_salary')
         .eq('company_id', currentCompany.id);
 
-      if (payrollError) console.error('Error fetching payroll:', payrollError);
+      if (payrollError) logError(payrollError, 'medium', { component: 'EmployeesOld', action: 'fetchPayroll' });
 
       const enrichedEmployees = (employeesData || []).map(emp => {
         const payroll = payrollData?.filter(p => p.employee_id === emp.id) || [];
@@ -133,7 +135,7 @@ export function Employees() {
 
       setEmployees(enrichedEmployees);
     } catch (error) {
-      console.error('Error fetching employees:', error);
+      logError(error, 'medium', { component: 'EmployeesOld', action: 'fetchEmployees' });
     } finally {
       setLoading(false);
     }
@@ -152,7 +154,7 @@ export function Employees() {
       if (error) throw error;
       setDepartments(data || []);
     } catch (error) {
-      console.error('Error fetching departments:', error);
+      logError(error, 'medium', { component: 'EmployeesOld', action: 'fetchDepartments' });
     }
   };
 
@@ -281,7 +283,7 @@ export function Employees() {
       const { error } = await supabase.from('employees').delete().eq('id', id);
       if (error) throw error;
     } catch (error) {
-      console.error('Error deleting employee:', error);
+      logError(error, 'medium', { component: 'EmployeesOld', action: 'deleteEmployee' });
       alert('Failed to delete employee');
     }
   };
@@ -299,7 +301,7 @@ export function Employees() {
       if (error) throw error;
       setSelectedEmployees(new Set());
     } catch (error) {
-      console.error('Error deleting employees:', error);
+      logError(error, 'medium', { component: 'EmployeesOld', action: 'deleteEmployees' });
       alert('Failed to delete employees');
     }
   };
@@ -317,7 +319,7 @@ export function Employees() {
       setSelectedEmployees(new Set());
       fetchEmployees();
     } catch (error) {
-      console.error('Error updating employee status:', error);
+      logError(error, 'medium', { component: 'EmployeesOld', action: 'updateEmployeeStatus' });
       alert('Failed to update employee status');
     }
   };

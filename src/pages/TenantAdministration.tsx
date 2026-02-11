@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   Building2, Users, Shield, TrendingUp, AlertCircle, CheckCircle,
   XCircle, Settings, Plus, Search, Filter
@@ -38,6 +39,7 @@ export default function TenantAdministration() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const { logError } = useErrorHandler();
   const [selectedTenant, setSelectedTenant] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,7 +56,7 @@ export default function TenantAdministration() {
       if (tenantsRes.data) setTenants(tenantsRes.data);
       if (healthRes.data) setHealthMetrics(healthRes.data);
     } catch (error) {
-      console.error('Error loading tenant data:', error);
+      logError(error, 'medium', { component: 'TenantAdministration', action: 'loadTenantData' });
     } finally {
       setLoading(false);
     }

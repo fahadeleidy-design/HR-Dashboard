@@ -9,6 +9,7 @@ import {
   Filter, Download, RefreshCw
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface WorkVisa {
   id: string;
@@ -99,6 +100,7 @@ export function Visas() {
     visa_type: 'employment',
     notes: '',
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -239,7 +241,7 @@ export function Visas() {
 
       await fetchData();
     } catch (error) {
-      console.error('Error creating visa request:', error);
+      logError(error, 'medium', { component: 'Visas', action: 'createVisaRequest' });
       alert(t.visas.failedToCreate);
     } finally {
       setSubmitting(false);

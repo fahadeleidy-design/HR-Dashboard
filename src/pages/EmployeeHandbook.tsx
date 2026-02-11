@@ -21,6 +21,7 @@ import {
   File
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Handbook {
   id: string;
@@ -58,6 +59,7 @@ export function EmployeeHandbook() {
   const [stats, setStats] = useState<HandbookStats | null>(null);
   const [userRole, setUserRole] = useState<string>('');
   const [uploading, setUploading] = useState(false);
+  const { logError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     title: '',
@@ -175,7 +177,7 @@ export function EmployeeHandbook() {
       setSelectedFile(null);
       loadHandbooks();
     } catch (error: any) {
-      console.error('Error uploading handbook:', error);
+      logError(error, 'medium', { component: 'EmployeeHandbook', action: 'uploadHandbook' });
       alert(error.message || 'Failed to upload handbook');
     } finally {
       setUploading(false);

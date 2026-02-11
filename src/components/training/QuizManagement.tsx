@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { RefreshCw, AlertTriangle, CheckCircle, XCircle, RotateCcw } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface QuizAssignment {
   assignment_id: string;
@@ -36,6 +37,7 @@ export default function QuizManagement({ programId, companyId }: QuizManagementP
   const { language } = useLanguage();
   const [assignments, setAssignments] = useState<QuizAssignment[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [reEnabling, setReEnabling] = useState<string | null>(null);
 
   useEffect(() => {
@@ -94,7 +96,7 @@ export default function QuizManagement({ programId, companyId }: QuizManagementP
 
       setAssignments(assignmentsWithEmployees);
     } catch (error: any) {
-      console.error('Error loading assignments:', error);
+      logError(error, 'medium', { component: 'QuizManagement', action: 'loadAssignments' });
       showToast(error.message, 'error');
     } finally {
       setLoading(false);
@@ -130,7 +132,7 @@ export default function QuizManagement({ programId, companyId }: QuizManagementP
         throw new Error(data?.message || 'Failed to re-enable quiz');
       }
     } catch (error: any) {
-      console.error('Error re-enabling quiz:', error);
+      logError(error, 'medium', { component: 'QuizManagement', action: 'reEnableQuiz' });
       showToast(error.message, 'error');
     } finally {
       setReEnabling(null);

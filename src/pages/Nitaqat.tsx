@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { formatNumber, formatPercentage } from '@/lib/formatters';
 import { Shield, TrendingUp, Download, Info, AlertCircle, CheckCircle, Users, Calculator } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Employee {
   id: string;
@@ -59,6 +60,7 @@ export function Nitaqat() {
   const [historyRecords, setHistoryRecords] = useState<NitaqatHistoryRecord[]>([]);
   const [calculatorEmployees, setCalculatorEmployees] = useState(0);
   const [calculatorSaudis, setCalculatorSaudis] = useState(0);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -79,7 +81,7 @@ export function Nitaqat() {
       if (error) throw error;
       setHistoryRecords(data || []);
     } catch (error) {
-      console.error('Error fetching Nitaqat history:', error);
+      logError(error, 'medium', { component: 'Nitaqat', action: 'fetchNitaqatHistory' });
     }
   };
 
@@ -182,7 +184,7 @@ export function Nitaqat() {
       });
 
       if (bandError) {
-        console.error('Error fetching Nitaqat band:', bandError);
+        logError(bandError, 'medium', { component: 'Nitaqat', action: 'fetchNitaqatBand' });
       }
 
       if (bandData && bandData.status === 'success') {
@@ -284,10 +286,10 @@ export function Nitaqat() {
           nitaqat_color: color
         }]);
       } catch (error) {
-        console.error('Error saving Nitaqat tracking:', error);
+        logError(error, 'medium', { component: 'Nitaqat', action: 'saveNitaqatTracking' });
       }
     } catch (error) {
-      console.error('Error calculating Nitaqat:', error);
+      logError(error, 'medium', { component: 'Nitaqat', action: 'calculateNitaqat' });
     } finally {
       setLoading(false);
     }

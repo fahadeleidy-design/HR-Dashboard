@@ -4,6 +4,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { Receipt, Plus, AlertTriangle, Calculator } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Employee {
   id: string;
@@ -87,6 +88,7 @@ export function Expenses() {
     reimbursement_method: 'bank_transfer',
     notes: '',
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -168,7 +170,7 @@ export function Expenses() {
           .upload(filePath, file);
 
         if (error) {
-          console.error('Error uploading file:', error);
+          logError(error, 'medium', { component: 'ExpensesOld', action: 'uploadFile' });
           continue;
         }
 
@@ -179,7 +181,7 @@ export function Expenses() {
         uploadedUrls.push(publicUrl);
       }
     } catch (error) {
-      console.error('Error in file upload:', error);
+      logError(error, 'medium', { component: 'ExpensesOld', action: 'inFileUpload' });
     } finally {
       setUploading(false);
     }
@@ -280,7 +282,7 @@ export function Expenses() {
 
       await fetchData();
     } catch (error) {
-      console.error('Error creating expense claim:', error);
+      logError(error, 'medium', { component: 'ExpensesOld', action: 'createExpenseClaim' });
       alert('Failed to create expense claim. Please try again.');
     } finally {
       setSubmitting(false);

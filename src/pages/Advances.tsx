@@ -10,8 +10,9 @@ import { SearchableSelect } from '@/components/SearchableSelect';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
-import { validateSync } from '@/lib/validation/validator';
 import { advanceRequestSchema } from '@/lib/validation/schemas';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { FieldError } from '@/components/ui/FieldError';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { usePagination } from '@/hooks/usePagination';
 import { Pagination } from '@/components/ui/Pagination';
@@ -64,6 +65,7 @@ export function Advances() {
   const { userRole } = useAuth();
   const { showToast } = useToast();
   const { logError, logActivity } = useErrorHandler();
+  const { fieldErrors, validateForm, clearErrors } = useFormValidation(advanceRequestSchema);
   const [advances, setAdvances] = useState<Advance[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [advanceEligibility, setAdvanceEligibility] = useState<AdvanceEligibility | null>(null);
@@ -160,6 +162,16 @@ export function Advances() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCompany) return;
+
+    const { isValid } = validateForm({
+      employee_id: formData.employee_id,
+      amount: formData.amount,
+      request_date: formData.request_date,
+    });
+    if (!isValid) {
+      showToast({ type: 'warning', title: 'Please fix the validation errors' });
+      return;
+    }
 
     if (!formData.employee_id) {
       showToast({ type: 'warning', title: t.advances.pleaseSelectEmployee });
@@ -296,6 +308,7 @@ export function Advances() {
     setEditingAdvance(null);
     setAdvanceEligibility(null);
     setShowForm(false);
+    clearErrors();
   };
 
   const getStatusColor = (status: string) => {
@@ -635,6 +648,7 @@ export function Advances() {
                   step="0.01"
                   max={advanceEligibility?.max_advance_amount || undefined}
                 />
+                <FieldError error={fieldErrors.amount} />
                 {advanceEligibility && formData.amount > advanceEligibility.max_advance_amount && (
                   <p className="text-xs text-red-600 mt-1">
                     {t.advances.advanceExceedsSalary}
@@ -656,6 +670,7 @@ export function Advances() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   required
                 />
+                <FieldError error={fieldErrors.request_date} />
               </div>
 
               {formData.amount > 0 && (

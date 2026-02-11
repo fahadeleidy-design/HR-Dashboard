@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import { RequestApprovalPanel } from './RequestApprovalPanel';
 import { ApprovalTimeline } from '@/components/ApprovalTimeline';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   X, User, Calendar, DollarSign, FileText, Clock,
   Building2, Hash, Briefcase, AlertTriangle, MessageSquare
@@ -65,6 +66,7 @@ export function RequestDetailModal({
   const { isRTL, language } = useLanguage();
   const [request, setRequest] = useState<RequestData | null>(null);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
 
   useEffect(() => {
@@ -201,7 +203,7 @@ export function RequestDetailModal({
 
       setRequest(data);
     } catch (error) {
-      console.error('Error fetching request details:', error);
+      logError(error, 'medium', { component: 'RequestDetailModal', action: 'fetchRequestDetails' });
     } finally {
       setLoading(false);
     }

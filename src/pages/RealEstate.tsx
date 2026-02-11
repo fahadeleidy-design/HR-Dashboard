@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { Building2, Package, DollarSign, Plus, Edit, Trash2, X } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Property {
   id: string;
@@ -85,6 +86,7 @@ export function RealEstate() {
     status: 'active',
     notes: ''
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -105,7 +107,7 @@ export function RealEstate() {
       setProperties(propertiesData.data || []);
       setAssets(assetsData.data || []);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logError(error, 'medium', { component: 'RealEstate', action: 'fetchData' });
     } finally {
       setLoading(false);
     }

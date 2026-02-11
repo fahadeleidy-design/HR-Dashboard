@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { FileText, AlertCircle, CheckCircle, Clock, Plus, Edit, Trash2, X } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface GovDocument {
   id: string;
@@ -42,6 +43,7 @@ export function GovernmentalDocs() {
     auto_renew: false,
     notes: ''
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -62,7 +64,7 @@ export function GovernmentalDocs() {
 
       setDocuments(data || []);
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      logError(error, 'medium', { component: 'GovernmentalDocs', action: 'fetchDocuments' });
     } finally {
       setLoading(false);
     }
@@ -102,7 +104,7 @@ export function GovernmentalDocs() {
       resetForm();
       fetchDocuments();
     } catch (error: any) {
-      console.error('Error saving document:', error);
+      logError(error, 'medium', { component: 'GovernmentalDocs', action: 'saveDocument' });
       alert(t.governmentalDocs.failedToSave + ': ' + error.message);
     }
   };
@@ -138,7 +140,7 @@ export function GovernmentalDocs() {
       alert(t.governmentalDocs.documentDeletedSuccess);
       fetchDocuments();
     } catch (error: any) {
-      console.error('Error deleting document:', error);
+      logError(error, 'medium', { component: 'GovernmentalDocs', action: 'deleteDocument' });
       alert(t.governmentalDocs.failedToDelete + ': ' + error.message);
     }
   };

@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Users, Plus, X, Search, Building2, UserCheck, UserX, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Employee {
   id: string;
@@ -69,6 +70,7 @@ export default function TrainingAssignments({ programId, companyId }: TrainingAs
   const [showAddEmployee, setShowAddEmployee] = useState(false);
   const [showAddDepartment, setShowAddDepartment] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const { logError } = useErrorHandler();
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([]);
   const [expandedSection, setExpandedSection] = useState<'employees' | 'departments' | null>('employees');
@@ -89,7 +91,7 @@ export default function TrainingAssignments({ programId, companyId }: TrainingAs
         fetchAvailableDepartments()
       ]);
     } catch (error) {
-      console.error('Error fetching data:', error);
+      logError(error, 'medium', { component: 'TrainingAssignments', action: 'fetchData' });
     } finally {
       setLoading(false);
     }
@@ -230,7 +232,7 @@ export default function TrainingAssignments({ programId, companyId }: TrainingAs
       setShowAddEmployee(false);
       fetchEnrollments();
     } catch (error: any) {
-      console.error('Error assigning employees:', error);
+      logError(error, 'medium', { component: 'TrainingAssignments', action: 'assignEmployees' });
       showToast(error.message, 'error');
     }
   };
@@ -260,7 +262,7 @@ export default function TrainingAssignments({ programId, companyId }: TrainingAs
         });
 
         if (enrollError) {
-          console.error('Error auto-enrolling department employees:', enrollError);
+          logError(enrollError, 'medium', { component: 'TrainingAssignments', action: 'autoEnrollDepartmentEmployees' });
         }
       }
 
@@ -275,7 +277,7 @@ export default function TrainingAssignments({ programId, companyId }: TrainingAs
       setShowAddDepartment(false);
       fetchData();
     } catch (error: any) {
-      console.error('Error assigning departments:', error);
+      logError(error, 'medium', { component: 'TrainingAssignments', action: 'assignDepartments' });
       showToast(error.message, 'error');
     }
   };
@@ -299,7 +301,7 @@ export default function TrainingAssignments({ programId, companyId }: TrainingAs
       );
       fetchEnrollments();
     } catch (error: any) {
-      console.error('Error removing enrollment:', error);
+      logError(error, 'medium', { component: 'TrainingAssignments', action: 'removeEnrollment' });
       showToast(error.message, 'error');
     }
   };
@@ -323,7 +325,7 @@ export default function TrainingAssignments({ programId, companyId }: TrainingAs
       );
       fetchDepartmentAssignments();
     } catch (error: any) {
-      console.error('Error removing department assignment:', error);
+      logError(error, 'medium', { component: 'TrainingAssignments', action: 'removeDepartmentAssignment' });
       showToast(error.message, 'error');
     }
   };

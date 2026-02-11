@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useCompany } from '../contexts/CompanyContext';
 import { Line, Bar } from 'recharts';
 import { LineChart, BarChart, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface GlobalStats {
   totalCountries: number;
@@ -24,6 +25,7 @@ interface CountryBreakdown {
 export default function GlobalHR() {
   const { selectedCompany } = useCompany();
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [stats, setStats] = useState<GlobalStats>({
     totalCountries: 0,
     totalEmployees: 0,
@@ -126,7 +128,7 @@ export default function GlobalHR() {
       });
 
     } catch (error) {
-      console.error('Error loading global data:', error);
+      logError(error, 'medium', { component: 'GlobalHR', action: 'loadGlobalData' });
     } finally {
       setLoading(false);
     }

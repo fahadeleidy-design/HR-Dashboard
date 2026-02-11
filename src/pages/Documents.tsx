@@ -10,6 +10,7 @@ import { FileText, AlertTriangle, CheckCircle, Plus, Upload, X, Loader2, Layers,
 import * as XLSX from 'xlsx';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatInteger } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Document {
   id: string;
@@ -57,6 +58,7 @@ export function Documents() {
     expiry_date: '',
     file: null as File | null
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -91,7 +93,7 @@ export function Documents() {
         .order('first_name_en');
 
       if (empError) {
-        console.error('Error fetching employees:', empError);
+        logError(empError, 'medium', { component: 'Documents', action: 'fetchEmployees' });
         return;
       }
 
@@ -102,7 +104,7 @@ export function Documents() {
         .eq('document_type', 'contract');
 
       if (docError) {
-        console.error('Error fetching contract documents:', docError);
+        logError(docError, 'medium', { component: 'Documents', action: 'fetchContractDocuments' });
         return;
       }
 
@@ -160,7 +162,7 @@ export function Documents() {
         setEmployeesWithoutContracts([]);
       }
     } catch (error) {
-      console.error('Error in fetchEmployeesWithoutContracts:', error);
+      logError(error, 'medium', { component: 'Documents', action: 'inFetchEmployeesWithoutContracts' });
       setEmployeesWithoutContracts([]);
     }
   };
@@ -187,7 +189,7 @@ export function Documents() {
       if (error) throw error;
       setDocuments(data || []);
     } catch (error) {
-      console.error('Error fetching documents:', error);
+      logError(error, 'medium', { component: 'Documents', action: 'fetchDocuments' });
     } finally {
       setLoading(false);
     }
@@ -418,7 +420,7 @@ export function Documents() {
       });
       fetchDocuments();
     } catch (error: any) {
-      console.error('Error uploading document:', error);
+      logError(error, 'medium', { component: 'Documents', action: 'uploadDocument' });
       alert(error.message || t.documents.failedToUpload);
     } finally {
       setUploading(false);

@@ -3,6 +3,7 @@ import { TrendingUp, TrendingDown, Clock, Users, CheckCircle, XCircle, AlertTria
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface WorkflowMetrics {
   workflow_template_id: string;
@@ -36,6 +37,7 @@ export default function WorkflowAnalytics() {
     avgSLACompliance: 0,
     approvalRate: 0,
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (selectedCompany) {
@@ -178,7 +180,7 @@ export default function WorkflowAnalytics() {
       });
 
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      logError(error, 'medium', { component: 'WorkflowAnalytics', action: 'loadAnalytics' });
     } finally {
       setLoading(false);
     }

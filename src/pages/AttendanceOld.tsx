@@ -8,6 +8,7 @@ import { useSortableData, SortableTableHeader } from '@/components/SortableTable
 import { EmptyState } from '@/components/EmptyState';
 import { PageSkeleton } from '@/components/LoadingSkeleton';
 import * as XLSX from 'xlsx';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface AttendanceRecord {
   id: string;
@@ -30,6 +31,7 @@ export function Attendance() {
   const { t, isRTL, language } = useLanguage();
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export function Attendance() {
       if (error) throw error;
       setAttendanceRecords(data || []);
     } catch (error) {
-      console.error('Error fetching attendance:', error);
+      logError(error, 'medium', { component: 'AttendanceOld', action: 'fetchAttendance' });
     } finally {
       setLoading(false);
     }

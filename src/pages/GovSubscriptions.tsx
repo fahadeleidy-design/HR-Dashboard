@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { Plus, Edit2, Trash2, AlertCircle, CheckCircle, XCircle, Search, Download } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface GovSubscription {
   id: string;
@@ -64,6 +65,7 @@ export function GovSubscriptions() {
     contact_email: '',
     notes: '',
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -84,7 +86,7 @@ export function GovSubscriptions() {
       if (error) throw error;
       setSubscriptions(data || []);
     } catch (error) {
-      console.error('Error fetching subscriptions:', error);
+      logError(error, 'medium', { component: 'GovSubscriptions', action: 'fetchSubscriptions' });
     } finally {
       setLoading(false);
     }
@@ -129,7 +131,7 @@ export function GovSubscriptions() {
       fetchSubscriptions();
       handleCloseForm();
     } catch (error: any) {
-      console.error('Error saving subscription:', error);
+      logError(error, 'medium', { component: 'GovSubscriptions', action: 'saveSubscription' });
       alert(error.message || 'Failed to save subscription');
     }
   };
@@ -146,7 +148,7 @@ export function GovSubscriptions() {
       if (error) throw error;
       fetchSubscriptions();
     } catch (error) {
-      console.error('Error deleting subscription:', error);
+      logError(error, 'medium', { component: 'GovSubscriptions', action: 'deleteSubscription' });
     }
   };
 

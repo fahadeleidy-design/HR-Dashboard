@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { formatDate } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   CheckCircle, XCircle, Clock, AlertTriangle, User,
   MessageSquare, ChevronDown, ChevronUp, Timer, ArrowRight
@@ -62,6 +63,7 @@ export function RequestApprovalPanel({
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
   const [processing, setProcessing] = useState(false);
   const [expanded, setExpanded] = useState(true);
+  const { logError } = useErrorHandler();
 
   const getApprovalLevels = (): ApprovalLevel[] => {
     const levels: ApprovalLevel[] = [];
@@ -249,7 +251,7 @@ export function RequestApprovalPanel({
       setRejectionReasonInput('');
       onStatusChange?.();
     } catch (error) {
-      console.error('Error processing approval:', error);
+      logError(error, 'medium', { component: 'RequestApprovalPanel', action: 'processApproval' });
       alert('Failed to process approval');
     } finally {
       setProcessing(false);

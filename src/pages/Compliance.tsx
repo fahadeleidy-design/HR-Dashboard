@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { formatNumber } from '@/lib/formatters';
 import { Shield, TrendingUp, Download, DollarSign, Info, AlertCircle, CheckCircle, Users, Calculator, BookOpen, FileBarChart, RefreshCw } from 'lucide-react';
 import * as XLSX from 'xlsx';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Employee {
   id: string;
@@ -66,6 +67,7 @@ export function Compliance() {
   const [gosiConfigured, setGosiConfigured] = useState(false);
   const [gosiSyncLogs, setGosiSyncLogs] = useState<GOSISyncLog[]>([]);
   const [showSyncLogs, setShowSyncLogs] = useState(false);
+  const { logError } = useErrorHandler();
   const [syncResult, setSyncResult] = useState<any>(null);
 
   useEffect(() => {
@@ -89,7 +91,7 @@ export function Compliance() {
 
       setGosiConfigured(!!data && !!data.client_id && !!data.client_secret && !!data.establishment_number);
     } catch (error) {
-      console.error('Error checking GOSI config:', error);
+      logError(error, 'medium', { component: 'Compliance', action: 'checkGOSIConfig' });
     }
   };
 
@@ -106,7 +108,7 @@ export function Compliance() {
       if (error) throw error;
       setGosiSyncLogs(data || []);
     } catch (error) {
-      console.error('Error fetching GOSI sync logs:', error);
+      logError(error, 'medium', { component: 'Compliance', action: 'fetchGOSISyncLogs' });
     }
   };
 
@@ -166,7 +168,7 @@ export function Compliance() {
 
       fetchGOSISyncLogs();
     } catch (error: any) {
-      console.error('GOSI sync error:', error);
+      logError(error, 'medium', { component: 'Compliance', action: 'gOSISyncError' });
       alert(error.message || 'Failed to sync with GOSI');
 
       await supabase.from('gosi_sync_logs').insert([{
@@ -195,7 +197,7 @@ export function Compliance() {
       if (error) throw error;
       setHistoryRecords(data || []);
     } catch (error) {
-      console.error('Error fetching Nitaqat history:', error);
+      logError(error, 'medium', { component: 'Compliance', action: 'fetchNitaqatHistory' });
     }
   };
 
@@ -339,10 +341,10 @@ export function Compliance() {
           nitaqat_color: color
         }]);
       } catch (error) {
-        console.error('Error saving Nitaqat tracking:', error);
+        logError(error, 'medium', { component: 'Compliance', action: 'saveNitaqatTracking' });
       }
     } catch (error) {
-      console.error('Error calculating Nitaqat:', error);
+      logError(error, 'medium', { component: 'Compliance', action: 'calculateNitaqat' });
     } finally {
       setLoading(false);
     }
@@ -388,7 +390,7 @@ export function Compliance() {
 
       setGosiContributions(transformed);
     } catch (error) {
-      console.error('Error fetching GOSI contributions:', error);
+      logError(error, 'medium', { component: 'Compliance', action: 'fetchGOSIContributions' });
     }
   };
 

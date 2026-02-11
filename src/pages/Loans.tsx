@@ -10,8 +10,9 @@ import { useSortableData, SortableTableHeader } from '@/components/SortableTable
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
-import { validateSync } from '@/lib/validation/validator';
 import { loanRequestSchema } from '@/lib/validation/schemas';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { FieldError } from '@/components/ui/FieldError';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
 import { usePagination } from '@/hooks/usePagination';
 import { Pagination } from '@/components/ui/Pagination';
@@ -68,6 +69,7 @@ export function Loans() {
   const { userRole } = useAuth();
   const { showToast } = useToast();
   const { logError, logActivity } = useErrorHandler();
+  const { fieldErrors, validateForm, clearErrors } = useFormValidation(loanRequestSchema);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loanEligibility, setLoanEligibility] = useState<LoanEligibility | null>(null);
@@ -185,6 +187,18 @@ export function Loans() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentCompany) return;
+
+    const { isValid } = validateForm({
+      employee_id: formData.employee_id,
+      loan_type: formData.loan_type,
+      loan_amount: formData.loan_amount,
+      number_of_installments: formData.number_of_installments,
+      start_date: formData.start_date,
+    });
+    if (!isValid) {
+      showToast({ type: 'warning', title: 'Please fix the validation errors' });
+      return;
+    }
 
     if (!formData.employee_id) {
       showToast({ type: 'warning', title: t.loans.pleaseSelectEmployee });
@@ -310,6 +324,7 @@ export function Loans() {
     setEditingLoan(null);
     setLoanEligibility(null);
     setShowForm(false);
+    clearErrors();
   };
 
   const getStatusColor = (status: string) => {
@@ -685,6 +700,7 @@ export function Loans() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     required
                   />
+                  <FieldError error={fieldErrors.start_date} />
                 </div>
               </div>
 
@@ -703,6 +719,7 @@ export function Loans() {
                     step="0.01"
                     max={loanEligibility?.available_loan_amount || undefined}
                   />
+                  <FieldError error={fieldErrors.loan_amount} />
                   {loanEligibility && formData.loan_amount > loanEligibility.available_loan_amount && (
                     <p className="text-xs text-red-600 mt-1">
                       {t.loans.exceedsAvailableAmount}
@@ -727,6 +744,7 @@ export function Loans() {
                     <option value={5}>5 {t.loans.months}</option>
                     <option value={6}>6 {t.loans.months}</option>
                   </select>
+                  <FieldError error={fieldErrors.number_of_installments} />
                   <p className={`text-xs text-gray-500 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.loans.maximumSixMonths}</p>
                 </div>
               </div>

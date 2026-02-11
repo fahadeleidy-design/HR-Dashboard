@@ -12,6 +12,7 @@ import { AttendanceAnalytics } from '@/components/attendance/AttendanceAnalytics
 import { AttendanceRequests } from '@/components/attendance/AttendanceRequests';
 import { AttendanceExceptions } from '@/components/attendance/AttendanceExceptions';
 import * as XLSX from 'xlsx';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface AttendanceRecord {
   id: string;
@@ -41,6 +42,7 @@ export function Attendance() {
   const [attendanceRequests, setAttendanceRequests] = useState<any[]>([]);
   const [attendanceExceptions, setAttendanceExceptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
 
@@ -84,7 +86,7 @@ export function Attendance() {
       if (error) throw error;
       setAttendanceRecords(data || []);
     } catch (error) {
-      console.error('Error fetching attendance:', error);
+      logError(error, 'medium', { component: 'Attendance', action: 'fetchAttendance' });
     }
   };
 
@@ -105,7 +107,7 @@ export function Attendance() {
       if (error) throw error;
       setAttendanceRequests(data || []);
     } catch (error) {
-      console.error('Error fetching requests:', error);
+      logError(error, 'medium', { component: 'Attendance', action: 'fetchRequests' });
     }
   };
 
@@ -126,7 +128,7 @@ export function Attendance() {
       if (error) throw error;
       setAttendanceExceptions(data || []);
     } catch (error) {
-      console.error('Error fetching exceptions:', error);
+      logError(error, 'medium', { component: 'Attendance', action: 'fetchExceptions' });
     }
   };
 
@@ -185,7 +187,7 @@ export function Attendance() {
       if (error) throw error;
       fetchRequests();
     } catch (error) {
-      console.error('Error approving request:', error);
+      logError(error, 'medium', { component: 'Attendance', action: 'approveRequest' });
     }
   };
 
@@ -203,7 +205,7 @@ export function Attendance() {
       if (error) throw error;
       fetchRequests();
     } catch (error) {
-      console.error('Error rejecting request:', error);
+      logError(error, 'medium', { component: 'Attendance', action: 'rejectRequest' });
     }
   };
 
@@ -221,7 +223,7 @@ export function Attendance() {
       if (error) throw error;
       fetchExceptions();
     } catch (error) {
-      console.error('Error resolving exception:', error);
+      logError(error, 'medium', { component: 'Attendance', action: 'resolveException' });
     }
   };
 

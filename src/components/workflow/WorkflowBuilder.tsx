@@ -3,6 +3,7 @@ import { Plus, Save, Play, Settings, Trash2, Copy, GitBranch, Clock, Users, Bell
 import { supabase } from '../../lib/supabase';
 import { useToast } from '../../contexts/ToastContext';
 import { useCompany } from '../../contexts/CompanyContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface WorkflowStep {
   id: string;
@@ -82,6 +83,7 @@ export default function WorkflowBuilder() {
   const [showStepConfig, setShowStepConfig] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const { logError } = useErrorHandler();
 
   const stepTypes = [
     { type: 'start', icon: Play, label: 'Start', color: 'bg-green-500' },
@@ -261,7 +263,7 @@ export default function WorkflowBuilder() {
 
       showToast('Workflow saved successfully!', 'success');
     } catch (error: any) {
-      console.error('Error saving workflow:', error);
+      logError(error, 'medium', { component: 'WorkflowBuilder', action: 'saveWorkflow' });
       showToast(error.message || 'Failed to save workflow', 'error');
     }
   };

@@ -5,6 +5,7 @@ import {
   Download, Filter, RefreshCcw
 } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface TenantGroup {
   id: string;
@@ -34,6 +35,7 @@ export default function CrossCompanyAnalytics() {
   const [companies, setCompanies] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     loadTenantGroups();
@@ -59,7 +61,7 @@ export default function CrossCompanyAnalytics() {
         setSelectedGroup(data[0].id);
       }
     } catch (error) {
-      console.error('Error loading tenant groups:', error);
+      logError(error, 'medium', { component: 'CrossCompanyAnalytics', action: 'loadTenantGroups' });
     } finally {
       setLoading(false);
     }
@@ -83,7 +85,7 @@ export default function CrossCompanyAnalytics() {
       if (analyticsRes.data) setAnalyticsData(analyticsRes.data);
       if (companiesRes.data) setCompanies(companiesRes.data);
     } catch (error) {
-      console.error('Error loading analytics:', error);
+      logError(error, 'medium', { component: 'CrossCompanyAnalytics', action: 'loadAnalytics' });
     } finally {
       setRefreshing(false);
     }
@@ -108,7 +110,7 @@ export default function CrossCompanyAnalytics() {
       link.click();
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error exporting report:', error);
+      logError(error, 'medium', { component: 'CrossCompanyAnalytics', action: 'exportDataReport' });
     }
   };
 

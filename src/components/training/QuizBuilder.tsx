@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   Plus,
   Edit2,
@@ -97,6 +98,7 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
       { option_text: '', is_correct: false }
     ]
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     loadQuizzes();
@@ -124,7 +126,7 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
         setSelectedQuiz(data[0]);
       }
     } catch (error: any) {
-      console.error('Error loading quizzes:', error);
+      logError(error, 'medium', { component: 'QuizBuilder', action: 'loadQuizzes' });
       showToast(error.message, 'error');
     } finally {
       setLoading(false);
@@ -142,7 +144,7 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
       if (error) throw error;
       setModules(data || []);
     } catch (error: any) {
-      console.error('Error loading modules:', error);
+      logError(error, 'medium', { component: 'QuizBuilder', action: 'loadModules' });
     }
   };
 
@@ -160,7 +162,7 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
       if (error) throw error;
       setQuestions(data || []);
     } catch (error: any) {
-      console.error('Error loading questions:', error);
+      logError(error, 'medium', { component: 'QuizBuilder', action: 'loadQuestions' });
       showToast(error.message, 'error');
     }
   };
@@ -193,7 +195,7 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
       setSelectedQuiz(data);
       await loadQuizzes();
     } catch (error: any) {
-      console.error('Error saving quiz:', error);
+      logError(error, 'medium', { component: 'QuizBuilder', action: 'saveQuiz' });
       showToast(error.message, 'error');
     }
   };
@@ -265,7 +267,7 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
       resetQuestionForm();
       await loadQuestions(selectedQuiz.id);
     } catch (error: any) {
-      console.error('Error saving question:', error);
+      logError(error, 'medium', { component: 'QuizBuilder', action: 'saveQuestion' });
       showToast(error.message, 'error');
     }
   };
@@ -292,7 +294,7 @@ export default function QuizBuilder({ programId, companyId }: QuizBuilderProps) 
         await loadQuestions(selectedQuiz.id);
       }
     } catch (error: any) {
-      console.error('Error deleting question:', error);
+      logError(error, 'medium', { component: 'QuizBuilder', action: 'deleteQuestion' });
       showToast(error.message, 'error');
     }
   };

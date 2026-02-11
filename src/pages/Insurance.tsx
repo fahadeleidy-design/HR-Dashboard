@@ -9,6 +9,7 @@ import {
   Car, Building2, User, Calendar, DollarSign, FileCheck
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface InsurancePolicy {
   id: string;
@@ -84,6 +85,7 @@ export function Insurance() {
     covered_employees_count: '',
     covered_dependents_count: ''
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -174,7 +176,7 @@ export function Insurance() {
       setShowAddModal(false);
       resetForm();
     } catch (error) {
-      console.error('Error creating insurance policy:', error);
+      logError(error, 'medium', { component: 'Insurance', action: 'createInsurancePolicy' });
       alert('Failed to create insurance policy. Please try again.');
     } finally {
       setSaving(false);

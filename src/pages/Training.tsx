@@ -16,6 +16,7 @@ import CourseCatalog from '@/components/lms/CourseCatalog';
 import LearningPaths from '@/components/lms/LearningPaths';
 import ComplianceTracking from '@/components/lms/ComplianceTracking';
 import LearningAnalytics from '@/components/lms/LearningAnalytics';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface TrainingProgram {
   id: string;
@@ -44,6 +45,7 @@ export function Training() {
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany && user) {
@@ -65,7 +67,7 @@ export function Training() {
       if (error) throw error;
       if (data) setUserRole(data);
     } catch (error) {
-      console.error('Error fetching user role:', error);
+      logError(error, 'medium', { component: 'Training', action: 'fetchUserRole' });
     }
   };
 
@@ -86,7 +88,7 @@ export function Training() {
         setSelectedProgram(data[0]);
       }
     } catch (error) {
-      console.error('Error fetching training programs:', error);
+      logError(error, 'medium', { component: 'Training', action: 'fetchTrainingPrograms' });
     } finally {
       setLoading(false);
     }

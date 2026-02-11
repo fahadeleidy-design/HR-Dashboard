@@ -3,6 +3,7 @@ import { Clock, CheckCircle, XCircle, AlertTriangle, TrendingUp, Users, BarChart
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useNavigate } from 'react-router-dom';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface WorkflowStats {
   total_active: number;
@@ -39,6 +40,7 @@ export default function WorkflowDashboard() {
   const [stats, setStats] = useState<WorkflowStats | null>(null);
   const [recentInstances, setRecentInstances] = useState<WorkflowInstance[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [filter, setFilter] = useState<'all' | 'pending' | 'in_progress' | 'approved' | 'rejected'>('all');
 
   useEffect(() => {
@@ -101,7 +103,7 @@ export default function WorkflowDashboard() {
 
       setStats(statsData);
     } catch (error) {
-      console.error('Error loading workflow dashboard:', error);
+      logError(error, 'medium', { component: 'WorkflowDashboard', action: 'loadWorkflowDashboard' });
     } finally {
       setLoading(false);
     }

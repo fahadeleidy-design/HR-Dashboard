@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { X, Download, ZoomIn, ZoomOut, Loader2 } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface FilePreviewProps {
   filePath: string;
@@ -14,6 +15,7 @@ export default function FilePreview({ filePath, fileName, onClose }: FilePreview
   const [fileUrl, setFileUrl] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState(100);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     loadFile();
@@ -37,7 +39,7 @@ export default function FilePreview({ filePath, fileName, onClose }: FilePreview
       const url = URL.createObjectURL(data);
       setFileUrl(url);
     } catch (error) {
-      console.error('Error loading file:', error);
+      logError(error, 'medium', { component: 'FilePreview', action: 'loadFile' });
     } finally {
       setLoading(false);
     }
@@ -60,7 +62,7 @@ export default function FilePreview({ filePath, fileName, onClose }: FilePreview
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Error downloading file:', error);
+      logError(error, 'medium', { component: 'FilePreview', action: 'downloadFile' });
     }
   };
 

@@ -11,8 +11,9 @@ import { SearchableSelect } from '@/components/SearchableSelect';
 import { LeaveConfiguration } from '@/components/leave/LeaveConfiguration';
 import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
-import { validateSync } from '@/lib/validation/validator';
 import { leaveRequestSchema } from '@/lib/validation/schemas';
+import { useFormValidation } from '@/hooks/useFormValidation';
+import { FieldError } from '@/components/ui/FieldError';
 import { usePagination } from '@/hooks/usePagination';
 import { Pagination } from '@/components/ui/Pagination';
 
@@ -100,6 +101,7 @@ export function Leave() {
   const { t, isRTL } = useLanguage();
   const { showToast } = useToast();
   const { logError, logActivity } = useErrorHandler();
+  const { fieldErrors, validateForm, clearErrors } = useFormValidation(leaveRequestSchema);
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [leaveTypes, setLeaveTypes] = useState<LeaveType[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -318,6 +320,18 @@ export function Leave() {
     e.preventDefault();
     if (!currentCompany) return;
 
+    const { isValid } = validateForm({
+      employee_id: requestForm.employee_id,
+      leave_type_id: requestForm.leave_type_id,
+      start_date: requestForm.start_date,
+      end_date: requestForm.end_date,
+      reason: requestForm.reason,
+    });
+    if (!isValid) {
+      showToast({ type: 'warning', title: 'Please fix the validation errors' });
+      return;
+    }
+
     try {
       const days = calculateDays(requestForm.start_date, requestForm.end_date, requestForm.is_half_day);
 
@@ -372,6 +386,7 @@ export function Leave() {
         half_day_period: '',
       });
       setBlackoutWarning(null);
+      clearErrors();
 
       logActivity('leave_request_created', { employeeId: requestForm.employee_id, leaveTypeId: requestForm.leave_type_id });
       showToast('Leave request submitted successfully', 'success');
@@ -997,6 +1012,7 @@ export function Leave() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                     disabled={requestForm.is_half_day}
                   />
+                  <FieldError error={fieldErrors.end_date} />
                 </div>
               </div>
 
@@ -1037,6 +1053,7 @@ export function Leave() {
                   onChange={(e) => setRequestForm({...requestForm, reason: e.target.value})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                 />
+                <FieldError error={fieldErrors.reason} />
               </div>
 
               <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
@@ -1054,6 +1071,7 @@ export function Leave() {
                       half_day_period: ''
                     });
                     setBlackoutWarning(null);
+                    clearErrors();
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
                 >

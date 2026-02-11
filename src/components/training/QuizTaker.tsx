@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   PlayCircle,
   CheckCircle,
@@ -80,6 +81,7 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
   const [quizStarted, setQuizStarted] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState<number | null>(null);
   const [showResults, setShowResults] = useState(false);
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     loadQuizzes();
@@ -146,7 +148,7 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
         setSelectedQuiz(quizList[0]);
       }
     } catch (error: any) {
-      console.error('Error loading quizzes:', error);
+      logError(error, 'medium', { component: 'QuizTaker', action: 'loadQuizzes' });
       showToast(error.message, 'error');
     } finally {
       setLoading(false);
@@ -179,7 +181,7 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
 
       setQuestions(loadedQuestions);
     } catch (error: any) {
-      console.error('Error loading questions:', error);
+      logError(error, 'medium', { component: 'QuizTaker', action: 'loadQuestions' });
       showToast(error.message, 'error');
     }
   };
@@ -196,7 +198,7 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
       if (error) throw error;
       setAttempts(data || []);
     } catch (error: any) {
-      console.error('Error loading attempts:', error);
+      logError(error, 'medium', { component: 'QuizTaker', action: 'loadAttempts' });
     }
   };
 
@@ -247,7 +249,7 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
         'success'
       );
     } catch (error: any) {
-      console.error('Error starting quiz:', error);
+      logError(error, 'medium', { component: 'QuizTaker', action: 'startQuiz' });
       showToast(error.message, 'error');
     }
   };
@@ -330,7 +332,7 @@ export default function QuizTaker({ programId, companyId, employeeId }: QuizTake
         passed ? 'success' : 'error'
       );
     } catch (error: any) {
-      console.error('Error submitting quiz:', error);
+      logError(error, 'medium', { component: 'QuizTaker', action: 'submitQuiz' });
       showToast(error.message, 'error');
     } finally {
       setSubmitting(false);

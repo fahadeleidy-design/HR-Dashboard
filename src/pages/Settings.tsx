@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase';
 import { Building2, Users, Plus, Shield, AlertCircle, CheckCircle } from 'lucide-react';
 import { UserRoleManagement } from '@/components/UserRoleManagement';
 import { EmailSettings } from '@/components/settings/EmailSettings';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Department {
   id: string;
@@ -77,6 +78,7 @@ export function Settings() {
     name_ar: '',
     description: '',
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -107,7 +109,7 @@ export function Settings() {
       if (error) throw error;
       setDepartments(data || []);
     } catch (error) {
-      console.error('Error fetching departments:', error);
+      logError(error, 'medium', { component: 'Settings', action: 'fetchDepartments' });
     } finally {
       setLoading(false);
     }
@@ -123,7 +125,7 @@ export function Settings() {
       if (error) throw error;
       setNitaqatSectors(data || []);
     } catch (error) {
-      console.error('Error fetching Nitaqat sectors:', error);
+      logError(error, 'medium', { component: 'Settings', action: 'fetchNitaqatSectors' });
     }
   };
 
@@ -152,7 +154,7 @@ export function Settings() {
         });
       }
     } catch (error) {
-      console.error('Error fetching GOSI config:', error);
+      logError(error, 'medium', { component: 'Settings', action: 'fetchGOSIConfig' });
     }
   };
 
@@ -199,7 +201,7 @@ export function Settings() {
         });
       }
     } catch (error: any) {
-      console.error('GOSI test error:', error);
+      logError(error, 'medium', { component: 'Settings', action: 'gOSITestError' });
       setGosiTestResult({
         success: false,
         message: error.message || 'Failed to test connection'
@@ -245,7 +247,7 @@ export function Settings() {
 
       fetchGOSIConfig();
     } catch (error: any) {
-      console.error('Error saving GOSI config:', error);
+      logError(error, 'medium', { component: 'Settings', action: 'saveGOSIConfig' });
       alert(error.message || 'Failed to save GOSI configuration');
     } finally {
       setGosiLoading(false);
@@ -271,7 +273,7 @@ export function Settings() {
       if (error) throw error;
       alert('Nitaqat configuration updated successfully!');
     } catch (error: any) {
-      console.error('Error updating company:', error);
+      logError(error, 'medium', { component: 'Settings', action: 'updateCompany' });
       alert(error.message || 'Failed to update Nitaqat configuration');
     } finally {
       setCompanyLoading(false);
@@ -296,7 +298,7 @@ export function Settings() {
       setDeptForm({ name_en: '', name_ar: '', description: '' });
       fetchDepartments();
     } catch (error: any) {
-      console.error('Error adding department:', error);
+      logError(error, 'medium', { component: 'Settings', action: 'addDepartment' });
       alert(error.message || 'Failed to add department');
     }
   };

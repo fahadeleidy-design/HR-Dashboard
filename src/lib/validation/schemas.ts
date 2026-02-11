@@ -56,29 +56,28 @@ export const employeeCreateSchema = employeeBaseSchema.extend({
 });
 
 export const leaveRequestSchema = z.object({
-  employee_id: uuidSchema,
-  leave_type_id: uuidSchema,
+  employee_id: z.string().min(1, 'Employee is required'),
+  leave_type_id: z.string().min(1, 'Leave type is required'),
   start_date: z.string().min(1, 'Start date is required'),
   end_date: z.string().min(1, 'End date is required'),
-  days_requested: positiveNumberSchema,
-  reason: z.string().min(10, 'Reason must be at least 10 characters').max(500),
+  reason: z.string().min(3, 'Reason must be at least 3 characters').max(500),
 }).refine((data) => new Date(data.end_date) >= new Date(data.start_date), {
   message: 'End date must be after or equal to start date',
   path: ['end_date'],
 });
 
 export const loanRequestSchema = z.object({
-  employee_id: uuidSchema,
-  amount_requested: positiveNumberSchema,
-  purpose: z.string().min(10, 'Purpose must be at least 10 characters').max(500),
-  repayment_months: z.number().int().min(1).max(60, 'Repayment period cannot exceed 60 months'),
+  employee_id: z.string().min(1, 'Employee is required'),
+  loan_type: z.string().min(1, 'Loan type is required'),
+  loan_amount: z.number().positive('Loan amount must be greater than 0'),
+  number_of_installments: z.number().int().min(1, 'At least 1 installment required').max(6, 'Maximum 6 installments'),
+  start_date: z.string().min(1, 'Start date is required'),
 });
 
 export const advanceRequestSchema = z.object({
-  employee_id: uuidSchema,
-  amount_requested: positiveNumberSchema,
-  reason: z.string().min(10, 'Reason must be at least 10 characters').max(500),
-  repayment_date: z.string().min(1, 'Repayment date is required'),
+  employee_id: z.string().min(1, 'Employee is required'),
+  amount: z.number().positive('Amount must be greater than 0'),
+  request_date: z.string().min(1, 'Request date is required'),
 });
 
 export const expenseClaimSchema = z.object({

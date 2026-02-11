@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCompany } from '../../contexts/CompanyContext';
 import { useToast } from '../../contexts/ToastContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface Delegation {
   id: string;
@@ -38,6 +39,7 @@ export default function WorkflowDelegation() {
   const [workflows, setWorkflows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const { logError } = useErrorHandler();
 
   const [formData, setFormData] = useState({
     delegate_id: '',
@@ -113,7 +115,7 @@ export default function WorkflowDelegation() {
 
       setWorkflows(workflowsData || []);
     } catch (error) {
-      console.error('Error loading delegations:', error);
+      logError(error, 'medium', { component: 'WorkflowDelegation', action: 'loadDelegations' });
       showToast('Failed to load delegations', 'error');
     } finally {
       setLoading(false);
@@ -162,7 +164,7 @@ export default function WorkflowDelegation() {
       });
       loadData();
     } catch (error: any) {
-      console.error('Error creating delegation:', error);
+      logError(error, 'medium', { component: 'WorkflowDelegation', action: 'createDelegation' });
       showToast(error.message || 'Failed to create delegation', 'error');
     }
   };
@@ -179,7 +181,7 @@ export default function WorkflowDelegation() {
       showToast(`Delegation ${!isActive ? 'activated' : 'deactivated'}`, 'success');
       loadData();
     } catch (error: any) {
-      console.error('Error toggling delegation:', error);
+      logError(error, 'medium', { component: 'WorkflowDelegation', action: 'toggleDelegation' });
       showToast(error.message || 'Failed to update delegation', 'error');
     }
   };
@@ -198,7 +200,7 @@ export default function WorkflowDelegation() {
       showToast('Delegation deleted successfully', 'success');
       loadData();
     } catch (error: any) {
-      console.error('Error deleting delegation:', error);
+      logError(error, 'medium', { component: 'WorkflowDelegation', action: 'deleteDelegation' });
       showToast(error.message || 'Failed to delete delegation', 'error');
     }
   };

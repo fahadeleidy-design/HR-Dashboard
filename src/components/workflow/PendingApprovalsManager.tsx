@@ -5,6 +5,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatDate } from '@/lib/formatters';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   Clock, Calendar, DollarSign, CreditCard, AlertTriangle,
   CheckCircle, XCircle, User, ChevronRight, Filter, RefreshCw,
@@ -37,6 +38,7 @@ export function PendingApprovalsManager() {
   const navigate = useNavigate();
   const [requests, setRequests] = useState<PendingRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
   const [filter, setFilter] = useState<'all' | 'leave' | 'loan' | 'advance'>('all');
   const [urgencyFilter, setUrgencyFilter] = useState<'all' | 'overdue' | 'at_risk'>('all');
 
@@ -202,7 +204,7 @@ export function PendingApprovalsManager() {
 
       setRequests(pendingRequests);
     } catch (error) {
-      console.error('Error fetching pending requests:', error);
+      logError(error, 'medium', { component: 'PendingApprovalsManager', action: 'fetchPendingRequests' });
     } finally {
       setLoading(false);
     }

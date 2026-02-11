@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { Plus, Edit2, Trash2, Save, X, BookOpen, Info } from 'lucide-react';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface TrainingProgram {
   id: string;
@@ -41,6 +42,7 @@ export default function TrainingProgramManager({ companyId, programs, onPrograms
     max_participants: 0,
     cost: 0
   });
+  const { logError } = useErrorHandler();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,7 +89,7 @@ export default function TrainingProgramManager({ companyId, programs, onPrograms
       resetForm();
       onProgramsChange();
     } catch (error: any) {
-      console.error('Error saving program:', error);
+      logError(error, 'medium', { component: 'TrainingProgramManager', action: 'saveProgram' });
       showToast(error.message, 'error');
     }
   };
@@ -126,7 +128,7 @@ export default function TrainingProgramManager({ companyId, programs, onPrograms
       );
       onProgramsChange();
     } catch (error: any) {
-      console.error('Error deleting program:', error);
+      logError(error, 'medium', { component: 'TrainingProgramManager', action: 'deleteProgram' });
       showToast(error.message, 'error');
     }
   };

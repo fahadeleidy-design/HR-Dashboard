@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 import { EmployeeDashboard } from '@/components/EmployeeDashboard';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface DashboardStats {
   totalEmployees: number;
@@ -81,6 +82,7 @@ export function Dashboard() {
   const [employmentTypeData, setEmploymentTypeData] = useState<any[]>([]);
   const [monthlyHiresData, setMonthlyHiresData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { logError } = useErrorHandler();
 
   const isEmployeeOnly = userRole?.role === 'employee';
   const hasEmployeeProfile = !!userRole?.employee_id;
@@ -396,7 +398,7 @@ export function Dashboard() {
         setMonthlyHiresData(hireCounts);
       }
     } catch (error) {
-      console.error('Error fetching dashboard stats:', error);
+      logError(error, 'medium', { component: 'Dashboard', action: 'fetchDashboardStats' });
     } finally {
       setLoading(false);
     }

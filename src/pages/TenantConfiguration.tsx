@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useCompany } from '../contexts/CompanyContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   Settings, Palette, Shield, Zap, Bell, Mail, Globe,
   Save, AlertCircle, CheckCircle, Eye
@@ -37,6 +38,7 @@ export default function TenantConfiguration() {
   const [branding, setBranding] = useState<TenantBranding | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { logError } = useErrorHandler();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
@@ -72,7 +74,7 @@ export default function TenantConfiguration() {
         await createDefaultBranding();
       }
     } catch (error) {
-      console.error('Error loading configuration:', error);
+      logError(error, 'medium', { component: 'TenantConfiguration', action: 'loadConfiguration' });
     } finally {
       setLoading(false);
     }

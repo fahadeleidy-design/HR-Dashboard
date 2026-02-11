@@ -4,6 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import FilePreview from './FilePreview';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   BookOpen,
   Plus,
@@ -69,6 +70,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
     duration_minutes: 0,
     is_mandatory: true
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     loadModules();
@@ -86,7 +88,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
       if (error) throw error;
       setTrainingPrograms(data || []);
     } catch (error: any) {
-      console.error('Error loading training programs:', error);
+      logError(error, 'medium', { component: 'TrainingModules', action: 'loadTrainingPrograms' });
     }
   };
 
@@ -102,7 +104,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
       if (error) throw error;
       setModules(data || []);
     } catch (error: any) {
-      console.error('Error loading modules:', error);
+      logError(error, 'medium', { component: 'TrainingModules', action: 'loadModules' });
       showToast(error.message, 'error');
     } finally {
       setLoading(false);
@@ -123,7 +125,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
 
       return fileName;
     } catch (error: any) {
-      console.error('Error uploading file:', error);
+      logError(error, 'medium', { component: 'TrainingModules', action: 'uploadFile' });
       showToast(error.message, 'error');
       return null;
     } finally {
@@ -190,7 +192,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
       resetForm();
       await loadModules();
     } catch (error: any) {
-      console.error('Error saving module:', error);
+      logError(error, 'medium', { component: 'TrainingModules', action: 'saveModule' });
       showToast(error.message, 'error');
     }
   };
@@ -235,7 +237,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
       );
       await loadModules();
     } catch (error: any) {
-      console.error('Error deleting module:', error);
+      logError(error, 'medium', { component: 'TrainingModules', action: 'deleteModule' });
       showToast(error.message, 'error');
     }
   };
@@ -271,7 +273,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
 
       await loadModules();
     } catch (error: any) {
-      console.error('Error reordering modules:', error);
+      logError(error, 'medium', { component: 'TrainingModules', action: 'reorderModules' });
       showToast(error.message, 'error');
     }
   };
@@ -309,7 +311,7 @@ export default function TrainingModules({ programId, companyId, isReadOnly = fal
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch (error: any) {
-      console.error('Error downloading file:', error);
+      logError(error, 'medium', { component: 'TrainingModules', action: 'downloadFile' });
       showToast(error.message, 'error');
     }
   };

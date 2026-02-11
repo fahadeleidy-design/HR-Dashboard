@@ -9,6 +9,7 @@ import {
   DollarSign, FileText, User, CheckSquare, XSquare
 } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface TravelRequest {
   id: string;
@@ -106,6 +107,7 @@ export function Travel() {
     advance_amount: '',
     notes: '',
   });
+  const { logError } = useErrorHandler();
 
   useEffect(() => {
     if (currentCompany) {
@@ -273,7 +275,7 @@ export function Travel() {
 
       await fetchData();
     } catch (error) {
-      console.error('Error creating travel request:', error);
+      logError(error, 'medium', { component: 'Travel', action: 'createTravelRequest' });
       alert('Failed to create travel request. Please try again.');
     } finally {
       setSubmitting(false);

@@ -8,6 +8,7 @@ import { CheckCircle, XCircle, Clock, FileText, DollarSign, Calendar, Filter, Ey
 import { useToast } from '@/contexts/ToastContext';
 import { ApprovalTimeline } from '@/components/ApprovalTimeline';
 import { SLAIndicator } from '@/components/SLAIndicator';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 type RequestType = 'advance' | 'loan' | 'leave' | 'expense_claim' | 'penalty' | 'travel' | 'attendance_request';
 
@@ -61,6 +62,7 @@ export function PendingRequests() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [processing, setProcessing] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const { logError } = useErrorHandler();
   const [selectedRequest, setSelectedRequest] = useState<PendingRequest | null>(null);
   const [slaStatuses, setSlaStatuses] = useState<Map<string, SLAStatus>>(new Map());
 
@@ -95,7 +97,7 @@ export function PendingRequests() {
       if (error) throw error;
       setRequests(data || []);
     } catch (error) {
-      console.error('Error fetching pending requests:', error);
+      logError(error, 'medium', { component: 'PendingRequests', action: 'fetchPendingRequests' });
       showToast('Error loading pending requests', 'error');
     } finally {
       setLoading(false);
@@ -126,7 +128,7 @@ export function PendingRequests() {
 
       setSlaStatuses(statusMap);
     } catch (error) {
-      console.error('Error fetching SLA statuses:', error);
+      logError(error, 'medium', { component: 'PendingRequests', action: 'fetchSLAStatuses' });
     }
   };
 
@@ -187,7 +189,7 @@ export function PendingRequests() {
         showToast(result.error || 'Failed to approve request', 'error');
       }
     } catch (error: any) {
-      console.error('Error approving request:', error);
+      logError(error, 'medium', { component: 'PendingRequests', action: 'approveRequest' });
       showToast(error.message || 'Error approving request', 'error');
     } finally {
       setProcessing(false);
@@ -226,7 +228,7 @@ export function PendingRequests() {
         showToast(result.error || 'Failed to reject request', 'error');
       }
     } catch (error: any) {
-      console.error('Error rejecting request:', error);
+      logError(error, 'medium', { component: 'PendingRequests', action: 'rejectRequest' });
       showToast(error.message || 'Error rejecting request', 'error');
     } finally {
       setProcessing(false);

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
 import { DollarSign, Download, RefreshCw, AlertCircle, CheckCircle, FileBarChart } from 'lucide-react';
@@ -20,6 +21,7 @@ interface GOSISyncLog {
 export function GOSI() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const { logError } = useErrorHandler();
   const [gosiContributions, setGosiContributions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
@@ -48,7 +50,7 @@ export function GOSI() {
 
       setGosiConfigured(!!data && !!data.client_id && !!data.client_secret && !!data.establishment_number);
     } catch (error) {
-      console.error('Error checking GOSI config:', error);
+      logError(error, 'medium', { component: 'GOSI', action: 'checkGOSIConfiguration' });
     }
   };
 
@@ -65,7 +67,7 @@ export function GOSI() {
       if (error) throw error;
       setGosiSyncLogs(data || []);
     } catch (error) {
-      console.error('Error fetching GOSI sync logs:', error);
+      logError(error, 'medium', { component: 'GOSI', action: 'fetchGOSISyncLogs' });
     }
   };
 
@@ -126,7 +128,7 @@ export function GOSI() {
       fetchGOSISyncLogs();
       fetchGOSIContributions();
     } catch (error: any) {
-      console.error('GOSI sync error:', error);
+      logError(error, 'medium', { component: 'GOSI', action: 'handleGOSISync' });
       alert(error.message || 'Failed to sync with GOSI');
 
       await supabase.from('gosi_sync_logs').insert([{
@@ -184,7 +186,7 @@ export function GOSI() {
 
       setGosiContributions(transformed);
     } catch (error) {
-      console.error('Error fetching GOSI contributions:', error);
+      logError(error, 'medium', { component: 'GOSI', action: 'fetchGOSIContributions' });
     } finally {
       setLoading(false);
     }
