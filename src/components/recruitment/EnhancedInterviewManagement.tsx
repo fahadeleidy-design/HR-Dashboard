@@ -187,12 +187,12 @@ export function EnhancedInterviewManagement() {
 
   const renderInterviews = () => (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0">
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 flex-shrink-0"
           >
             <option value="all">All Status</option>
             <option value="scheduled">Scheduled</option>
@@ -203,7 +203,7 @@ export function EnhancedInterviewManagement() {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex-shrink-0 whitespace-nowrap"
         >
           <Plus className="h-5 w-5" />
           Schedule Interview

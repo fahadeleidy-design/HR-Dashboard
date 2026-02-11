@@ -98,9 +98,9 @@ export function CandidateManagement() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-4 flex-1">
-          <div className="relative flex-1 max-w-md">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
+          <div className="relative flex-1 max-w-md min-w-[200px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
             <input
               type="text"
@@ -114,7 +114,7 @@ export function CandidateManagement() {
           <select
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 flex-shrink-0"
           >
             <option value="all">All Status</option>
             <option value="new">New</option>
@@ -128,7 +128,7 @@ export function CandidateManagement() {
 
         <button
           onClick={() => setShowModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex-shrink-0 whitespace-nowrap"
         >
           <Plus className="h-5 w-5" />
           Add Candidate
