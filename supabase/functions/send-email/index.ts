@@ -47,7 +47,23 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const payload: SendEmailRequest = await req.json();
+    const contentType = req.headers.get("Content-Type") || "";
+    if (!contentType.includes("application/json")) {
+      return new Response(
+        JSON.stringify({ error: "Content-Type must be application/json" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let payload: SendEmailRequest;
+    try {
+      payload = await req.json();
+    } catch (parseError) {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON payload" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     const { action } = payload;
 
     switch (action) {
