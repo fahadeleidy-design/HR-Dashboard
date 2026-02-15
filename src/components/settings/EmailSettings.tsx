@@ -42,8 +42,8 @@ export function EmailSettings() {
   const [showPassword, setShowPassword] = useState(false);
   const [queueStats, setQueueStats] = useState<QueueStats | null>(null);
   const [form, setForm] = useState({
-    smtp_host: 'smtpout.secureserver.net',
-    smtp_port: 465,
+    smtp_host: 'smtp.office365.com',
+    smtp_port: 587,
     smtp_secure: true,
     smtp_user: '',
     smtp_pass_encrypted: '',
@@ -279,9 +279,9 @@ export function EmailSettings() {
                 value={form.smtp_host}
                 onChange={(e) => setForm({ ...form, smtp_host: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                placeholder="smtpout.secureserver.net"
+                placeholder="smtp.office365.com"
               />
-              <p className="text-xs text-gray-500 mt-1">GoDaddy default: smtpout.secureserver.net</p>
+              <p className="text-xs text-gray-500 mt-1">Office365 default: smtp.office365.com</p>
             </div>
 
             <div>
@@ -304,7 +304,7 @@ export function EmailSettings() {
                 value={form.smtp_user}
                 onChange={(e) => setForm({ ...form, smtp_user: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
-                placeholder="noreply@yourdomain.com"
+                placeholder="hr@yourdomain.com"
               />
             </div>
 
