@@ -89,35 +89,35 @@ function App() {
                     <Route path="/performance" element={<ProtectedPage><Performance /></ProtectedPage>} />
                     <Route path="/training" element={<ProtectedPage><Training /></ProtectedPage>} />
                     <Route path="/documents" element={<ProtectedPage><Documents /></ProtectedPage>} />
-                    <Route path="/nitaqat" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><Nitaqat /></ProtectedPage>} />
+                    <Route path="/nitaqat" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Nitaqat /></ProtectedPage>} />
                     <Route path="/gosi" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><GOSI /></ProtectedPage>} />
                     <Route path="/vehicles" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Vehicles /></ProtectedPage>} />
-                    <Route path="/gov-docs" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><GovernmentalDocs /></ProtectedPage>} />
+                    <Route path="/gov-docs" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><GovernmentalDocs /></ProtectedPage>} />
                     <Route path="/real-estate" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><RealEstate /></ProtectedPage>} />
                     <Route path="/contracts" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Contracts /></ProtectedPage>} />
-                    <Route path="/employee-contracts" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><EmployeeContracts /></ProtectedPage>} />
+                    <Route path="/employee-contracts" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><EmployeeContracts /></ProtectedPage>} />
                     <Route path="/insurance" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Insurance /></ProtectedPage>} />
                     <Route path="/travel" element={<ProtectedPage><Travel /></ProtectedPage>} />
                     <Route path="/expenses" element={<ProtectedPage><Expenses /></ProtectedPage>} />
-                    <Route path="/visas" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><Visas /></ProtectedPage>} />
+                    <Route path="/visas" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Visas /></ProtectedPage>} />
                     <Route path="/loans" element={<ProtectedPage><Loans /></ProtectedPage>} />
                     <Route path="/advances" element={<ProtectedPage><Advances /></ProtectedPage>} />
                     <Route path="/gov-subscriptions" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><GovSubscriptions /></ProtectedPage>} />
-                    <Route path="/end-of-service" element={<ProtectedPage><EndOfService /></ProtectedPage>} />
-                    <Route path="/audit-log" element={<ProtectedPage allowedRoles={['super_admin']}><AuditLog /></ProtectedPage>} />
-                    <Route path="/compliance" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><ComplianceDashboard /></ProtectedPage>} />
+                    <Route path="/end-of-service" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><EndOfService /></ProtectedPage>} />
+                    <Route path="/audit-log" element={<ProtectedPage allowedRoles={['super_admin', 'finance']}><AuditLog /></ProtectedPage>} />
+                    <Route path="/compliance" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><ComplianceDashboard /></ProtectedPage>} />
                     <Route path="/salary-scale" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><SalaryScale /></ProtectedPage>} />
                     <Route path="/recruitment" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Recruitment /></ProtectedPage>} />
-                    <Route path="/managers" element={<ProtectedPage allowedRoles={['hr', 'super_admin']}><ManagerAssignment /></ProtectedPage>} />
+                    <Route path="/managers" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><ManagerAssignment /></ProtectedPage>} />
                     <Route path="/tenant-administration" element={<ProtectedPage allowedRoles={['super_admin']}><TenantAdministration /></ProtectedPage>} />
                     <Route path="/tenant-configuration" element={<ProtectedPage allowedRoles={['super_admin', 'admin']}><TenantConfiguration /></ProtectedPage>} />
-                    <Route path="/cross-company-analytics" element={<ProtectedPage allowedRoles={['super_admin']}><CrossCompanyAnalytics /></ProtectedPage>} />
+                    <Route path="/cross-company-analytics" element={<ProtectedPage allowedRoles={['super_admin', 'finance']}><CrossCompanyAnalytics /></ProtectedPage>} />
                     <Route path="/permissions" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'tenant_admin']}><PermissionsManagement /></ProtectedPage>} />
-                    <Route path="/workflow" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager']}><WorkflowManagement /></ProtectedPage>} />
-                    <Route path="/global-hr" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager']}><GlobalHR /></ProtectedPage>} />
+                    <Route path="/workflow" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance']}><WorkflowManagement /></ProtectedPage>} />
+                    <Route path="/global-hr" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager', 'finance']}><GlobalHR /></ProtectedPage>} />
                     <Route path="/skills" element={<ProtectedPage><SkillsManagement /></ProtectedPage>} />
                     <Route path="/penalties" element={<ProtectedPage allowedRoles={['hr', 'finance', 'admin', 'super_admin']}><Penalties /></ProtectedPage>} />
-                    <Route path="/settings" element={<ProtectedPage allowedRoles={['super_admin', 'hr']}><Settings /></ProtectedPage>} />
+                    <Route path="/settings" element={<ProtectedPage allowedRoles={['super_admin', 'hr', 'finance']}><Settings /></ProtectedPage>} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </Suspense>
