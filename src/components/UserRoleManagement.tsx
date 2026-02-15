@@ -51,7 +51,7 @@ const ROLES = [
   {
     value: 'finance',
     label: 'Finance',
-    description: 'Payroll, loans, advances, expenses, approve financial operations',
+    description: 'Full financial operations: payroll, loans, advances, expenses, penalties, GOSI, salary scale, end of service, contracts, insurance, audit log, and financial approvals',
     color: 'green'
   },
   {

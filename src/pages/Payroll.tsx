@@ -116,6 +116,7 @@ export function Payroll() {
   const { logError, logActivity } = useErrorHandler();
   const [searchParams] = useSearchParams();
   const employeeIdParam = searchParams.get('employee_id');
+  const isFinanceOrAdmin = ['finance', 'hr', 'admin', 'super_admin'].includes(userRole?.role || '');
   const isEmployee = userRole?.role === 'employee';
   const hasEmployeeProfile = !!userRole?.employee_id;
   const [view, setView] = useState<View>(isEmployee ? 'items' : 'batches');

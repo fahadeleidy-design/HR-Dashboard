@@ -221,7 +221,7 @@ export interface UserRole {
   id: string;
   user_id: string;
   employee_id?: string;
-  role: 'super_admin' | 'hr_admin' | 'hr_manager' | 'manager' | 'employee';
+  role: 'super_admin' | 'admin' | 'hr' | 'hr_admin' | 'hr_manager' | 'finance' | 'manager' | 'employee';
   company_id: string;
   permissions: Record<string, any>;
   created_at: string;

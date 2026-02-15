@@ -129,7 +129,7 @@ export default function Penalties() {
 
   const isHR = ['hr', 'admin', 'super_admin'].includes(userRole?.role || '');
   const isFinance = ['finance', 'admin', 'super_admin'].includes(userRole?.role || '');
-  const canCreate = isHR;
+  const canCreate = isHR || isFinance;
   const canApprove = isFinance;
 
   const stats = {

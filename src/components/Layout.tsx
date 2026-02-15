@@ -60,7 +60,9 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const isEmployee = userRole?.role === 'employee';
+  const isFinanceUser = userRole?.role === 'finance';
   const canApprovePendingRequests = ['manager', 'hr', 'finance', 'admin', 'super_admin'].includes(userRole?.role || '');
+  const hasFullAccess = ['super_admin', 'hr', 'finance', 'admin'].includes(userRole?.role || '');
 
   const navSections = [
     {
@@ -68,7 +70,7 @@ export function Layout({ children }: LayoutProps) {
       items: [
         { path: '/', icon: LayoutDashboard, label: t.nav.dashboard },
         { path: '/employees', icon: Users, label: t.nav.employees },
-        ...(!isEmployee ? [
+        ...(hasFullAccess || !isEmployee ? [
           { path: '/recruitment', icon: UserPlus, label: t.nav.recruitment || 'Recruitment' },
           { path: '/managers', icon: UserCheck, label: t.nav.managers || 'Manager Assignment' },
           { path: '/salary-scale', icon: DollarSign, label: t.nav.salaryScale || 'Salary Scale' },
@@ -89,7 +91,7 @@ export function Layout({ children }: LayoutProps) {
         { path: '/loans', icon: CreditCard, label: t.nav.loans },
         { path: '/advances', icon: Receipt, label: t.nav.advances },
         { path: '/expenses', icon: Receipt, label: t.nav.expenses },
-        ...(!isEmployee ? [
+        ...(hasFullAccess || !isEmployee ? [
           { path: '/penalties', icon: AlertTriangle, label: language === 'ar' ? 'الجزاءات' : 'Penalties' },
           { path: '/end-of-service', icon: Calculator, label: t.nav.endOfService },
         ] : []),
@@ -103,7 +105,7 @@ export function Layout({ children }: LayoutProps) {
         { path: '/documents', icon: FileText, label: t.nav.documents },
       ]
     },
-    ...(!isEmployee ? [
+    ...(hasFullAccess || !isEmployee ? [
       {
         title: t.nav.complianceGov,
         items: [
