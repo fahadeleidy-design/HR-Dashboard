@@ -20,13 +20,12 @@ import {
   Eye,
   AlertCircle,
   Send,
-  MoreVertical,
-  Edit,
   Trash2
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { PayslipViewer } from '@/components/PayslipViewer';
 import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { PayrollBatchCreator } from '@/components/payroll/PayrollBatchCreator';
 import { usePagination } from '@/hooks/usePagination';
 import { Pagination } from '@/components/ui/Pagination';
 
@@ -129,7 +128,6 @@ export function Payroll() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [advances, setAdvances] = useState<Advance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [showPayslip, setShowPayslip] = useState(false);
   const [selectedPayrollItem, setSelectedPayrollItem] = useState<{ itemId: string; employeeId: string } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -267,210 +265,6 @@ export function Payroll() {
     }
   };
 
-  const getEmployeeGOSIRates = async (employeeId: string) => {
-    if (!currentCompany) return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
-
-    try {
-      const { data, error } = await supabase.rpc('get_employee_gosi_rates', {
-        p_employee_id: employeeId,
-        p_company_id: currentCompany.id,
-      });
-
-      if (error) {
-        logError(error, 'medium', { component: 'Payroll', action: 'fetchGOSIRates' });
-        return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
-      }
-
-      if (data && data.length > 0) {
-        return data[0];
-      }
-
-      return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
-    } catch (error) {
-      logError(error, 'medium', { component: 'Payroll', action: 'getEmployeeGOSIRates' });
-      return { employee_rate: 0, employer_rate: 0, max_wage_ceiling: 45000 };
-    }
-  };
-
-  const calculateGOSI = async (basicSalary: number, housingAllowance: number, employeeId: string) => {
-    const rates = await getEmployeeGOSIRates(employeeId);
-    const gosiBase = Math.min(basicSalary + housingAllowance, rates.max_wage_ceiling);
-
-    return {
-      employee: gosiBase * Number(rates.employee_rate),
-      employer: gosiBase * Number(rates.employer_rate),
-    };
-  };
-
-  const createBatch = async () => {
-    if (!currentCompany) return;
-
-    const month = selectedMonth;
-    const periodStart = new Date(month + '-01');
-    const periodEnd = new Date(periodStart.getFullYear(), periodStart.getMonth() + 1, 0);
-
-    try {
-      const { data: existingBatch } = await supabase
-        .from('payroll_batches')
-        .select('id')
-        .eq('company_id', currentCompany.id)
-        .eq('month', month)
-        .maybeSingle();
-
-      if (existingBatch) {
-        showToast('A payroll batch already exists for this month.', 'warning');
-        return;
-      }
-
-      const { data: batch, error: batchError } = await supabase
-        .from('payroll_batches')
-        .insert([{
-          company_id: currentCompany.id,
-          month: month,
-          period_start: periodStart.toISOString().split('T')[0],
-          period_end: periodEnd.toISOString().split('T')[0],
-          status: 'draft'
-        }])
-        .select()
-        .single();
-
-      if (batchError) throw batchError;
-
-      const { data: latestPayroll } = await supabase
-        .from('payroll')
-        .select('*')
-        .eq('company_id', currentCompany.id)
-        .order('effective_from', { ascending: false });
-
-      const employeeLatestSalaries = new Map();
-      latestPayroll?.forEach(p => {
-        if (!employeeLatestSalaries.has(p.employee_id)) {
-          employeeLatestSalaries.set(p.employee_id, p);
-        }
-      });
-
-      const periodStartStr = periodStart.toISOString().split('T')[0];
-      const periodEndStr = periodEnd.toISOString().split('T')[0];
-      const daysInMonth = periodEnd.getDate();
-
-      const { data: approvedLeaves } = await supabase
-        .from('leave_requests')
-        .select('employee_id, total_days, leave_type:leave_types!leave_requests_leave_type_id_fkey(paid)')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'approved')
-        .gte('start_date', periodStartStr)
-        .lte('end_date', periodEndStr);
-
-      const unpaidLeaveMap: Record<string, number> = {};
-      (approvedLeaves || []).forEach((l: any) => {
-        if (l.leave_type && !l.leave_type.paid) {
-          unpaidLeaveMap[l.employee_id] = (unpaidLeaveMap[l.employee_id] || 0) + (l.total_days || 0);
-        }
-      });
-
-      const { data: approvedPenalties } = await supabase
-        .from('penalties')
-        .select('employee_id, deduction_amount')
-        .eq('company_id', currentCompany.id)
-        .eq('status', 'approved')
-        .eq('payroll_applied', false);
-
-      const penaltyMap: Record<string, number> = {};
-      (approvedPenalties || []).forEach((p: any) => {
-        penaltyMap[p.employee_id] = (penaltyMap[p.employee_id] || 0) + (p.deduction_amount || 0);
-      });
-
-      const payrollItemsToInsert = [];
-      for (const emp of employees) {
-        const latestSalary = employeeLatestSalaries.get(emp.id);
-        const basicSalary = latestSalary?.basic_salary || 0;
-        const housingAllowance = latestSalary?.housing_allowance || 0;
-        const transportationAllowance = latestSalary?.transportation_allowance || 0;
-        const otherAllowances = latestSalary?.other_allowances || 0;
-
-        const loan = loans.find(l => l.employee_id === emp.id && l.status === 'active');
-        const advance = advances.find(a => a.employee_id === emp.id && a.status === 'approved');
-
-        const unpaidDays = unpaidLeaveMap[emp.id] || 0;
-        const penaltyDeduction = penaltyMap[emp.id] || 0;
-        const dailyRate = basicSalary / daysInMonth;
-        const absenceDeduction = dailyRate * unpaidDays;
-
-        const totalEarnings = basicSalary + housingAllowance + transportationAllowance + otherAllowances;
-        const gosi = await calculateGOSI(basicSalary, housingAllowance, emp.id);
-        const loanDeduction = loan?.monthly_installment || 0;
-        const advanceDeduction = advance?.deduction_amount || 0;
-        const totalDeductions = gosi.employee + loanDeduction + advanceDeduction + absenceDeduction + penaltyDeduction;
-        const netSalary = totalEarnings - totalDeductions;
-
-        payrollItemsToInsert.push({
-          batch_id: batch.id,
-          employee_id: emp.id,
-          company_id: currentCompany.id,
-          basic_salary: basicSalary,
-          housing_allowance: housingAllowance,
-          transportation_allowance: transportationAllowance,
-          other_allowances: otherAllowances,
-          total_earnings: totalEarnings,
-          gosi_employee: gosi.employee,
-          gosi_employer: gosi.employer,
-          loan_deduction: loanDeduction,
-          advance_deduction: advanceDeduction,
-          absence_deduction: absenceDeduction,
-          other_deductions: penaltyDeduction,
-          total_deductions: totalDeductions,
-          net_salary: netSalary,
-          days_worked: daysInMonth - unpaidDays,
-          absence_days: unpaidDays,
-          payment_method: 'wps',
-          payment_status: 'pending'
-        });
-      }
-
-      if (payrollItemsToInsert.length > 0) {
-        const { error: itemsError } = await supabase
-          .from('payroll_items')
-          .insert(payrollItemsToInsert);
-
-        if (itemsError) throw itemsError;
-      }
-
-      const totalGross = payrollItemsToInsert.reduce((sum, item) => sum + item.total_earnings, 0);
-      const totalNet = payrollItemsToInsert.reduce((sum, item) => sum + item.net_salary, 0);
-      const totalDed = payrollItemsToInsert.reduce((sum, item) => sum + item.total_deductions, 0);
-
-      const { data: updatedBatch } = await supabase
-        .from('payroll_batches')
-        .update({
-          total_employees: payrollItemsToInsert.length,
-          total_gross: totalGross,
-          total_net: totalNet,
-          total_deductions: totalDed
-        })
-        .eq('id', batch.id)
-        .select()
-        .single();
-
-      if (approvedPenalties && approvedPenalties.length > 0) {
-        await supabase
-          .from('penalties')
-          .update({ payroll_applied: true, payroll_applied_at: new Date().toISOString() })
-          .eq('company_id', currentCompany.id)
-          .eq('status', 'approved')
-          .eq('payroll_applied', false);
-      }
-
-      showToast(`Payroll batch created successfully with ${payrollItemsToInsert.length} employees!`, 'success');
-      logActivity('payroll_batch_created', { month, employeeCount: payrollItemsToInsert.length });
-      await fetchBatches();
-      setSelectedBatch(updatedBatch || batch);
-      await fetchPayrollItems(batch.id);
-      setView('items');
-    } catch (error: any) {
-      logError(error, 'medium', { component: 'Payroll', action: 'createBatch' });
-      showToast('Failed to create payroll batch: ' + error.message, 'error');
-    }
-  };
 
   const updateBatchStatus = async (batchId: string, status: string) => {
     try {
@@ -1061,52 +855,22 @@ export function Payroll() {
       )}
 
       {!isEmployee && view === 'create' && (
-        <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New Payroll Batch</h2>
-
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Select Month
-              </label>
-              <input
-                type="month"
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-blue-900 mb-2">Batch Information</h3>
-              <div className="text-sm text-blue-800 space-y-1">
-                <p>Active Employees: {employees.length}</p>
-                <p>Active Loans: {loans.length}</p>
-                <p>Pending Advances: {advances.length}</p>
-                <p className="mt-3 text-xs text-blue-600">
-                  This will create a payroll batch with all active employees using their latest salary information.
-                  Loans and advances will be automatically deducted.
-                </p>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setView('batches')}
-                className="px-6 py-2 border border-gray-300 rounded-md hover:bg-gray-100 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={createBatch}
-                disabled={!selectedMonth || employees.length === 0}
-                className="px-6 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                Create Batch
-              </button>
-            </div>
-          </div>
-        </div>
+        <PayrollBatchCreator
+          onBack={() => setView('batches')}
+          onBatchCreated={async (batchId) => {
+            await fetchBatches();
+            const { data: newBatch } = await supabase
+              .from('payroll_batches')
+              .select('*')
+              .eq('id', batchId)
+              .maybeSingle();
+            if (newBatch) {
+              setSelectedBatch(newBatch);
+              await fetchPayrollItems(batchId);
+            }
+            setView('items');
+          }}
+        />
       )}
 
       {!isEmployee && view === 'analytics' && (
