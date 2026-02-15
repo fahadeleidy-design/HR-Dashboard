@@ -113,21 +113,26 @@ async function sendViaSmtp(
   html: string,
   text: string
 ) {
+  const port = Number(config.smtp_port) || 587;
+  const useDirectTls = port === 465;
+
   const transporter = nodemailer.createTransport({
     host: config.smtp_host,
-    port: config.smtp_port,
-    secure: config.smtp_secure,
+    port,
+    secure: useDirectTls,
     auth: {
       user: config.smtp_user,
       pass: config.smtp_pass_encrypted,
     },
     tls: {
-      ciphers: 'SSLv3',
       rejectUnauthorized: false,
     },
+    connectionTimeout: 15000,
+    greetingTimeout: 15000,
+    socketTimeout: 30000,
   });
 
-  const mailOptions = {
+  await transporter.sendMail({
     from: config.default_from_name
       ? `"${config.default_from_name}" <${config.default_from_email}>`
       : config.default_from_email,
@@ -135,9 +140,7 @@ async function sendViaSmtp(
     subject,
     text: text || "Please view this email in an HTML-capable client.",
     html: html || undefined,
-  };
-
-  await transporter.sendMail(mailOptions);
+  });
 }
 
 async function handleSendDirect(supabase: any, payload: SendEmailRequest) {
