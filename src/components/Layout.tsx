@@ -1,8 +1,9 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/lib/supabase';
 import {
   LayoutDashboard,
   Users,
@@ -40,7 +41,6 @@ import {
   Lock,
   Wallet,
 } from 'lucide-react';
-import { useState } from 'react';
 import { NotificationCenter } from './NotificationCenter';
 
 interface LayoutProps {
@@ -55,8 +55,35 @@ export function Layout({ children }: LayoutProps) {
   const location = useLocation();
   const [showCompanyMenu, setShowCompanyMenu] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [badgeCounts, setBadgeCounts] = useState<Record<string, number>>({});
 
   const isPrivilegedUser = ['super_admin', 'hr', 'finance'].includes(userRole?.role || '');
+
+  useEffect(() => {
+    if (!['finance', 'super_admin'].includes(userRole?.role || '')) return;
+    const cIds = isConsolidatedView ? companies.map(c => c.id) : currentCompany ? [currentCompany.id] : [];
+    if (cIds.length === 0) return;
+
+    const fetchBadges = async () => {
+      const [loansRes, advancesRes, eosRes, expensesRes, penaltiesRes] = await Promise.all([
+        supabase.from('loans').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'hr_approved'),
+        supabase.from('salary_advances').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'hr_approved'),
+        supabase.from('eos_calculations').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'draft'),
+        supabase.from('expense_claims').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'submitted'),
+        supabase.from('penalties').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'pending_finance'),
+      ]);
+      setBadgeCounts({
+        '/loans': loansRes.count || 0,
+        '/advances': advancesRes.count || 0,
+        '/end-of-service': eosRes.count || 0,
+        '/expenses': expensesRes.count || 0,
+        '/penalties': penaltiesRes.count || 0,
+      });
+    };
+    fetchBadges();
+    const interval = setInterval(fetchBadges, 60000);
+    return () => clearInterval(interval);
+  }, [userRole?.role, currentCompany?.id, isConsolidatedView, companies]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -323,6 +350,13 @@ export function Layout({ children }: LayoutProps) {
                         )}
                         <Icon className={`relative h-5 w-5 transition-transform group-hover:scale-110 group-hover:rotate-3 ${active ? 'text-white' : 'text-gray-400 group-hover:text-primary-600'}`} />
                         <span className={`relative font-medium text-sm ${active ? 'text-white' : 'group-hover:text-primary-700'} flex-1 ${isRTL ? 'text-right' : 'text-left'}`}>{item.label}</span>
+                        {(badgeCounts[item.path] || 0) > 0 && (
+                          <span className={`relative min-w-[20px] h-5 px-1.5 flex items-center justify-center text-[10px] font-bold rounded-full ${
+                            active ? 'bg-white text-primary-700' : 'bg-red-500 text-white'
+                          }`}>
+                            {badgeCounts[item.path]}
+                          </span>
+                        )}
                         {active && (
                           <div className={`absolute ${isRTL ? 'left-0' : 'right-0'} top-1/2 -translate-y-1/2 h-8 w-1 bg-white rounded-full shadow-lg`}></div>
                         )}

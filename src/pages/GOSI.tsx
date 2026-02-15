@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useToast } from '@/contexts/ToastContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatInteger } from '@/lib/formatters';
-import { DollarSign, Download, RefreshCw, AlertCircle, CheckCircle, FileBarChart } from 'lucide-react';
+import { DollarSign, Download, RefreshCw, AlertCircle, CheckCircle, FileBarChart, TrendingUp, Banknote } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import * as XLSX from 'xlsx';
 
 interface GOSISyncLog {
@@ -21,6 +24,8 @@ interface GOSISyncLog {
 export function GOSI() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
+  const { showToast } = useToast();
+  const { userRole } = useAuth();
   const { logError } = useErrorHandler();
   const [gosiContributions, setGosiContributions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -30,6 +35,8 @@ export function GOSI() {
   const [gosiSyncLogs, setGosiSyncLogs] = useState<GOSISyncLog[]>([]);
   const [showSyncLogs, setShowSyncLogs] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
+  const [monthlyTrend, setMonthlyTrend] = useState<any[]>([]);
+  const [showTrend, setShowTrend] = useState(false);
 
   useEffect(() => {
     if (currentCompany) {
@@ -80,7 +87,7 @@ export function GOSI() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (!session) {
-        alert('Please log in to sync with GOSI');
+        showToast({ type: 'warning', title: language === 'ar' ? 'يرجى تسجيل الدخول' : 'Please log in to sync with GOSI' });
         return;
       }
 
@@ -115,7 +122,7 @@ export function GOSI() {
       }
 
       setSyncResult(result);
-      alert(result.message || 'GOSI sync completed successfully!');
+      showToast({ type: 'success', title: result.message || (language === 'ar' ? 'تمت مزامنة GOSI بنجاح' : 'GOSI sync completed successfully!') });
 
       await supabase.from('gosi_sync_logs').insert([{
         company_id: currentCompany.id,
@@ -129,7 +136,7 @@ export function GOSI() {
       fetchGOSIContributions();
     } catch (error: any) {
       logError(error, 'medium', { component: 'GOSI', action: 'handleGOSISync' });
-      alert(error.message || 'Failed to sync with GOSI');
+      showToast({ type: 'error', title: error.message || (language === 'ar' ? 'فشل مزامنة GOSI' : 'Failed to sync with GOSI') });
 
       await supabase.from('gosi_sync_logs').insert([{
         company_id: currentCompany.id,
@@ -192,6 +199,45 @@ export function GOSI() {
     }
   };
 
+  const fetchMonthlyTrend = async () => {
+    if (!currentCompany) return;
+    try {
+      const months = [];
+      const now = new Date();
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push({ year: d.getFullYear(), month: d.getMonth() + 1, label: d.toLocaleString(language === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', year: 'numeric' }) });
+      }
+
+      const trendData = [];
+      for (const m of months) {
+        const startDate = `${m.year}-${String(m.month).padStart(2, '0')}-01`;
+        const nextMonth = m.month === 12 ? 1 : m.month + 1;
+        const nextYear = m.month === 12 ? m.year + 1 : m.year;
+        const endDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`;
+
+        const { data } = await supabase
+          .from('payroll')
+          .select('gosi_employee, gosi_employer')
+          .eq('company_id', currentCompany.id)
+          .gte('effective_from', startDate)
+          .lt('effective_from', endDate);
+
+        const empTotal = data?.reduce((s, r) => s + (r.gosi_employee || 0), 0) || 0;
+        const errTotal = data?.reduce((s, r) => s + (r.gosi_employer || 0), 0) || 0;
+        trendData.push({
+          month: m.label,
+          [language === 'ar' ? 'مساهمة الموظف' : 'Employee']: empTotal,
+          [language === 'ar' ? 'مساهمة صاحب العمل' : 'Employer']: errTotal,
+        });
+      }
+      setMonthlyTrend(trendData);
+      setShowTrend(true);
+    } catch (error) {
+      logError(error, 'medium', { component: 'GOSI', action: 'fetchMonthlyTrend' });
+    }
+  };
+
   const handleExportGOSI = () => {
     const exportData = gosiContributions.map((contrib) => ({
       'Employee Number': contrib.employee.employee_number,
@@ -223,12 +269,37 @@ export function GOSI() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">GOSI Contributions</h1>
-          <p className="text-gray-600 mt-1">General Organization for Social Insurance tracking and reporting</p>
+      <div className={`flex justify-between items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
+        <div className={isRTL ? 'text-right' : 'text-left'}>
+          <h1 className="text-3xl font-bold text-gray-900">{language === 'ar' ? 'مساهمات التأمينات الاجتماعية' : 'GOSI Contributions'}</h1>
+          <p className="text-gray-600 mt-1">{language === 'ar' ? 'تتبع وتقارير المؤسسة العامة للتأمينات الاجتماعية' : 'General Organization for Social Insurance tracking and reporting'}</p>
         </div>
+        <button
+          onClick={fetchMonthlyTrend}
+          className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+        >
+          <TrendingUp className="h-4 w-4" />
+          {language === 'ar' ? 'الاتجاه الشهري' : '6-Month Trend'}
+        </button>
       </div>
+
+      {showTrend && monthlyTrend.length > 0 && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+            {language === 'ar' ? 'اتجاه المساهمات الشهرية' : 'Monthly Contribution Trend'}
+          </h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={monthlyTrend}>
+              <XAxis dataKey="month" />
+              <YAxis />
+              <Tooltip formatter={(value: number) => `SAR ${value.toLocaleString()}`} />
+              <Legend />
+              <Bar dataKey={language === 'ar' ? 'مساهمة الموظف' : 'Employee'} fill="#3B82F6" stackId="a" />
+              <Bar dataKey={language === 'ar' ? 'مساهمة صاحب العمل' : 'Employer'} fill="#10B981" stackId="a" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-6 border-b border-gray-200">
@@ -370,24 +441,24 @@ export function GOSI() {
           <div className="flex items-center space-x-4">
             <DollarSign className="h-12 w-12 text-blue-600" />
             <div>
-              <p className="text-sm text-gray-600">Total GOSI</p>
-              <p className="text-xl font-bold text-gray-900">SAR {totalGOSI.toLocaleString()}</p>
+              <p className="text-sm text-gray-600">{language === 'ar' ? 'إجمالي التأمينات' : 'Total GOSI'}</p>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(totalGOSI, language)}</p>
             </div>
           </div>
 
           <div className="flex items-center space-x-4">
             <DollarSign className="h-12 w-12 text-green-600" />
             <div>
-              <p className="text-sm text-gray-600">Employee Contribution</p>
-              <p className="text-xl font-bold text-gray-900">SAR {employeeGOSI.toLocaleString()}</p>
+              <p className="text-sm text-gray-600">{language === 'ar' ? 'مساهمة الموظف' : 'Employee Contribution'}</p>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(employeeGOSI, language)}</p>
             </div>
           </div>
 
           <div className="flex items-center space-x-4">
             <DollarSign className="h-12 w-12 text-orange-600" />
             <div>
-              <p className="text-sm text-gray-600">Employer Contribution</p>
-              <p className="text-xl font-bold text-gray-900">SAR {employerGOSI.toLocaleString()}</p>
+              <p className="text-sm text-gray-600">{language === 'ar' ? 'مساهمة صاحب العمل' : 'Employer Contribution'}</p>
+              <p className="text-xl font-bold text-gray-900">{formatCurrency(employerGOSI, language)}</p>
             </div>
           </div>
         </div>

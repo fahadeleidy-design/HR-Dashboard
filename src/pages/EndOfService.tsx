@@ -4,8 +4,10 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/contexts/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
+import { useAuth } from '@/contexts/AuthContext';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
-import { Calculator, Plus, FileText, CheckCircle, XCircle, Clock, AlertCircle, DollarSign, Calendar, User } from 'lucide-react';
+import { Calculator, Plus, FileText, CheckCircle, XCircle, Clock, AlertCircle, DollarSign, Calendar, User, Download, Banknote } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { format, differenceInYears, differenceInMonths, differenceInDays } from 'date-fns';
 
 interface Employee {
@@ -65,6 +67,7 @@ export function EndOfService() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
   const { showToast } = useToast();
+  const { userRole } = useAuth();
   const { logError, logActivity } = useErrorHandler();
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [calculations, setCalculations] = useState<EOSCalculation[]>([]);
@@ -367,6 +370,56 @@ export function EndOfService() {
     }
   };
 
+  const handleStatusUpdate = async (calcId: string, newStatus: string) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const updateData: any = { status: newStatus };
+      if (newStatus === 'approved') {
+        updateData.approved_by = userData.user?.id;
+        updateData.approved_at = new Date().toISOString();
+      }
+      if (newStatus === 'paid') {
+        updateData.paid_by = userData.user?.id;
+        updateData.paid_at = new Date().toISOString();
+      }
+
+      const { error } = await supabase
+        .from('end_of_service_calculations')
+        .update(updateData)
+        .eq('id', calcId);
+
+      if (error) throw error;
+      showToast({ type: 'success', title: language === 'ar' ? 'تم تحديث الحالة' : 'Status updated' });
+      logActivity('eos_status_updated', { calculationId: calcId, newStatus });
+      loadCalculations();
+    } catch (error: any) {
+      logError(error, 'medium', { component: 'EndOfService', action: 'updateStatus' });
+      showToast({ type: 'error', title: error.message });
+    }
+  };
+
+  const handleExport = () => {
+    const exportData = calculations.map(calc => ({
+      [language === 'ar' ? 'الموظف' : 'Employee']: calc.employee_name,
+      [language === 'ar' ? 'الرقم الوظيفي' : 'Code']: calc.employee_code,
+      [language === 'ar' ? 'تاريخ الإنهاء' : 'Termination Date']: calc.termination_date,
+      [language === 'ar' ? 'سنوات الخدمة' : 'Service Years']: calc.total_service_years,
+      [language === 'ar' ? 'المبلغ الإجمالي' : 'Gross Amount']: calc.gross_benefit_amount,
+      [language === 'ar' ? 'خصم القروض' : 'Loans Deduction']: calc.loans_deduction,
+      [language === 'ar' ? 'خصم السلف' : 'Advances Deduction']: calc.advances_deduction,
+      [language === 'ar' ? 'صافي المبلغ' : 'Net Amount']: calc.net_benefit_amount,
+      [language === 'ar' ? 'الحالة' : 'Status']: calc.status,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'EOS');
+    XLSX.writeFile(wb, `eos_calculations_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast({ type: 'success', title: language === 'ar' ? 'تم تصدير التقرير' : 'Report exported' });
+  };
+
+  const isFinanceOrAdmin = userRole?.role && ['finance', 'super_admin'].includes(userRole.role);
+
   const filteredCalculations = filterStatus === 'all'
     ? calculations
     : calculations.filter(c => c.status === filterStatus);
@@ -394,13 +447,22 @@ export function EndOfService() {
           </h1>
           <p className={`text-gray-600 mt-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.endOfService.subtitle}</p>
         </div>
-        <button
-          onClick={() => setShowCalculator(!showCalculator)}
-          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
-        >
-          <Plus className="h-5 w-5" />
-          {t.endOfService.newCalculation}
-        </button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <button
+            onClick={handleExport}
+            className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
+            <Download className="h-5 w-5" />
+            {t.common.export}
+          </button>
+          <button
+            onClick={() => setShowCalculator(!showCalculator)}
+            className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
+            <Plus className="h-5 w-5" />
+            {t.endOfService.newCalculation}
+          </button>
+        </div>
       </div>
 
       {showCalculator && (
@@ -651,16 +713,19 @@ export function EndOfService() {
                 <th className={`px-6 py-3 ${isRTL ? 'text-left' : 'text-right'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{t.endOfService.grossAmount}</th>
                 <th className={`px-6 py-3 ${isRTL ? 'text-left' : 'text-right'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{t.endOfService.netAmount}</th>
                 <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{t.endOfService.status}</th>
+                {isFinanceOrAdmin && (
+                  <th className={`px-6 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase tracking-wider`}>{language === 'ar' ? 'إجراءات' : 'Actions'}</th>
+                )}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">{t.endOfService.loading}</td>
+                  <td colSpan={isFinanceOrAdmin ? 7 : 6} className="px-6 py-8 text-center text-gray-500">{t.endOfService.loading}</td>
                 </tr>
               ) : filteredCalculations.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  <td colSpan={isFinanceOrAdmin ? 7 : 6} className="px-6 py-8 text-center text-gray-500">
                     <FileText className="h-12 w-12 mx-auto mb-2 text-gray-400" />
                     {t.endOfService.noCalculationsFound}
                   </td>
@@ -689,6 +754,42 @@ export function EndOfService() {
                     <td className="px-6 py-4">
                       {getStatusBadge(calc.status)}
                     </td>
+                    {isFinanceOrAdmin && (
+                      <td className="px-6 py-4">
+                        <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                          {calc.status === 'draft' && (
+                            <button
+                              onClick={() => handleStatusUpdate(calc.id, 'approved')}
+                              className="flex items-center gap-1 px-3 py-1 text-xs font-medium bg-green-50 text-green-700 rounded-lg hover:bg-green-100 transition-colors"
+                              title={language === 'ar' ? 'موافقة' : 'Approve'}
+                            >
+                              <CheckCircle className="h-3.5 w-3.5" />
+                              {language === 'ar' ? 'موافقة' : 'Approve'}
+                            </button>
+                          )}
+                          {calc.status === 'approved' && (
+                            <button
+                              onClick={() => handleStatusUpdate(calc.id, 'paid')}
+                              className="flex items-center gap-1 px-3 py-1 text-xs font-medium bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors"
+                              title={language === 'ar' ? 'تم الدفع' : 'Mark as Paid'}
+                            >
+                              <Banknote className="h-3.5 w-3.5" />
+                              {language === 'ar' ? 'تم الدفع' : 'Mark Paid'}
+                            </button>
+                          )}
+                          {calc.status === 'draft' && (
+                            <button
+                              onClick={() => handleStatusUpdate(calc.id, 'rejected')}
+                              className="flex items-center gap-1 px-3 py-1 text-xs font-medium bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                              title={language === 'ar' ? 'رفض' : 'Reject'}
+                            >
+                              <XCircle className="h-3.5 w-3.5" />
+                              {language === 'ar' ? 'رفض' : 'Reject'}
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

@@ -4,7 +4,8 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { supabase } from '@/lib/supabase';
-import { Plus, DollarSign, Clock, CheckCircle, XCircle, Edit, Trash2, Eye, Users } from 'lucide-react';
+import { Plus, DollarSign, Clock, CheckCircle, XCircle, Edit, Trash2, Eye, Users, Download, Search, Banknote } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
@@ -75,6 +76,10 @@ export function Advances() {
   const [selectedAdvanceId, setSelectedAdvanceId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [rejectingAdvanceId, setRejectingAdvanceId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
   const [formData, setFormData] = useState({
     employee_id: '',
@@ -83,7 +88,16 @@ export function Advances() {
     notes: ''
   });
 
-  const { sortedData, sortConfig, requestSort } = useSortableData(advances);
+  const filteredAdvances = advances.filter(adv => {
+    const matchesStatus = statusFilter === 'all' || adv.status === statusFilter;
+    const matchesSearch = !searchQuery ||
+      adv.employee.first_name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      adv.employee.last_name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      adv.employee.employee_number.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  const { sortedData, sortConfig, requestSort } = useSortableData(filteredAdvances);
   const pagination = usePagination(sortedData, { initialPageSize: 25 });
 
   useEffect(() => {
@@ -261,19 +275,26 @@ export function Advances() {
     }
   };
 
-  const handleApprove = async (id: string) => {
+  const handleStepApprove = async (id: string, advance: Advance) => {
     try {
-      const { error } = await supabase
-        .from('advances')
-        .update({
-          status: 'approved',
-          approved_date: new Date().toISOString().split('T')[0]
-        })
-        .eq('id', id);
+      const { data: userData } = await supabase.auth.getUser();
+      const userId = userData.user?.id;
+      let updateData: any = {};
 
+      if (advance.status === 'pending' && userRole?.role === 'manager') {
+        updateData = { status: 'manager_approved', manager_approved_by: userId, manager_approved_at: new Date().toISOString() };
+      } else if (advance.status === 'manager_approved' && ['hr', 'hr_admin', 'hr_manager'].includes(userRole?.role || '')) {
+        updateData = { status: 'hr_approved', hr_approved_by: userId, hr_approved_at: new Date().toISOString() };
+      } else if (advance.status === 'hr_approved' && ['finance', 'super_admin'].includes(userRole?.role || '')) {
+        updateData = { status: 'approved', finance_approved_by: userId, finance_approved_at: new Date().toISOString(), approved_date: new Date().toISOString().split('T')[0] };
+      } else {
+        updateData = { status: 'approved', approved_date: new Date().toISOString().split('T')[0] };
+      }
+
+      const { error } = await supabase.from('advances').update(updateData).eq('id', id);
       if (error) throw error;
       showToast({ type: 'success', title: t.advances.advanceApprovedSuccess });
-      logActivity('advance_approved', { component: 'Advances', advanceId: id });
+      logActivity('advance_approved', { component: 'Advances', advanceId: id, newStatus: updateData.status });
       fetchAdvances();
     } catch (error: any) {
       logError(error, 'medium', { component: 'Advances', action: 'approveAdvance' });
@@ -281,21 +302,48 @@ export function Advances() {
     }
   };
 
-  const handleReject = async (id: string) => {
+  const handleFinanceReject = async () => {
+    if (!rejectingAdvanceId) return;
     try {
+      const { data: userData } = await supabase.auth.getUser();
       const { error } = await supabase
         .from('advances')
-        .update({ status: 'rejected' })
-        .eq('id', id);
+        .update({
+          status: 'rejected',
+          rejected_by: userData.user?.id,
+          rejected_at: new Date().toISOString(),
+          rejection_reason: rejectionReason,
+        })
+        .eq('id', rejectingAdvanceId);
 
       if (error) throw error;
       showToast({ type: 'success', title: t.advances.advanceRejectedSuccess });
-      logActivity('advance_rejected', { component: 'Advances', advanceId: id });
+      logActivity('advance_rejected', { component: 'Advances', advanceId: rejectingAdvanceId });
+      setRejectingAdvanceId(null);
+      setRejectionReason('');
       fetchAdvances();
     } catch (error: any) {
       logError(error, 'medium', { component: 'Advances', action: 'rejectAdvance' });
       showToast({ type: 'error', title: `${t.advances.failedToReject}: ${error.message}` });
     }
+  };
+
+  const handleExport = () => {
+    const exportData = advances.map(adv => ({
+      [language === 'ar' ? 'رقم الموظف' : 'Employee Number']: adv.employee.employee_number,
+      [language === 'ar' ? 'اسم الموظف' : 'Employee Name']: `${adv.employee.first_name_en} ${adv.employee.last_name_en}`,
+      [language === 'ar' ? 'المبلغ' : 'Amount']: adv.amount,
+      [language === 'ar' ? 'المتبقي' : 'Remaining']: adv.remaining_amount,
+      [language === 'ar' ? 'الخصم الشهري' : 'Monthly Deduction']: adv.deduction_amount,
+      [language === 'ar' ? 'تاريخ الطلب' : 'Request Date']: adv.request_date,
+      [language === 'ar' ? 'الحالة' : 'Status']: adv.status,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Advances');
+    XLSX.writeFile(wb, `advances_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast({ type: 'success', title: language === 'ar' ? 'تم تصدير التقرير' : 'Report exported' });
   };
 
   const resetForm = () => {
@@ -359,16 +407,25 @@ export function Advances() {
           <h1 className="text-3xl font-bold text-gray-900">{t.advances.title}</h1>
           <p className="text-gray-600 mt-1">{t.advances.subtitle}</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t.advances.newAdvance}</span>
-        </button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <button
+            onClick={handleExport}
+            className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
+            <Download className="h-4 w-4" />
+            <span>{t.common.export}</span>
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
+            <Plus className="h-4 w-4" />
+            <span>{t.advances.newAdvance}</span>
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -400,6 +457,54 @@ export function Advances() {
               <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(pendingAdvances, language)}</p>
             </div>
             <Clock className="h-12 w-12 text-yellow-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">{language === 'ar' ? 'بانتظار المالية' : 'Pending Finance'}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {formatNumber(advances.filter(a => a.status === 'hr_approved').length, language)}
+              </p>
+            </div>
+            <Banknote className="h-12 w-12 text-amber-600" />
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className={`flex flex-col sm:flex-row gap-3 ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
+          <div className="relative flex-1">
+            <Search className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 ${isRTL ? 'right-3' : 'left-3'}`} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={language === 'ar' ? 'بحث بالاسم أو الرقم...' : 'Search by name or number...'}
+              className={`w-full py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'pr-10 pl-3' : 'pl-10 pr-3'}`}
+            />
+          </div>
+          <div className={`flex gap-2 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
+            {['all', 'pending', 'manager_approved', 'hr_approved', 'approved', 'rejected'].map(status => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                  statusFilter === status
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {status === 'all' ? (language === 'ar' ? 'الكل' : 'All') :
+                 isRTL ? getStatusDisplay(status).labelAr : getStatusDisplay(status).label}
+                {status !== 'all' && (
+                  <span className={`${isRTL ? 'mr-1' : 'ml-1'} text-xs opacity-75`}>
+                    ({advances.filter(a => a.status === status).length})
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -511,17 +616,35 @@ export function Advances() {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
-                          {['pending', 'manager_approved', 'hr_approved'].includes(advance.status) && userRole?.role && ['hr', 'finance', 'super_admin', 'admin', 'manager'].includes(userRole.role) && (
+                          {advance.status === 'hr_approved' && userRole?.role && ['finance', 'super_admin'].includes(userRole.role) && (
                             <>
                               <button
-                                onClick={() => handleApprove(advance.id)}
+                                onClick={() => handleStepApprove(advance.id, advance)}
+                                className="text-green-600 hover:text-green-800"
+                                title={isRTL ? 'موافقة مالية' : 'Finance Approve'}
+                              >
+                                <Banknote className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => setRejectingAdvanceId(advance.id)}
+                                className="text-red-600 hover:text-red-800"
+                                title={isRTL ? 'رفض مالي' : 'Finance Reject'}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
+                          {['pending', 'manager_approved'].includes(advance.status) && userRole?.role && ['hr', 'super_admin', 'admin', 'manager'].includes(userRole.role) && (
+                            <>
+                              <button
+                                onClick={() => handleStepApprove(advance.id, advance)}
                                 className="text-green-600 hover:text-green-800"
                                 title={isRTL ? 'موافقة' : 'Approve'}
                               >
                                 <CheckCircle className="h-4 w-4" />
                               </button>
                               <button
-                                onClick={() => handleReject(advance.id)}
+                                onClick={() => setRejectingAdvanceId(advance.id)}
                                 className="text-red-600 hover:text-red-800"
                                 title={isRTL ? 'رفض' : 'Reject'}
                               >
@@ -739,6 +862,38 @@ export function Advances() {
         confirmLabel="Delete"
         variant="danger"
       />
+
+      {rejectingAdvanceId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6" dir={isRTL ? 'rtl' : 'ltr'}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              {language === 'ar' ? 'رفض السلفة' : 'Reject Advance'}
+            </h3>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder={language === 'ar' ? 'سبب الرفض (مطلوب)...' : 'Rejection reason (required)...'}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
+              rows={3}
+            />
+            <div className={`flex justify-end gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <button
+                onClick={() => { setRejectingAdvanceId(null); setRejectionReason(''); }}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleFinanceReject}
+                disabled={!rejectionReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {language === 'ar' ? 'تأكيد الرفض' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

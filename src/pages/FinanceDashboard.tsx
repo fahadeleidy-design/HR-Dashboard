@@ -71,7 +71,7 @@ export function FinanceDashboard() {
         pendingExpensesRes,
         pendingPenaltiesRes,
       ] = await Promise.all([
-        supabase.from('payroll').select('net_salary, gross_salary, gosi_employee, gosi_employer, company_id').in('company_id', companyIds),
+        supabase.from('payroll').select('net_salary, gross_salary, gosi_employee, gosi_employer, company_id, effective_from').in('company_id', companyIds),
         supabase.from('loans').select('remaining_amount, status, company_id').in('company_id', companyIds).in('status', ['active', 'approved', 'hr_approved']),
         supabase.from('advances').select('remaining_amount, status, company_id').in('company_id', companyIds).in('status', ['active', 'approved', 'hr_approved']),
         supabase.from('expense_claims').select('total_amount, status, company_id, created_at').in('company_id', companyIds),
@@ -144,21 +144,42 @@ export function FinanceDashboard() {
         const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
         const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         const monthLabel = d.toLocaleDateString('en', { month: 'short', year: '2-digit' });
+        const mStart = `${monthKey}-01`;
+        const nextD = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+        const mEnd = `${nextD.getFullYear()}-${String(nextD.getMonth() + 1).padStart(2, '0')}-01`;
+
+        const monthPayroll = (payrollRes.data || [])
+          .filter(p => {
+            const pMonth = (p as any).effective_from;
+            return pMonth && pMonth >= mStart && pMonth < mEnd;
+          })
+          .reduce((s, p) => s + (p.net_salary || 0), 0);
 
         const monthGosi = (gosiRes.data || [])
           .filter(g => g.month?.startsWith(monthKey))
           .reduce((s, g) => s + (g.total_contribution || 0), 0);
 
+        const monthExpenses = (expenseRes.data || [])
+          .filter(e => {
+            const eDate = e.created_at;
+            return eDate && eDate >= mStart && eDate < mEnd && e.status === 'approved';
+          })
+          .reduce((s, e) => s + (e.total_amount || 0), 0);
+
         months.push({
           month: monthLabel,
-          payroll: totalPayroll * (0.85 + Math.random() * 0.3),
+          payroll: monthPayroll || totalPayroll,
           gosi: monthGosi || totalPayroll * 0.12,
-          loans: outstandingLoans * 0.05,
-          advances: outstandingAdvances * 0.1,
-          expenses: currentMonthExpenses * (0.7 + Math.random() * 0.6),
+          loans: outstandingLoans > 0 ? outstandingLoans / 6 : 0,
+          advances: outstandingAdvances > 0 ? outstandingAdvances / 3 : 0,
+          expenses: monthExpenses,
           insurance: totalPayroll * 0.03,
         });
       }
+
+      const prevMonthPayroll = months.length >= 2 ? months[months.length - 2].payroll : 0;
+      const currentMonthPayroll = months.length >= 1 ? months[months.length - 1].payroll : 0;
+      const realPayrollChange = prevMonthPayroll > 0 ? ((currentMonthPayroll - prevMonthPayroll) / prevMonthPayroll) * 100 : 0;
 
       const breakdownData = [
         { name: language === 'ar' ? 'الرواتب' : 'Payroll', value: totalPayroll, color: '#3b82f6' },
@@ -193,11 +214,51 @@ export function FinanceDashboard() {
         });
       }
 
+      const insuranceRes = await supabase.from('insurance_policies').select('id, end_date, policy_number').in('company_id', companyIds).gte('end_date', now.toISOString().split('T')[0]);
+      const expiringSoon = (insuranceRes.data || []).filter(p => {
+        const daysLeft = Math.ceil((new Date(p.end_date).getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        return daysLeft <= 30 && daysLeft > 0;
+      });
+      if (expiringSoon.length > 0) {
+        generatedAlerts.push({
+          id: 'ins-1', type: 'insurance_expiry', severity: 'warning',
+          title: language === 'ar' ? `${expiringSoon.length} وثيقة تأمين تنتهي قريباً` : `${expiringSoon.length} insurance policy(s) expiring soon`,
+          description: language === 'ar' ? 'يرجى مراجعة التجديدات' : 'Please review renewals',
+          action_label: language === 'ar' ? 'عرض التأمين' : 'View Insurance',
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      const overdueLoans = (loansRes.data || []).filter(l => l.status === 'active' && (l.remaining_amount || 0) > 0);
+      if (overdueLoans.length > 5) {
+        generatedAlerts.push({
+          id: 'loan-1', type: 'loan_overdue', severity: 'info',
+          title: language === 'ar' ? `${overdueLoans.length} قرض نشط قيد السداد` : `${overdueLoans.length} active loans outstanding`,
+          description: language === 'ar' ? 'مراقبة محفظة القروض' : 'Monitor loan portfolio health',
+          action_label: language === 'ar' ? 'عرض القروض' : 'View Loans',
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      const periodCloseRes = await supabase.from('financial_periods').select('id, status, period_month, period_year').in('company_id', companyIds).eq('status', 'open');
+      const openPeriods = periodCloseRes.data || [];
+      const prevMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const hasPrevOpen = openPeriods.some(p => p.period_month === prevMonth.getMonth() + 1 && p.period_year === prevMonth.getFullYear());
+      if (hasPrevOpen) {
+        generatedAlerts.push({
+          id: 'period-1', type: 'period_close', severity: 'warning',
+          title: language === 'ar' ? 'الفترة المالية السابقة لم تُغلق بعد' : 'Previous financial period still open',
+          description: language === 'ar' ? 'يرجى إتمام إغلاق الفترة' : 'Please complete period close checklist',
+          action_label: language === 'ar' ? 'إغلاق الفترة' : 'Close Period',
+          created_at: new Date().toISOString(),
+        });
+      }
+
       setKpis({
         totalPayroll, pendingApprovals: pendingAll.length, outstandingLoans,
         outstandingAdvances, gosiLiability, eosLiability,
         monthlyExpenses: currentMonthExpenses, budgetUtilization: budgetUtil,
-        payrollChange: 2.3, pendingSLA: overdueCount,
+        payrollChange: realPayrollChange, pendingSLA: overdueCount,
       });
       setPendingItems(pendingAll);
       setCashFlowData(months);
@@ -336,6 +397,9 @@ export function FinanceDashboard() {
           onAction={(alert) => {
             if (alert.type === 'sla_breach') navigate('/pending-requests');
             else if (alert.type === 'budget_warning') navigate('/budgets');
+            else if (alert.type === 'insurance_expiry') navigate('/insurance');
+            else if (alert.type === 'loan_overdue') navigate('/loans');
+            else if (alert.type === 'period_close') navigate('/period-close');
           }}
         />
       )}

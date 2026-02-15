@@ -5,7 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
-import { Plus, DollarSign, TrendingDown, CheckCircle, XCircle, Edit, Trash2, Eye, Clock, Users } from 'lucide-react';
+import { Plus, DollarSign, TrendingDown, CheckCircle, XCircle, Edit, Trash2, Eye, Clock, Users, Download, Search, Filter, Banknote } from 'lucide-react';
+import * as XLSX from 'xlsx';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { SearchableSelect } from '@/components/SearchableSelect';
 import { RequestDetailModal } from '@/components/workflow/RequestDetailModal';
@@ -88,8 +89,22 @@ export function Loans() {
   const [selectedLoanId, setSelectedLoanId] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [rejectingLoanId, setRejectingLoanId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState('');
 
-  const { sortedData, sortConfig, requestSort } = useSortableData(loans);
+  const filteredLoans = loans.filter(loan => {
+    const matchesStatus = statusFilter === 'all' || loan.status === statusFilter;
+    const matchesSearch = !searchQuery ||
+      loan.employee.first_name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      loan.employee.last_name_en.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      loan.employee.employee_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      loan.loan_type.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  const { sortedData, sortConfig, requestSort } = useSortableData(filteredLoans);
   const pagination = usePagination(sortedData, { initialPageSize: 25 });
 
   useEffect(() => {
@@ -312,6 +327,74 @@ export function Loans() {
     }
   };
 
+  const handleFinanceApprove = async (id: string) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('loans')
+        .update({
+          status: 'active',
+          finance_approved_by: userData.user?.id,
+          finance_approved_at: new Date().toISOString(),
+        })
+        .eq('id', id);
+
+      if (error) throw error;
+      showToast({ type: 'success', title: language === 'ar' ? 'تمت الموافقة المالية على القرض' : 'Loan approved by Finance' });
+      logActivity('loan_finance_approved', { component: 'Loans', loanId: id });
+      fetchLoans();
+    } catch (error: any) {
+      logError(error, 'medium', { component: 'Loans', action: 'financeApproveLoan' });
+      showToast({ type: 'error', title: error.message });
+    }
+  };
+
+  const handleFinanceReject = async () => {
+    if (!rejectingLoanId) return;
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from('loans')
+        .update({
+          status: 'rejected',
+          rejected_by: userData.user?.id,
+          rejected_at: new Date().toISOString(),
+          rejection_reason: rejectionReason,
+        })
+        .eq('id', rejectingLoanId);
+
+      if (error) throw error;
+      showToast({ type: 'success', title: language === 'ar' ? 'تم رفض القرض' : 'Loan rejected' });
+      logActivity('loan_finance_rejected', { component: 'Loans', loanId: rejectingLoanId });
+      setRejectingLoanId(null);
+      setRejectionReason('');
+      fetchLoans();
+    } catch (error: any) {
+      logError(error, 'medium', { component: 'Loans', action: 'financeRejectLoan' });
+      showToast({ type: 'error', title: error.message });
+    }
+  };
+
+  const handleExport = () => {
+    const exportData = loans.map(loan => ({
+      [language === 'ar' ? 'رقم الموظف' : 'Employee Number']: loan.employee.employee_number,
+      [language === 'ar' ? 'اسم الموظف' : 'Employee Name']: `${loan.employee.first_name_en} ${loan.employee.last_name_en}`,
+      [language === 'ar' ? 'نوع القرض' : 'Loan Type']: loan.loan_type,
+      [language === 'ar' ? 'مبلغ القرض' : 'Loan Amount']: loan.loan_amount,
+      [language === 'ar' ? 'المبلغ المتبقي' : 'Remaining Amount']: loan.remaining_amount,
+      [language === 'ar' ? 'القسط الشهري' : 'Monthly Installment']: loan.monthly_installment,
+      [language === 'ar' ? 'عدد الأقساط' : 'Installments']: loan.number_of_installments,
+      [language === 'ar' ? 'تاريخ البدء' : 'Start Date']: loan.start_date,
+      [language === 'ar' ? 'الحالة' : 'Status']: loan.status,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Loans');
+    XLSX.writeFile(wb, `loans_report_${new Date().toISOString().split('T')[0]}.xlsx`);
+    showToast({ type: 'success', title: language === 'ar' ? 'تم تصدير التقرير' : 'Report exported' });
+  };
+
   const resetForm = () => {
     setFormData({
       employee_id: '',
@@ -379,16 +462,25 @@ export function Loans() {
           <h1 className="text-3xl font-bold text-gray-900">{t.loans.title}</h1>
           <p className="text-gray-600 mt-1">{t.loans.subtitle}</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
-        >
-          <Plus className="h-4 w-4" />
-          <span>{t.loans.newLoan}</span>
-        </button>
+        <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+          <button
+            onClick={handleExport}
+            className={`flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
+            <Download className="h-4 w-4" />
+            <span>{t.common.export}</span>
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
+          >
+            <Plus className="h-4 w-4" />
+            <span>{t.loans.newLoan}</span>
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -420,6 +512,54 @@ export function Loans() {
               <p className="text-2xl font-bold text-gray-900 mt-1">{formatNumber(activeLoans, language)}</p>
             </div>
             <CheckCircle className="h-12 w-12 text-green-600" />
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-gray-600">{language === 'ar' ? 'بانتظار المالية' : 'Pending Finance'}</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">
+                {formatNumber(loans.filter(l => l.status === 'hr_approved').length, language)}
+              </p>
+            </div>
+            <Banknote className="h-12 w-12 text-amber-600" />
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className={`flex flex-col sm:flex-row gap-3 ${isRTL ? 'sm:flex-row-reverse' : ''}`}>
+          <div className="relative flex-1">
+            <Search className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 ${isRTL ? 'right-3' : 'left-3'}`} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder={language === 'ar' ? 'بحث بالاسم أو الرقم...' : 'Search by name or number...'}
+              className={`w-full py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 ${isRTL ? 'pr-10 pl-3' : 'pl-10 pr-3'}`}
+            />
+          </div>
+          <div className={`flex gap-2 flex-wrap ${isRTL ? 'flex-row-reverse' : ''}`}>
+            {['all', 'pending', 'manager_approved', 'hr_approved', 'active', 'completed', 'rejected'].map(status => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors whitespace-nowrap ${
+                  statusFilter === status
+                    ? 'bg-primary-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {status === 'all' ? (language === 'ar' ? 'الكل' : 'All') :
+                 isRTL ? getStatusDisplay(status).labelAr : getStatusDisplay(status).label}
+                {status !== 'all' && (
+                  <span className={`${isRTL ? 'mr-1' : 'ml-1'} text-xs opacity-75`}>
+                    ({loans.filter(l => l.status === status).length})
+                  </span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -531,6 +671,24 @@ export function Loans() {
                           >
                             <Eye className="h-4 w-4" />
                           </button>
+                          {loan.status === 'hr_approved' && userRole?.role && ['finance', 'super_admin'].includes(userRole.role) && (
+                            <>
+                              <button
+                                onClick={() => handleFinanceApprove(loan.id)}
+                                className="text-green-600 hover:text-green-800"
+                                title={isRTL ? 'موافقة مالية' : 'Finance Approve'}
+                              >
+                                <Banknote className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => setRejectingLoanId(loan.id)}
+                                className="text-red-600 hover:text-red-800"
+                                title={isRTL ? 'رفض مالي' : 'Finance Reject'}
+                              >
+                                <XCircle className="h-4 w-4" />
+                              </button>
+                            </>
+                          )}
                           {userRole?.role && ['hr', 'finance', 'super_admin', 'admin'].includes(userRole.role) && (
                             <>
                               <button
@@ -549,7 +707,7 @@ export function Loans() {
                                   <CheckCircle className="h-4 w-4" />
                                 </button>
                               )}
-                              {['pending', 'manager_approved', 'hr_approved'].includes(loan.status) && (
+                              {['pending', 'manager_approved'].includes(loan.status) && (
                                 <button
                                   onClick={() => handleStatusChange(loan.id, 'cancelled')}
                                   className="text-red-600 hover:text-red-800"
@@ -822,6 +980,38 @@ export function Loans() {
         confirmLabel="Delete"
         variant="danger"
       />
+
+      {rejectingLoanId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 p-6" dir={isRTL ? 'rtl' : 'ltr'}>
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+              {language === 'ar' ? 'رفض القرض' : 'Reject Loan'}
+            </h3>
+            <textarea
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder={language === 'ar' ? 'سبب الرفض (مطلوب)...' : 'Rejection reason (required)...'}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 mb-4"
+              rows={3}
+            />
+            <div className={`flex justify-end gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
+              <button
+                onClick={() => { setRejectingLoanId(null); setRejectionReason(''); }}
+                className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                {language === 'ar' ? 'إلغاء' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleFinanceReject}
+                disabled={!rejectionReason.trim()}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {language === 'ar' ? 'تأكيد الرفض' : 'Confirm Rejection'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
