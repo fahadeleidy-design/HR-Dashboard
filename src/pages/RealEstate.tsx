@@ -615,10 +615,12 @@ export function RealEstate() {
                     <option value="rented">{t.realEstate.rented}</option>
                   </select>
                 </div>
+                {propertyForm.ownership_type !== 'rented' && propertyForm.ownership_type !== 'leased' && (
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.currentValue} ({isRTL ? 'ر.س' : 'SAR'})</label>
                   <input type="number" min="0" value={propertyForm.current_value} onChange={(e) => setPropertyForm({...propertyForm, current_value: parseFloat(e.target.value)})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
                 </div>
+                )}
                 <div>
                   <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.areaSqm}</label>
                   <input type="number" min="0" value={propertyForm.area_sqm} onChange={(e) => setPropertyForm({...propertyForm, area_sqm: parseFloat(e.target.value)})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
