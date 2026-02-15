@@ -3,7 +3,7 @@ import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
-import { Building2, Package, DollarSign, Plus, Edit, Trash2, X } from 'lucide-react';
+import { Building2, Package, DollarSign, Plus, Edit, Trash2, X, CalendarClock } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 
@@ -17,6 +17,9 @@ interface Property {
   current_value: number;
   status: string;
   monthly_rent?: number;
+  annual_rent?: number;
+  payment_frequency?: string;
+  next_payment_date?: string;
   lease_end_date?: string;
 }
 
@@ -59,12 +62,34 @@ export function RealEstate() {
     monthly_rent: 0,
     annual_rent: 0,
     payment_frequency: 'monthly',
+    next_payment_date: '',
     landlord_name: '',
     landlord_contact: '',
     purpose: '',
     status: 'active',
     notes: ''
   });
+
+  const getPaymentAmount = (annualRent: number, frequency: string) => {
+    if (!annualRent) return 0;
+    switch (frequency) {
+      case 'monthly': return annualRent / 12;
+      case 'quarterly': return annualRent / 4;
+      case 'semi_annually': return annualRent / 2;
+      case 'annually': return annualRent;
+      default: return 0;
+    }
+  };
+
+  const getFrequencyLabel = (frequency: string) => {
+    switch (frequency) {
+      case 'monthly': return t.realEstate.monthly;
+      case 'quarterly': return t.realEstate.quarterly;
+      case 'semi_annually': return t.realEstate.semiAnnually;
+      case 'annually': return t.realEstate.annually;
+      default: return frequency;
+    }
+  };
 
   const [assetForm, setAssetForm] = useState({
     asset_type: 'equipment',
@@ -125,6 +150,7 @@ export function RealEstate() {
         deed_number: propertyForm.deed_number || null,
         lease_start_date: propertyForm.lease_start_date || null,
         lease_end_date: propertyForm.lease_end_date || null,
+        next_payment_date: propertyForm.next_payment_date || null,
         landlord_name: propertyForm.landlord_name || null,
         landlord_contact: propertyForm.landlord_contact || null,
         purpose: propertyForm.purpose || null,
@@ -230,6 +256,7 @@ export function RealEstate() {
       monthly_rent: 0,
       annual_rent: 0,
       payment_frequency: 'monthly',
+      next_payment_date: '',
       landlord_name: '',
       landlord_contact: '',
       purpose: '',
@@ -371,6 +398,8 @@ export function RealEstate() {
                   <SortableTableHeader label={t.realEstate.location} sortKey="city" currentSort={propertySortConfig} onSort={requestPropertySort} />
                   <SortableTableHeader label={t.realEstate.ownership} sortKey="ownership_type" currentSort={propertySortConfig} onSort={requestPropertySort} />
                   <SortableTableHeader label={t.realEstate.value} sortKey="current_value" currentSort={propertySortConfig} onSort={requestPropertySort} />
+                  <SortableTableHeader label={t.realEstate.annualRent} sortKey="annual_rent" currentSort={propertySortConfig} onSort={requestPropertySort} />
+                  <SortableTableHeader label={t.realEstate.nextPayment} sortKey="next_payment_date" currentSort={propertySortConfig} onSort={requestPropertySort} />
                   <SortableTableHeader label={t.common.status} sortKey="status" currentSort={propertySortConfig} onSort={requestPropertySort} />
                   <th className={`px-4 py-3 ${isRTL ? 'text-right' : 'text-left'} text-xs font-medium text-gray-500 uppercase`}>{t.common.actions}</th>
                 </tr>
@@ -378,7 +407,7 @@ export function RealEstate() {
               <tbody className="divide-y divide-gray-200">
                 {sortedProperties.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-500">{t.messages.noResults}</td>
+                    <td colSpan={9} className="px-4 py-8 text-center text-gray-500">{t.messages.noResults}</td>
                   </tr>
                 ) : (
                   sortedProperties.map((property) => (
@@ -387,7 +416,33 @@ export function RealEstate() {
                       <td className="px-4 py-3 text-sm text-gray-900 capitalize">{property.property_type}</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{property.city}</td>
                       <td className="px-4 py-3 text-sm text-gray-900 capitalize">{property.ownership_type}</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">SAR {property.current_value.toLocaleString()}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">SAR {property.current_value?.toLocaleString() || '0'}</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {(property.ownership_type === 'rented' || property.ownership_type === 'leased') && property.annual_rent ? (
+                          <div>
+                            <div className="font-medium">SAR {property.annual_rent.toLocaleString()}</div>
+                            {property.payment_frequency && (
+                              <div className="text-xs text-gray-500">
+                                SAR {getPaymentAmount(property.annual_rent, property.payment_frequency).toLocaleString()} / {getFrequencyLabel(property.payment_frequency)}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {property.next_payment_date ? (
+                          <div className={`flex items-center gap-1.5 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                            <CalendarClock className="h-3.5 w-3.5 text-blue-500 flex-shrink-0" />
+                            <span className={new Date(property.next_payment_date) <= new Date() ? 'text-red-600 font-medium' : 'text-gray-900'}>
+                              {new Date(property.next_payment_date).toLocaleDateString()}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3">
                         <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                           {property.status}
@@ -539,8 +594,15 @@ export function RealEstate() {
                 {propertyForm.ownership_type === 'leased' || propertyForm.ownership_type === 'rented' ? (
                   <>
                     <div>
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.annualRent} ({isRTL ? 'ر.س' : 'SAR'}) *</label>
+                      <input type="number" min="0" required value={propertyForm.annual_rent} onChange={(e) => {
+                        const annual = parseFloat(e.target.value) || 0;
+                        setPropertyForm({...propertyForm, annual_rent: annual, monthly_rent: Math.round((annual / 12) * 100) / 100});
+                      }} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
+                    </div>
+                    <div>
                       <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.monthlyRent} ({isRTL ? 'ر.س' : 'SAR'})</label>
-                      <input type="number" min="0" value={propertyForm.monthly_rent} onChange={(e) => setPropertyForm({...propertyForm, monthly_rent: parseFloat(e.target.value)})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
+                      <input type="number" min="0" value={propertyForm.monthly_rent} readOnly className={`w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`} />
                     </div>
                     <div>
                       <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.paymentFrequency}</label>
@@ -550,6 +612,21 @@ export function RealEstate() {
                         <option value="semi_annually">{t.realEstate.semiAnnually}</option>
                         <option value="annually">{t.realEstate.annually}</option>
                       </select>
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.paymentAmount} ({isRTL ? 'ر.س' : 'SAR'})</label>
+                      <div className="w-full px-3 py-2 border rounded-md bg-blue-50 text-blue-800 font-semibold">
+                        {formatCurrency(getPaymentAmount(propertyForm.annual_rent, propertyForm.payment_frequency), language)}
+                        <span className="text-xs font-normal text-blue-600 mx-1">/ {getFrequencyLabel(propertyForm.payment_frequency)}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.nextPaymentDate}</label>
+                      <input type="date" value={propertyForm.next_payment_date} onChange={(e) => setPropertyForm({...propertyForm, next_payment_date: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+                    </div>
+                    <div>
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.leaseStartDate}</label>
+                      <input type="date" value={propertyForm.lease_start_date} onChange={(e) => setPropertyForm({...propertyForm, lease_start_date: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
                     </div>
                     <div>
                       <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.leaseEndDate}</label>

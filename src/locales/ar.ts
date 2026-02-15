@@ -1041,6 +1041,9 @@ export const arTranslations = {
 
     // الدفع
     paymentFrequency: 'دورية الدفع',
+    paymentAmount: 'مبلغ الدفعة',
+    nextPaymentDate: 'تاريخ الدفعة القادمة',
+    nextPayment: 'الدفعة القادمة',
     monthly: 'شهري',
     quarterly: 'ربع سنوي',
     semiAnnually: 'نصف سنوي',

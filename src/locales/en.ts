@@ -960,6 +960,9 @@ export const enTranslations = {
 
     // Payment
     paymentFrequency: 'Payment Frequency',
+    paymentAmount: 'Payment Amount',
+    nextPaymentDate: 'Next Payment Date',
+    nextPayment: 'Next Payment',
     monthly: 'Monthly',
     quarterly: 'Quarterly',
     semiAnnually: 'Semi-Annually',
