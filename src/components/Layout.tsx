@@ -35,6 +35,10 @@ import {
   UserCheck,
   CheckCircle,
   AlertTriangle,
+  Banknote,
+  PieChart,
+  Lock,
+  Wallet,
 } from 'lucide-react';
 import { useState } from 'react';
 import { NotificationCenter } from './NotificationCenter';
@@ -87,6 +91,9 @@ export function Layout({ children }: LayoutProps) {
     {
       title: t.nav.payrollFinance,
       items: [
+        ...(isFinanceUser ? [
+          { path: '/finance-dashboard', icon: Wallet, label: language === 'ar' ? 'لوحة التحكم المالية' : 'Finance Dashboard' },
+        ] : []),
         { path: '/payroll', icon: DollarSign, label: t.nav.payroll },
         { path: '/loans', icon: CreditCard, label: t.nav.loans },
         { path: '/advances', icon: Receipt, label: t.nav.advances },
@@ -94,6 +101,12 @@ export function Layout({ children }: LayoutProps) {
         ...(hasFullAccess || !isEmployee ? [
           { path: '/penalties', icon: AlertTriangle, label: language === 'ar' ? 'الجزاءات' : 'Penalties' },
           { path: '/end-of-service', icon: Calculator, label: t.nav.endOfService },
+        ] : []),
+        ...(isFinanceUser || userRole?.role === 'super_admin' ? [
+          { path: '/finance-reports', icon: PieChart, label: language === 'ar' ? 'التقارير المالية' : 'Finance Reports' },
+          { path: '/budgets', icon: Banknote, label: language === 'ar' ? 'إدارة الميزانية' : 'Budgets' },
+          { path: '/payment-reconciliation', icon: CheckCircle, label: language === 'ar' ? 'المطابقة البنكية' : 'Bank Reconciliation' },
+          { path: '/period-close', icon: Lock, label: language === 'ar' ? 'إغلاق الفترة' : 'Period Close' },
         ] : []),
       ]
     },

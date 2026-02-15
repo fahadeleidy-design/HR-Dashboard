@@ -51,6 +51,11 @@ const WorkflowManagement = lazy(() => import('./pages/WorkflowManagement'));
 const GlobalHR = lazy(() => import('./pages/GlobalHR'));
 const SkillsManagement = lazy(() => import('./pages/SkillsManagement'));
 const Penalties = lazy(() => import('./pages/Penalties'));
+const FinanceDashboard = lazy(() => import('./pages/FinanceDashboard').then(m => ({ default: m.FinanceDashboard })));
+const FinanceReports = lazy(() => import('./pages/FinanceReports').then(m => ({ default: m.FinanceReports })));
+const BudgetManagement = lazy(() => import('./pages/BudgetManagement').then(m => ({ default: m.BudgetManagement })));
+const PaymentReconciliation = lazy(() => import('./pages/PaymentReconciliation').then(m => ({ default: m.PaymentReconciliation })));
+const PeriodClose = lazy(() => import('./pages/PeriodClose').then(m => ({ default: m.PeriodClose })));
 
 function ProtectedPage({ children, allowedRoles }: { children: ReactNode; allowedRoles?: string[] }) {
   return (
@@ -117,6 +122,11 @@ function App() {
                     <Route path="/global-hr" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager', 'finance']}><GlobalHR /></ProtectedPage>} />
                     <Route path="/skills" element={<ProtectedPage><SkillsManagement /></ProtectedPage>} />
                     <Route path="/penalties" element={<ProtectedPage allowedRoles={['hr', 'finance', 'admin', 'super_admin']}><Penalties /></ProtectedPage>} />
+                    <Route path="/finance-dashboard" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><FinanceDashboard /></ProtectedPage>} />
+                    <Route path="/finance-reports" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><FinanceReports /></ProtectedPage>} />
+                    <Route path="/budgets" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><BudgetManagement /></ProtectedPage>} />
+                    <Route path="/payment-reconciliation" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><PaymentReconciliation /></ProtectedPage>} />
+                    <Route path="/period-close" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><PeriodClose /></ProtectedPage>} />
                     <Route path="/settings" element={<ProtectedPage allowedRoles={['super_admin', 'hr', 'finance']}><Settings /></ProtectedPage>} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
