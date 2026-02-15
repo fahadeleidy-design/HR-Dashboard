@@ -121,9 +121,13 @@ async function sendViaSmtp(
       user: config.smtp_user,
       pass: config.smtp_pass_encrypted,
     },
+    tls: {
+      ciphers: 'SSLv3',
+      rejectUnauthorized: false,
+    },
   });
 
-  await transporter.sendMail({
+  const mailOptions = {
     from: config.default_from_name
       ? `"${config.default_from_name}" <${config.default_from_email}>`
       : config.default_from_email,
@@ -131,7 +135,9 @@ async function sendViaSmtp(
     subject,
     text: text || "Please view this email in an HTML-capable client.",
     html: html || undefined,
-  });
+  };
+
+  await transporter.sendMail(mailOptions);
 }
 
 async function handleSendDirect(supabase: any, payload: SendEmailRequest) {
