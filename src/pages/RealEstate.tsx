@@ -91,6 +91,38 @@ export function RealEstate() {
     }
   };
 
+  const calculateNextPaymentDate = (leaseStart: string, frequency: string): string => {
+    if (!leaseStart) return '';
+    const start = new Date(leaseStart + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let monthsInterval: number;
+    switch (frequency) {
+      case 'monthly': monthsInterval = 1; break;
+      case 'quarterly': monthsInterval = 3; break;
+      case 'semi_annually': monthsInterval = 6; break;
+      case 'annually': monthsInterval = 12; break;
+      default: return '';
+    }
+    const next = new Date(start);
+    while (next < today) {
+      next.setMonth(next.getMonth() + monthsInterval);
+    }
+    return next.toISOString().split('T')[0];
+  };
+
+  const updateRentalFields = (updates: Partial<typeof propertyForm>) => {
+    const merged = { ...propertyForm, ...updates };
+    const monthly = merged.monthly_rent || 0;
+    const annual = Math.round(monthly * 12 * 100) / 100;
+    const nextDate = calculateNextPaymentDate(merged.lease_start_date, merged.payment_frequency);
+    setPropertyForm({
+      ...merged,
+      annual_rent: annual,
+      next_payment_date: nextDate,
+    });
+  };
+
   const [assetForm, setAssetForm] = useState({
     asset_type: 'equipment',
     asset_name: '',
@@ -594,19 +626,16 @@ export function RealEstate() {
                 {propertyForm.ownership_type === 'leased' || propertyForm.ownership_type === 'rented' ? (
                   <>
                     <div>
-                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.annualRent} ({isRTL ? 'ر.س' : 'SAR'}) *</label>
-                      <input type="number" min="0" required value={propertyForm.annual_rent} onChange={(e) => {
-                        const annual = parseFloat(e.target.value) || 0;
-                        setPropertyForm({...propertyForm, annual_rent: annual, monthly_rent: Math.round((annual / 12) * 100) / 100});
-                      }} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.monthlyRent} ({isRTL ? 'ر.س' : 'SAR'}) *</label>
+                      <input type="number" min="0" required value={propertyForm.monthly_rent} onChange={(e) => updateRentalFields({ monthly_rent: parseFloat(e.target.value) || 0 })} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} />
                     </div>
                     <div>
-                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.monthlyRent} ({isRTL ? 'ر.س' : 'SAR'})</label>
-                      <input type="number" min="0" value={propertyForm.monthly_rent} readOnly className={`w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`} />
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.annualRent} ({isRTL ? 'ر.س' : 'SAR'})</label>
+                      <input type="number" value={propertyForm.annual_rent} readOnly className={`w-full px-3 py-2 border rounded-md bg-gray-50 text-gray-600 ${isRTL ? 'text-right' : 'text-left'}`} />
                     </div>
                     <div>
                       <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.paymentFrequency}</label>
-                      <select value={propertyForm.payment_frequency} onChange={(e) => setPropertyForm({...propertyForm, payment_frequency: e.target.value})} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
+                      <select value={propertyForm.payment_frequency} onChange={(e) => updateRentalFields({ payment_frequency: e.target.value })} className={`w-full px-3 py-2 border rounded-md ${isRTL ? 'text-right' : 'text-left'}`} dir={isRTL ? 'rtl' : 'ltr'}>
                         <option value="monthly">{t.realEstate.monthly}</option>
                         <option value="quarterly">{t.realEstate.quarterly}</option>
                         <option value="semi_annually">{t.realEstate.semiAnnually}</option>
@@ -621,12 +650,14 @@ export function RealEstate() {
                       </div>
                     </div>
                     <div>
-                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.nextPaymentDate}</label>
-                      <input type="date" value={propertyForm.next_payment_date} onChange={(e) => setPropertyForm({...propertyForm, next_payment_date: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.leaseStartDate} *</label>
+                      <input type="date" required value={propertyForm.lease_start_date} onChange={(e) => updateRentalFields({ lease_start_date: e.target.value })} className="w-full px-3 py-2 border rounded-md" />
                     </div>
                     <div>
-                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.leaseStartDate}</label>
-                      <input type="date" value={propertyForm.lease_start_date} onChange={(e) => setPropertyForm({...propertyForm, lease_start_date: e.target.value})} className="w-full px-3 py-2 border rounded-md" />
+                      <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.nextPaymentDate}</label>
+                      <div className={`w-full px-3 py-2 border rounded-md bg-gray-50 ${propertyForm.next_payment_date ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
+                        {propertyForm.next_payment_date ? new Date(propertyForm.next_payment_date + 'T00:00:00').toLocaleDateString() : (isRTL ? 'يحسب تلقائيا من تاريخ البداية' : 'Auto-calculated from start date')}
+                      </div>
                     </div>
                     <div>
                       <label className={`block text-sm font-medium mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>{t.realEstate.leaseEndDate}</label>
