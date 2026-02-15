@@ -229,10 +229,10 @@ async function handleTestSmtp(supabase: any, payload: SendEmailRequest) {
     );
   }
 
-  const config = await getSmtpConfig(supabase, company_id);
-  const testEmail = config.default_from_email;
-
   try {
+    const config = await getSmtpConfig(supabase, company_id);
+    const testEmail = config.default_from_email;
+
     await sendViaSmtp(
       config,
       testEmail,
@@ -255,19 +255,34 @@ async function handleTestSmtp(supabase: any, payload: SendEmailRequest) {
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : "Unknown SMTP error";
+    let errorMsg = "Unknown SMTP error";
 
-    await supabase
-      .from("email_smtp_config")
-      .update({
-        last_tested_at: new Date().toISOString(),
-        last_test_result: `failed: ${errorMsg}`,
-      })
-      .eq("id", config.id);
+    if (error instanceof Error) {
+      errorMsg = error.message;
+    } else if (typeof error === 'string') {
+      errorMsg = error;
+    } else if (error && typeof error === 'object') {
+      errorMsg = JSON.stringify(error);
+    }
+
+    try {
+      await supabase
+        .from("email_smtp_config")
+        .update({
+          last_tested_at: new Date().toISOString(),
+          last_test_result: `failed: ${errorMsg.substring(0, 500)}`,
+        })
+        .eq("company_id", company_id);
+    } catch (dbError) {
+      console.error("Failed to update test result:", dbError);
+    }
 
     return new Response(
-      JSON.stringify({ error: `SMTP test failed: ${errorMsg}` }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({
+        success: false,
+        error: `SMTP test failed: ${errorMsg}`
+      }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 }
