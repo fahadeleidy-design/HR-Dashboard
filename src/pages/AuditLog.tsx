@@ -192,7 +192,7 @@ export function AuditLog() {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow-md border border-gray-200 mb-6 p-4 relative z-50">
+      <div className="bg-white rounded-lg shadow-md border border-gray-200 mb-6 p-4 relative z-10">
         <div className="flex items-center gap-2 mb-4">
           <Filter className="h-5 w-5 text-gray-500" />
           <h3 className="font-semibold text-gray-900">{t.common.filter}</h3>
