@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend, LineChart, Line } from 'recharts';
 import { EmployeeDashboard } from '@/components/EmployeeDashboard';
+import { MyDashboard } from '@/components/MyDashboard';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 interface DashboardStats {
@@ -106,7 +107,7 @@ export function Dashboard() {
     return <EmployeeDashboard />;
   }
 
-  if (dashboardView === 'personal' && hasEmployeeProfile) {
+  if (dashboardView === 'personal') {
     return (
       <div className={`space-y-4 ${isRTL ? 'rtl' : 'ltr'}`}>
         <div className={`flex items-center gap-3 ${isRTL ? 'flex-row-reverse' : ''}`}>
@@ -118,13 +119,13 @@ export function Dashboard() {
             {language === 'ar' ? 'لوحة الشركة' : 'Company Dashboard'}
           </button>
           <button
-            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-primary-600 shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 shadow-sm"
           >
             <User className="h-4 w-4" />
             {language === 'ar' ? 'لوحتي' : 'My Dashboard'}
           </button>
         </div>
-        <EmployeeDashboard />
+        <MyDashboard />
       </div>
     );
   }
@@ -451,15 +452,13 @@ export function Dashboard() {
             {t.common.welcome} {isRTL ? (currentCompany?.name_ar || currentCompany?.name_en) : (currentCompany?.name_en)}
           </p>
         </div>
-        {hasEmployeeProfile && (
-          <button
-            onClick={() => setDashboardView('personal')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-primary-700 bg-primary-50 border border-primary-200 hover:bg-primary-100 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
-          >
-            <User className="h-4 w-4" />
-            {language === 'ar' ? 'لوحتي' : 'My Dashboard'}
-          </button>
-        )}
+        <button
+          onClick={() => setDashboardView('personal')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-blue-700 bg-blue-50 border border-blue-200 hover:bg-blue-100 transition-colors shadow-sm ${isRTL ? 'flex-row-reverse' : ''}`}
+        >
+          <User className="h-4 w-4" />
+          {language === 'ar' ? 'لوحتي' : 'My Dashboard'}
+        </button>
       </div>
 
       <div>
