@@ -11,6 +11,7 @@ import { FinancePendingActions } from '@/components/finance/FinancePendingAction
 import { FinanceCashFlow } from '@/components/finance/FinanceCashFlow';
 import { FinanceAlerts } from '@/components/finance/FinanceAlerts';
 import { RecentPayrollBatches } from '@/components/finance/RecentPayrollBatches';
+import { YearlyForecastedCashflow } from '@/components/finance/YearlyForecastedCashflow';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { formatCurrency } from '@/lib/formatters';
 import {
@@ -485,6 +486,11 @@ export function FinanceDashboard() {
           )}
         </div>
       </div>
+
+      <YearlyForecastedCashflow
+        language={language as 'ar' | 'en'}
+        isRTL={isRTL}
+      />
 
       <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 ${isRTL ? 'direction-rtl' : ''}`}>
         {[
