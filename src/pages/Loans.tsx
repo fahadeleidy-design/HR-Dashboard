@@ -718,7 +718,7 @@ export function Loans() {
                               )}
                             </>
                           )}
-                          {userRole?.role === 'super_admin' && (
+                          {userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) && (
                             <button
                               onClick={() => handleDelete(loan.id)}
                               className="text-red-600 hover:text-red-800"

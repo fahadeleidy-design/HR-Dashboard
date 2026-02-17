@@ -713,7 +713,7 @@ export function Expenses() {
           )}
 
           {activeTab === 'settings' && (
-            <ExpenseSettings isAdmin={['super_admin', 'admin', 'finance'].includes(userRole?.role || '')} />
+            <ExpenseSettings isAdmin={['super_admin', 'admin', 'hr', 'finance'].includes(userRole?.role || '')} />
           )}
         </div>
       </div>

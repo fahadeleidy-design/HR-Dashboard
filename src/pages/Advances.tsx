@@ -661,7 +661,7 @@ export function Advances() {
                               <Edit className="h-4 w-4" />
                             </button>
                           )}
-                          {userRole?.role === 'super_admin' && (
+                          {userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) && (
                             <button
                               onClick={() => handleDelete(advance.id)}
                               className="text-red-600 hover:text-red-800"

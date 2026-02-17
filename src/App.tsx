@@ -109,24 +109,24 @@ function App() {
                     <Route path="/advances" element={<ProtectedPage><Advances /></ProtectedPage>} />
                     <Route path="/gov-subscriptions" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><GovSubscriptions /></ProtectedPage>} />
                     <Route path="/end-of-service" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><EndOfService /></ProtectedPage>} />
-                    <Route path="/audit-log" element={<ProtectedPage allowedRoles={['super_admin', 'finance']}><AuditLog /></ProtectedPage>} />
+                    <Route path="/audit-log" element={<ProtectedPage allowedRoles={['super_admin', 'hr', 'finance']}><AuditLog /></ProtectedPage>} />
                     <Route path="/compliance" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><ComplianceDashboard /></ProtectedPage>} />
                     <Route path="/salary-scale" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><SalaryScale /></ProtectedPage>} />
                     <Route path="/recruitment" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Recruitment /></ProtectedPage>} />
                     <Route path="/managers" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><ManagerAssignment /></ProtectedPage>} />
                     <Route path="/tenant-administration" element={<ProtectedPage allowedRoles={['super_admin']}><TenantAdministration /></ProtectedPage>} />
                     <Route path="/tenant-configuration" element={<ProtectedPage allowedRoles={['super_admin', 'admin']}><TenantConfiguration /></ProtectedPage>} />
-                    <Route path="/cross-company-analytics" element={<ProtectedPage allowedRoles={['super_admin', 'finance']}><CrossCompanyAnalytics /></ProtectedPage>} />
+                    <Route path="/cross-company-analytics" element={<ProtectedPage allowedRoles={['super_admin', 'hr', 'finance']}><CrossCompanyAnalytics /></ProtectedPage>} />
                     <Route path="/permissions" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'tenant_admin']}><PermissionsManagement /></ProtectedPage>} />
                     <Route path="/workflow" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance']}><WorkflowManagement /></ProtectedPage>} />
                     <Route path="/global-hr" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager', 'finance']}><GlobalHR /></ProtectedPage>} />
                     <Route path="/skills" element={<ProtectedPage><SkillsManagement /></ProtectedPage>} />
                     <Route path="/penalties" element={<ProtectedPage allowedRoles={['hr', 'finance', 'admin', 'super_admin']}><Penalties /></ProtectedPage>} />
-                    <Route path="/finance-dashboard" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><FinanceDashboard /></ProtectedPage>} />
-                    <Route path="/finance-reports" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><FinanceReports /></ProtectedPage>} />
-                    <Route path="/budgets" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><BudgetManagement /></ProtectedPage>} />
-                    <Route path="/payment-reconciliation" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><PaymentReconciliation /></ProtectedPage>} />
-                    <Route path="/period-close" element={<ProtectedPage allowedRoles={['finance', 'super_admin']}><PeriodClose /></ProtectedPage>} />
+                    <Route path="/finance-dashboard" element={<ProtectedPage allowedRoles={['finance', 'hr', 'super_admin']}><FinanceDashboard /></ProtectedPage>} />
+                    <Route path="/finance-reports" element={<ProtectedPage allowedRoles={['finance', 'hr', 'super_admin']}><FinanceReports /></ProtectedPage>} />
+                    <Route path="/budgets" element={<ProtectedPage allowedRoles={['finance', 'hr', 'super_admin']}><BudgetManagement /></ProtectedPage>} />
+                    <Route path="/payment-reconciliation" element={<ProtectedPage allowedRoles={['finance', 'hr', 'super_admin']}><PaymentReconciliation /></ProtectedPage>} />
+                    <Route path="/period-close" element={<ProtectedPage allowedRoles={['finance', 'hr', 'super_admin']}><PeriodClose /></ProtectedPage>} />
                     <Route path="/settings" element={<ProtectedPage allowedRoles={['super_admin', 'hr', 'finance']}><Settings /></ProtectedPage>} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>

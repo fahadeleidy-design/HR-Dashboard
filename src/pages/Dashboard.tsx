@@ -97,11 +97,6 @@ export function Dashboard() {
     }
   }, [currentCompany, isConsolidatedView, companies, companyLoading]);
 
-  useEffect(() => {
-    if (userRole?.role === 'finance') {
-      navigate('/finance-dashboard', { replace: true });
-    }
-  }, [userRole?.role, navigate]);
 
   if (isEmployeeOnly) {
     return <EmployeeDashboard />;

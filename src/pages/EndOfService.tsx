@@ -418,7 +418,7 @@ export function EndOfService() {
     showToast({ type: 'success', title: language === 'ar' ? 'تم تصدير التقرير' : 'Report exported' });
   };
 
-  const isFinanceOrAdmin = userRole?.role && ['finance', 'super_admin'].includes(userRole.role);
+  const isFinanceOrAdmin = userRole?.role && ['finance', 'hr', 'super_admin'].includes(userRole.role);
 
   const filteredCalculations = filterStatus === 'all'
     ? calculations

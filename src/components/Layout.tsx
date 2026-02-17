@@ -60,7 +60,7 @@ export function Layout({ children }: LayoutProps) {
   const isPrivilegedUser = ['super_admin', 'hr', 'finance'].includes(userRole?.role || '');
 
   useEffect(() => {
-    if (!['finance', 'super_admin'].includes(userRole?.role || '')) return;
+    if (!['finance', 'hr', 'super_admin'].includes(userRole?.role || '')) return;
     const cIds = isConsolidatedView ? companies.map(c => c.id) : currentCompany ? [currentCompany.id] : [];
     if (cIds.length === 0) return;
 
@@ -118,7 +118,7 @@ export function Layout({ children }: LayoutProps) {
     {
       title: t.nav.payrollFinance,
       items: [
-        ...(isFinanceUser ? [
+        ...(isFinanceUser || userRole?.role === 'hr' ? [
           { path: '/finance-dashboard', icon: Wallet, label: language === 'ar' ? 'لوحة التحكم المالية' : 'Finance Dashboard' },
         ] : []),
         { path: '/payroll', icon: DollarSign, label: t.nav.payroll },
@@ -129,7 +129,7 @@ export function Layout({ children }: LayoutProps) {
           { path: '/penalties', icon: AlertTriangle, label: language === 'ar' ? 'الجزاءات' : 'Penalties' },
           { path: '/end-of-service', icon: Calculator, label: t.nav.endOfService },
         ] : []),
-        ...(isFinanceUser || userRole?.role === 'super_admin' ? [
+        ...(isFinanceUser || ['hr', 'super_admin'].includes(userRole?.role || '') ? [
           { path: '/finance-reports', icon: PieChart, label: language === 'ar' ? 'التقارير المالية' : 'Finance Reports' },
           { path: '/budgets', icon: Banknote, label: language === 'ar' ? 'إدارة الميزانية' : 'Budgets' },
           { path: '/payment-reconciliation', icon: CheckCircle, label: language === 'ar' ? 'المطابقة البنكية' : 'Bank Reconciliation' },

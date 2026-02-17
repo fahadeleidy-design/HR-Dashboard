@@ -128,11 +128,11 @@ export function Employees() {
             break;
           case 'e':
             e.preventDefault();
-            if (userRole?.role === 'super_admin') handleExport();
+            if (userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role)) handleExport();
             break;
           case 'u':
             e.preventDefault();
-            if (userRole?.role === 'super_admin') setShowBulkUpload(true);
+            if (userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role)) setShowBulkUpload(true);
             break;
           case 'f':
             e.preventDefault();
@@ -743,7 +743,7 @@ export function Employees() {
               </button>
             </>
           )}
-          {userRole?.role && ['hr', 'super_admin'].includes(userRole.role) && (
+          {userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) && (
             <button
               onClick={() => setShowForm(true)}
               className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-all shadow-sm hover:shadow"
@@ -1519,8 +1519,8 @@ export function Employees() {
                             employee={employee}
                             onView={() => handleView(employee.id)}
                             onEdit={userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) ? () => handleEdit(employee) : undefined}
-                            onDelete={userRole?.role && ['hr', 'super_admin'].includes(userRole.role) ? () => handleDelete(employee.id) : undefined}
-                            onStatusChange={userRole?.role && ['hr', 'super_admin'].includes(userRole.role) ? (status) => handleBulkStatusChange(status) : undefined}
+                            onDelete={userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) ? () => handleDelete(employee.id) : undefined}
+                            onStatusChange={userRole?.role && ['hr', 'finance', 'super_admin'].includes(userRole.role) ? (status) => handleBulkStatusChange(status) : undefined}
                             onViewPayroll={() => handleViewPayroll(employee.id)}
                             onViewDocuments={() => handleViewDocuments(employee.id)}
                             onViewHistory={() => handleViewHistory(employee.id)}

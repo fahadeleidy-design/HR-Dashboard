@@ -430,7 +430,7 @@ export function RealEstate() {
   const totalAnnualRent = rentedProperties.reduce((sum, p) => sum + (p.annual_rent || 0), 0);
   const totalMonthlyRent = rentedProperties.reduce((sum, p) => sum + (p.monthly_rent || 0), 0);
 
-  const canVerifyPayments = ['super_admin', 'admin', 'finance'].includes(userRole);
+  const canVerifyPayments = ['super_admin', 'admin', 'hr', 'finance'].includes(userRole);
 
   const { sortedData: sortedProperties, sortConfig: propertySortConfig, requestSort: requestPropertySort } = useSortableData(properties);
   const { sortedData: sortedAssets, sortConfig: assetSortConfig, requestSort: requestAssetSort } = useSortableData(assets);
