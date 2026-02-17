@@ -150,7 +150,7 @@ export function Attendance() {
   };
 
   const subscribeToChanges = () => {
-    if (!currentCompany) return;
+    if (!currentCompany) return () => {};
 
     const channel = supabase
       .channel('attendance-changes')

@@ -193,7 +193,7 @@ export function EmployeeDetail({ employeeId, onClose }: EmployeeDetailProps) {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm text-gray-600">Department</p>
-                  <p className="text-sm font-medium text-gray-900">{employee.departments?.name_en || 'N/A'}</p>
+                  <p className="text-sm font-medium text-gray-900">{employee.department?.name_en || 'N/A'}</p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Job Title (Arabic)</p>

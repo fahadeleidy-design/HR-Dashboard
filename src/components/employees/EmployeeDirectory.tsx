@@ -104,7 +104,7 @@ export function EmployeeDirectory({ companyId, onEmployeeSelect }: EmployeeDirec
     }
 
     if (departmentFilter) {
-      filtered = filtered.filter(emp => emp.departments?.name_en === departmentFilter);
+      filtered = filtered.filter(emp => emp.department?.name_en === departmentFilter);
     }
 
     if (statusFilter) {

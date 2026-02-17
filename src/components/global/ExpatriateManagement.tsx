@@ -6,7 +6,7 @@ import { useToast } from '../../contexts/ToastContext';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 
 export default function ExpatriateManagement() {
-  const { selectedCompany } = useCompany();
+  const { currentCompany } = useCompany();
   const { showToast } = useToast();
   const [expatriates, setExpatriates] = useState<any[]>([]);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -32,10 +32,10 @@ export default function ExpatriateManagement() {
   const { logError } = useErrorHandler();
 
   useEffect(() => {
-    if (selectedCompany) {
+    if (currentCompany) {
       loadData();
     }
-  }, [selectedCompany]);
+  }, [currentCompany]);
 
   const loadData = async () => {
     try {
@@ -56,7 +56,7 @@ export default function ExpatriateManagement() {
       const { data: employeesData } = await supabase
         .from('employees')
         .select('id, full_name, email')
-        .eq('company_id', selectedCompany!.id)
+        .eq('company_id', currentCompany!.id)
         .eq('status', 'active')
         .order('full_name');
 

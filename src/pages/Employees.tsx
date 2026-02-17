@@ -253,7 +253,7 @@ export function Employees() {
   };
 
   const subscribeToChanges = () => {
-    if (!currentCompany) return;
+    if (!currentCompany) return () => {};
 
     const channel = supabase
       .channel('employees_changes')

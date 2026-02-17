@@ -279,7 +279,7 @@ export function Leave() {
   };
 
   const subscribeToChanges = () => {
-    if (!currentCompany) return;
+    if (!currentCompany) return () => {};
 
     const channel = supabase
       .channel('leave_requests_changes')
