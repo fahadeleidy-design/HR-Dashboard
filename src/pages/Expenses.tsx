@@ -98,7 +98,8 @@ export function Expenses() {
     if (currentCompany) {
       fetchClaims();
       fetchEmployees();
-      subscribeToChanges();
+      const cleanup = subscribeToChanges();
+      return cleanup;
     }
   }, [currentCompany, dateFilter]);
 
@@ -262,7 +263,12 @@ export function Expenses() {
 
     setSubmitting(true);
     try {
-      const amount = parseFloat(formData.amount);
+      const amount = parseFloat(formData.amount) || 0;
+      if (amount <= 0) {
+        showToast({ type: 'error', title: 'Please enter a valid amount' });
+        setSubmitting(false);
+        return;
+      }
       const vatAmount = amount * (VAT_RATE / 100);
       const totalAmount = amount + vatAmount;
       const claimNumber = `EXP-${Date.now().toString().slice(-8)}`;
@@ -281,8 +287,8 @@ export function Expenses() {
         vat_amount: vatAmount,
         vat_rate: VAT_RATE,
         currency: formData.currency,
-        exchange_rate: formData.currency === 'SAR' ? 1 : 1,
-        amount_in_sar: totalAmount,
+        exchange_rate: formData.currency === 'SAR' ? 1 : formData.currency === 'USD' ? 3.75 : formData.currency === 'EUR' ? 4.10 : formData.currency === 'GBP' ? 4.75 : formData.currency === 'AED' ? 1.02 : 1,
+        amount_in_sar: formData.currency === 'SAR' ? totalAmount : totalAmount * (formData.currency === 'USD' ? 3.75 : formData.currency === 'EUR' ? 4.10 : formData.currency === 'GBP' ? 4.75 : formData.currency === 'AED' ? 1.02 : 1),
         payment_method: formData.payment_method,
         approval_status: 'pending',
         policy_compliant: true,

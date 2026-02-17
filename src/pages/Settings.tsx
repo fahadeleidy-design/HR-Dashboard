@@ -62,7 +62,7 @@ export function Settings() {
     client_id: '',
     client_secret: '',
     private_key: '',
-    x_apikey: 'L6LK4GEAAIVrQbVo4AOVrQk781kvIT3X',
+    x_apikey: '',
     environment: 'sandbox' as 'sandbox' | 'production',
     sync_enabled: false,
   });
@@ -148,7 +148,7 @@ export function Settings() {
           client_id: data.client_id || '',
           client_secret: data.client_secret || '',
           private_key: data.private_key || '',
-          x_apikey: data.x_apikey || 'L6LK4GEAAIVrQbVo4AOVrQk781kvIT3X',
+          x_apikey: data.x_apikey || '',
           environment: data.environment,
           sync_enabled: data.sync_enabled,
         });
@@ -604,7 +604,7 @@ export function Settings() {
                 value={gosiForm.x_apikey}
                 onChange={(e) => setGosiForm({ ...gosiForm, x_apikey: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="L6LK4GEAAIVrQbVo4AOVrQk781kvIT3X"
+                placeholder=""
               />
               <p className="text-xs text-gray-500 mt-1">
                 Default x-apikey is pre-filled. Same for both Sandbox and Production environments.

@@ -142,7 +142,8 @@ export function Leave() {
       fetchEmployees();
       fetchLeaveBalances();
       fetchEncashmentRequests();
-      subscribeToChanges();
+      const cleanup = subscribeToChanges();
+      return cleanup;
     }
   }, [currentCompany]);
 

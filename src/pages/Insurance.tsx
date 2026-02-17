@@ -107,7 +107,8 @@ export function Insurance() {
 
       supabase
         .from('insurance_beneficiaries')
-        .select('*')
+        .select('*, insurance_policies!inner(company_id)')
+        .eq('insurance_policies.company_id', currentCompany.id)
         .order('created_at', { ascending: false })
     ]);
 

@@ -98,7 +98,8 @@ export function Employees() {
     if (currentCompany || (isConsolidatedView && companies.length > 0)) {
       fetchEmployees();
       fetchDepartments();
-      subscribeToChanges();
+      const cleanup = subscribeToChanges();
+      return cleanup;
     }
   }, [currentCompany, isConsolidatedView, companies]);
 
@@ -312,7 +313,7 @@ export function Employees() {
       } else if (filterNationality === 'non-saudi') {
         filtered = filtered.filter(emp => emp.is_saudi === false);
       } else {
-        filtered = filtered.filter(emp => emp.nationality.toLowerCase() === filterNationality.toLowerCase());
+        filtered = filtered.filter(emp => emp.nationality?.toLowerCase() === filterNationality.toLowerCase());
       }
     }
 
@@ -356,12 +357,12 @@ export function Employees() {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(
         (emp) =>
-          emp.first_name_en.toLowerCase().includes(term) ||
-          emp.last_name_en.toLowerCase().includes(term) ||
-          emp.employee_number.toLowerCase().includes(term) ||
+          emp.first_name_en?.toLowerCase().includes(term) ||
+          emp.last_name_en?.toLowerCase().includes(term) ||
+          emp.employee_number?.toLowerCase().includes(term) ||
           emp.email?.toLowerCase().includes(term) ||
-          emp.nationality.toLowerCase().includes(term) ||
-          emp.job_title_en.toLowerCase().includes(term) ||
+          emp.nationality?.toLowerCase().includes(term) ||
+          emp.job_title_en?.toLowerCase().includes(term) ||
           emp.iqama_number?.toLowerCase().includes(term)
       );
     }

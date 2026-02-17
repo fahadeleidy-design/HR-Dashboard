@@ -209,7 +209,7 @@ export function Visas() {
         proposed_salary: formData.proposed_salary ? parseFloat(formData.proposed_salary) : null,
         priority: formData.priority,
         expected_arrival_date: formData.expected_arrival_date || null,
-        sponsor_company_name: formData.sponsor_name || currentCompany.company_name_en,
+        sponsor_company_name: formData.sponsor_name || currentCompany.name_en,
         visa_type: formData.visa_type,
         processing_status: 'pending',
         workflow_step: 'initial_request',
@@ -1024,7 +1024,7 @@ export function Visas() {
                       value={formData.sponsor_name}
                       onChange={(e) => setFormData({ ...formData, sponsor_name: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder={currentCompany?.company_name_en || 'Company name'}
+                      placeholder={currentCompany?.name_en || 'Company name'}
                     />
                   </div>
 

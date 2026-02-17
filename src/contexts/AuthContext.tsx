@@ -22,6 +22,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [loading, setLoading] = useState(true);
   const currentUserIdRef = useRef<string | null>(null);
+  const initializedRef = useRef(false);
+  const fetchingRoleRef = useRef(false);
 
   const fetchUserRole = useCallback(async (userId: string) => {
     try {
@@ -43,30 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const refreshUserRole = async () => {
-    if (user) {
-      const role = await fetchUserRole(user.id);
+  const refreshUserRole = useCallback(async () => {
+    const userId = currentUserIdRef.current;
+    if (userId) {
+      const role = await fetchUserRole(userId);
       setUserRole(role);
     }
-  };
+  }, [fetchUserRole]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      (async () => {
-        const userId = session?.user?.id ?? null;
-        currentUserIdRef.current = userId;
-        setSession(session);
-        setUser(session?.user ?? null);
-
-        if (session?.user) {
-          const role = await fetchUserRole(session.user.id);
-          setUserRole(role);
-        }
-
-        setLoading(false);
-      })();
-    });
-
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       const newUserId = session?.user?.id ?? null;
 
@@ -75,22 +62,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      (async () => {
-        const userChanged = newUserId !== currentUserIdRef.current;
-        currentUserIdRef.current = newUserId;
-        setSession(session);
+      const userChanged = newUserId !== currentUserIdRef.current;
+      currentUserIdRef.current = newUserId;
+      setSession(session);
 
-        if (userChanged) {
-          setUser(session?.user ?? null);
+      if (userChanged) {
+        setUser(session?.user ?? null);
 
-          if (session?.user) {
-            const role = await fetchUserRole(session.user.id);
+        if (session?.user && !fetchingRoleRef.current) {
+          fetchingRoleRef.current = true;
+          fetchUserRole(session.user.id).then((role) => {
             setUserRole(role);
-          } else {
-            setUserRole(null);
+            fetchingRoleRef.current = false;
+            if (!initializedRef.current) {
+              initializedRef.current = true;
+              setLoading(false);
+            }
+          });
+        } else if (!session?.user) {
+          setUserRole(null);
+          if (!initializedRef.current) {
+            initializedRef.current = true;
+            setLoading(false);
           }
         }
-      })();
+      } else if (!initializedRef.current) {
+        initializedRef.current = true;
+        setLoading(false);
+      }
+    });
+
+    supabase.auth.getSession().catch(() => {
+      initializedRef.current = true;
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
@@ -113,10 +117,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    setSession(null);
-    setUserRole(null);
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      currentUserIdRef.current = null;
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+    }
   };
 
   const value = {

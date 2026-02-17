@@ -42,6 +42,7 @@ export function Attendance() {
   const [attendanceRequests, setAttendanceRequests] = useState<any[]>([]);
   const [attendanceExceptions, setAttendanceExceptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalEmployeeCount, setTotalEmployeeCount] = useState(0);
   const { logError } = useErrorHandler();
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
   const [activeTab, setActiveTab] = useState<TabType>('dashboard');
@@ -49,7 +50,8 @@ export function Attendance() {
   useEffect(() => {
     if (currentCompany) {
       fetchAllData();
-      subscribeToChanges();
+      const cleanup = subscribeToChanges();
+      return cleanup;
     }
   }, [currentCompany, selectedMonth]);
 
@@ -59,8 +61,23 @@ export function Attendance() {
       fetchAttendance(),
       fetchRequests(),
       fetchExceptions(),
+      fetchEmployeeCount(),
     ]);
     setLoading(false);
+  };
+
+  const fetchEmployeeCount = async () => {
+    if (!currentCompany) return;
+    try {
+      const { count } = await supabase
+        .from('employees')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', currentCompany.id)
+        .eq('status', 'active');
+      setTotalEmployeeCount(count || 0);
+    } catch (error) {
+      logError(error, 'low', { component: 'Attendance', action: 'fetchEmployeeCount' });
+    }
   };
 
   const fetchAttendance = async () => {
@@ -236,11 +253,13 @@ export function Attendance() {
       todayAbsent: todayRecords.filter(r => r.status === 'absent').length,
       todayLate: todayRecords.filter(r => r.status === 'late').length,
       todayOnTime: todayRecords.filter(r => r.status === 'present' && (r.late_minutes || 0) === 0).length,
-      totalEmployees: 100,
+      totalEmployees: totalEmployeeCount,
       checkedIn: todayRecords.length,
-      notCheckedIn: 100 - todayRecords.length,
+      notCheckedIn: Math.max(0, totalEmployeeCount - todayRecords.length),
       exceptions: attendanceExceptions.filter(e => !e.is_resolved).length,
-      averageCheckInTime: '9:05 AM',
+      averageCheckInTime: todayRecords.length > 0
+        ? new Date(todayRecords.reduce((sum, r) => sum + new Date(`1970-01-01T${r.check_in}`).getTime(), 0) / todayRecords.length).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+        : '--',
       overtimeToday: todayRecords.reduce((sum, r) => sum + (r.overtime_hours || 0), 0),
     };
   };

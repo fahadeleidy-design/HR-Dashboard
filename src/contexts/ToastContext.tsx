@@ -9,23 +9,46 @@ interface Toast {
   duration?: number;
 }
 
+type ToastType = Toast['type'];
+
 interface ToastContextType {
-  showToast: (toast: Omit<Toast, 'id'>) => void;
+  showToast: {
+    (toast: Omit<Toast, 'id'>): void;
+    (messageOrType: string, typeOrMessage?: string): void;
+  };
   hideToast: (id: string) => void;
 }
+
+const TOAST_TYPES: ToastType[] = ['success', 'error', 'warning', 'info'];
 
 const ToastContext = createContext<ToastContextType | undefined>(undefined);
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const showToast = (toast: Omit<Toast, 'id'>) => {
+  const showToast = (first: Omit<Toast, 'id'> | string, second?: string) => {
+    let resolved: Omit<Toast, 'id'>;
+
+    if (typeof first === 'string' && second) {
+      if (TOAST_TYPES.includes(first as ToastType)) {
+        resolved = { type: first as ToastType, title: second };
+      } else if (TOAST_TYPES.includes(second as ToastType)) {
+        resolved = { type: second as ToastType, title: first };
+      } else {
+        resolved = { type: 'info', title: first };
+      }
+    } else if (typeof first === 'string') {
+      resolved = { type: 'info', title: first };
+    } else {
+      resolved = first;
+    }
+
     const id = Math.random().toString(36).substr(2, 9);
-    const newToast = { ...toast, id };
+    const newToast = { ...resolved, id };
 
     setToasts((prev) => [...prev, newToast]);
 
-    const duration = toast.duration || 5000;
+    const duration = resolved.duration || 5000;
     setTimeout(() => {
       hideToast(id);
     }, duration);

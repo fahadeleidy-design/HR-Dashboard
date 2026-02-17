@@ -117,9 +117,9 @@ function App() {
                     <Route path="/tenant-administration" element={<ProtectedPage allowedRoles={['super_admin']}><TenantAdministration /></ProtectedPage>} />
                     <Route path="/tenant-configuration" element={<ProtectedPage allowedRoles={['super_admin', 'admin']}><TenantConfiguration /></ProtectedPage>} />
                     <Route path="/cross-company-analytics" element={<ProtectedPage allowedRoles={['super_admin', 'hr', 'finance']}><CrossCompanyAnalytics /></ProtectedPage>} />
-                    <Route path="/permissions" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'tenant_admin']}><PermissionsManagement /></ProtectedPage>} />
-                    <Route path="/workflow" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance']}><WorkflowManagement /></ProtectedPage>} />
-                    <Route path="/global-hr" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'finance_manager', 'finance']}><GlobalHR /></ProtectedPage>} />
+                    <Route path="/permissions" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_admin']}><PermissionsManagement /></ProtectedPage>} />
+                    <Route path="/workflow" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'hr', 'finance']}><WorkflowManagement /></ProtectedPage>} />
+                    <Route path="/global-hr" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr_manager', 'hr', 'finance']}><GlobalHR /></ProtectedPage>} />
                     <Route path="/skills" element={<ProtectedPage><SkillsManagement /></ProtectedPage>} />
                     <Route path="/penalties" element={<ProtectedPage allowedRoles={['hr', 'finance', 'admin', 'super_admin']}><Penalties /></ProtectedPage>} />
                     <Route path="/finance-dashboard" element={<ProtectedPage allowedRoles={['finance', 'hr', 'super_admin']}><FinanceDashboard /></ProtectedPage>} />
