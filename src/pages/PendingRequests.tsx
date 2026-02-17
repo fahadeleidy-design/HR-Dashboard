@@ -150,7 +150,7 @@ export function PendingRequests() {
         if ((role === 'hr' || role === 'admin' || role === 'super_admin') && r.pending_at_level === 'hr') {
           return true;
         }
-        if ((role === 'finance' || role === 'admin' || role === 'super_admin') && r.pending_at_level === 'finance') {
+        if ((role === 'finance' || role === 'ceo' || role === 'admin' || role === 'super_admin') && r.pending_at_level === 'finance') {
           return true;
         }
         return false;
@@ -334,7 +334,7 @@ export function PendingRequests() {
     if (request.pending_at_level === 'hr' && (role === 'hr' || role === 'admin' || role === 'super_admin')) {
       return true;
     }
-    if (request.pending_at_level === 'finance' && (role === 'finance' || role === 'admin' || role === 'super_admin')) {
+    if (request.pending_at_level === 'finance' && (role === 'finance' || role === 'ceo' || role === 'admin' || role === 'super_admin')) {
       return true;
     }
     return false;

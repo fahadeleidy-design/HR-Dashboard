@@ -16,7 +16,7 @@ interface UserRole {
   id: string;
   user_id: string;
   employee_id: string | null;
-  role: 'super_admin' | 'hr' | 'finance' | 'manager' | 'employee';
+  role: 'super_admin' | 'hr' | 'finance' | 'ceo' | 'manager' | 'employee';
   employee_number: string | null;
   first_name_en: string | null;
   last_name_en: string | null;
@@ -49,6 +49,12 @@ const ROLES = [
     color: 'amber'
   },
   {
+    value: 'ceo',
+    label: 'CEO',
+    description: 'Executive read access across all modules, approve high-value loans and finance-level requests',
+    color: 'teal'
+  },
+  {
     value: 'finance',
     label: 'Finance',
     description: 'Full financial operations: payroll, loans, advances, expenses, penalties, GOSI, salary scale, end of service, contracts, insurance, audit log, and financial approvals',
@@ -72,7 +78,7 @@ export function UserRoleManagement() {
   const [form, setForm] = useState({
     email: '',
     employee_id: '',
-    role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'manager' | 'employee'
+    role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'ceo' | 'manager' | 'employee'
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
@@ -81,7 +87,7 @@ export function UserRoleManagement() {
   const [editingRole, setEditingRole] = useState<UserRole | null>(null);
   const [editForm, setEditForm] = useState({
     employee_id: '',
-    role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'manager' | 'employee'
+    role: 'employee' as 'super_admin' | 'hr' | 'finance' | 'ceo' | 'manager' | 'employee'
   });
   const { logError } = useErrorHandler();
 
@@ -92,7 +98,7 @@ export function UserRoleManagement() {
     ? ROLES
     : isHR
       ? ROLES.filter(r => ['employee', 'hr', 'manager'].includes(r.value))
-      : ROLES.filter(r => r.value !== 'super_admin');
+      : ROLES.filter(r => r.value !== 'super_admin' && r.value !== 'ceo');
 
   useEffect(() => {
     if (currentCompany) {
