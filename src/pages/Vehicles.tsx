@@ -47,7 +47,7 @@ export function Vehicles() {
     current_mileage: 0,
     purchase_date: '',
     purchase_price: 0,
-    insurance_provider: '',
+    insurance_company: '',
     insurance_policy_number: '',
     insurance_expiry: '',
     registration_expiry: '',
@@ -317,7 +317,7 @@ export function Vehicles() {
                     purchase_date: formData.purchase_date || null,
                     insurance_expiry: formData.insurance_expiry || null,
                     registration_expiry: formData.registration_expiry || null,
-                    insurance_provider: formData.insurance_provider || null,
+                    insurance_company: formData.insurance_company || null,
                     insurance_policy_number: formData.insurance_policy_number || null,
                     notes: formData.notes || null
                   }]);
@@ -337,7 +337,7 @@ export function Vehicles() {
                   current_mileage: 0,
                   purchase_date: '',
                   purchase_price: 0,
-                  insurance_provider: '',
+                  insurance_company: '',
                   insurance_policy_number: '',
                   insurance_expiry: '',
                   registration_expiry: '',
@@ -516,8 +516,8 @@ export function Vehicles() {
                   </label>
                   <input
                     type="text"
-                    value={formData.insurance_provider}
-                    onChange={(e) => setFormData({ ...formData, insurance_provider: e.target.value })}
+                    value={formData.insurance_company}
+                    onChange={(e) => setFormData({ ...formData, insurance_company: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500"
                   />
                 </div>
