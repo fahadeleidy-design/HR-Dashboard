@@ -95,9 +95,8 @@ export function Login() {
           </button>
 
           <p className="text-center text-sm text-gray-600">
-            {t.auth.dontHaveAccount}{' '}
-            <Link to="/register" className="text-primary-600 hover:text-primary-700 font-medium">
-              {t.auth.signUp}
+            <Link to="/forgot-password" className="text-primary-600 hover:text-primary-700 font-medium">
+              {isRTL ? 'نسيت كلمة المرور؟' : 'Forgot your password?'}
             </Link>
           </p>
         </form>

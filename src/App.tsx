@@ -10,7 +10,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageLoadingFallback } from './components/PageLoadingFallback';
 
 const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login })));
-const Register = lazy(() => import('./pages/Register').then(m => ({ default: m.Register })));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Employees = lazy(() => import('./pages/Employees').then(m => ({ default: m.Employees })));
 const Payroll = lazy(() => import('./pages/Payroll').then(m => ({ default: m.Payroll })));
@@ -82,7 +82,7 @@ function App() {
                 <Suspense fallback={<PageLoadingFallback />}>
                   <Routes>
                     <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
                     <Route path="/" element={<ProtectedPage><Dashboard /></ProtectedPage>} />
                     <Route path="/employees" element={<ProtectedPage><Employees /></ProtectedPage>} />
                     <Route path="/org-chart" element={<ProtectedPage><OrgChart /></ProtectedPage>} />

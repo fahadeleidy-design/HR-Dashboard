@@ -11,6 +11,7 @@ import * as XLSX from 'xlsx';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatInteger } from '@/lib/formatters';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
+import { escapeHtml } from '@/lib/formatters';
 
 interface Document {
   id: string;
@@ -263,11 +264,11 @@ export function Documents() {
           <div class="header">
             <div>
               <h1>Employee Documents Report</h1>
-              <p><strong>Employee:</strong> ${employee.first_name_en} ${employee.last_name_en} (${employee.employee_number})</p>
+              <p><strong>Employee:</strong> ${escapeHtml(employee.first_name_en)} ${escapeHtml(employee.last_name_en)} (${escapeHtml(employee.employee_number)})</p>
               <p><strong>Total Documents:</strong> ${employeeDocs.length}</p>
             </div>
             <div class="company-info">
-              <p><strong>${currentCompany?.name_en || 'Company'}</strong></p>
+              <p><strong>${escapeHtml(currentCompany?.name_en || 'Company')}</strong></p>
               <p>${new Date().toLocaleDateString()}</p>
             </div>
           </div>
@@ -285,11 +286,11 @@ export function Documents() {
             <tbody>
               ${employeeDocs.map(doc => `
                 <tr>
-                  <td>${doc.document_type.toUpperCase()}</td>
-                  <td>${doc.document_name || '-'}</td>
+                  <td>${escapeHtml(doc.document_type.toUpperCase())}</td>
+                  <td>${escapeHtml(doc.document_name || '-')}</td>
                   <td>${doc.issue_date ? new Date(doc.issue_date).toLocaleDateString() : '-'}</td>
                   <td>${doc.expiry_date ? new Date(doc.expiry_date).toLocaleDateString() : '-'}</td>
-                  <td class="status-${doc.status}">${doc.status.replace('_', ' ').toUpperCase()}</td>
+                  <td class="status-${escapeHtml(doc.status)}">${escapeHtml(doc.status.replace('_', ' ').toUpperCase())}</td>
                 </tr>
               `).join('')}
             </tbody>
