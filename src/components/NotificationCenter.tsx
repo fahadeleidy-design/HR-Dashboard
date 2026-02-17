@@ -29,7 +29,8 @@ export function NotificationCenter() {
   useEffect(() => {
     if (currentCompany) {
       fetchNotifications();
-      subscribeToNotifications();
+      const cleanup = subscribeToNotifications();
+      return cleanup;
     }
   }, [currentCompany]);
 

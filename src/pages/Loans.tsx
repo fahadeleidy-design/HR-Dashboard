@@ -377,8 +377,8 @@ export function Loans() {
 
   const handleExport = () => {
     const exportData = loans.map(loan => ({
-      [language === 'ar' ? 'رقم الموظف' : 'Employee Number']: loan.employee.employee_number,
-      [language === 'ar' ? 'اسم الموظف' : 'Employee Name']: `${loan.employee.first_name_en} ${loan.employee.last_name_en}`,
+      [language === 'ar' ? 'رقم الموظف' : 'Employee Number']: loan.employee?.employee_number || '',
+      [language === 'ar' ? 'اسم الموظف' : 'Employee Name']: `${loan.employee?.first_name_en || ''} ${loan.employee?.last_name_en || ''}`.trim(),
       [language === 'ar' ? 'نوع القرض' : 'Loan Type']: loan.loan_type,
       [language === 'ar' ? 'مبلغ القرض' : 'Loan Amount']: loan.loan_amount,
       [language === 'ar' ? 'المبلغ المتبقي' : 'Remaining Amount']: loan.remaining_amount,
@@ -622,14 +622,14 @@ export function Loans() {
                 </tr>
               ) : (
                 pagination.paginatedData.map((loan) => {
-                  const progress = ((loan.loan_amount - loan.remaining_amount) / loan.loan_amount) * 100;
+                  const progress = loan.loan_amount > 0 ? ((loan.loan_amount - loan.remaining_amount) / loan.loan_amount) * 100 : 0;
                   return (
                     <tr key={loan.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {loan.employee.first_name_en} {loan.employee.last_name_en}
+                          {loan.employee?.first_name_en} {loan.employee?.last_name_en}
                         </div>
-                        <div className="text-sm text-gray-500">{loan.employee.employee_number}</div>
+                        <div className="text-sm text-gray-500">{loan.employee?.employee_number}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
                         {loan.loan_type}

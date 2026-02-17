@@ -147,8 +147,8 @@ export function EndOfService() {
       const formattedData = data.map((calc: any) => ({
         id: calc.id,
         employee_id: calc.employee_id,
-        employee_name: `${calc.employees.first_name_en} ${calc.employees.last_name_en}`,
-        employee_code: calc.employees.employee_number,
+        employee_name: `${calc.employees?.first_name_en || ''} ${calc.employees?.last_name_en || ''}`.trim(),
+        employee_code: calc.employees?.employee_number || '',
         calculation_date: calc.calculation_date,
         termination_date: calc.termination_date,
         termination_reason: calc.termination_reason,
@@ -175,7 +175,10 @@ export function EndOfService() {
     setCalculating(true);
 
     const employee = employees.find(e => e.id === selectedEmployee);
-    if (!employee) return;
+    if (!employee) {
+      setCalculating(false);
+      return;
+    }
 
     const hireDate = new Date(employee.hire_date);
     const termDate = new Date(terminationDate);

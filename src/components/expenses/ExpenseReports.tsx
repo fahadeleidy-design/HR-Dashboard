@@ -44,7 +44,7 @@ export function ExpenseReports({ claims }: ExpenseReportsProps) {
       let key: string;
       switch (groupBy) {
         case 'employee':
-          key = `${claim.employee.employee_number} - ${claim.employee.first_name_en} ${claim.employee.last_name_en}`;
+          key = `${claim.employee?.employee_number || 'N/A'} - ${claim.employee?.first_name_en || ''} ${claim.employee?.last_name_en || ''}`;
           break;
         case 'category':
           key = claim.expense_category || 'Uncategorized';
@@ -89,8 +89,8 @@ export function ExpenseReports({ claims }: ExpenseReportsProps) {
       data.claims.map(c => ({
         Group: groupName,
         'Claim #': c.claim_number,
-        Employee: `${c.employee.first_name_en} ${c.employee.last_name_en}`,
-        'Employee #': c.employee.employee_number,
+        Employee: `${c.employee?.first_name_en || ''} ${c.employee?.last_name_en || ''}`.trim(),
+        'Employee #': c.employee?.employee_number || '',
         Date: c.expense_date,
         Category: c.expense_category,
         Subcategory: c.subcategory || '',
@@ -216,7 +216,7 @@ export function ExpenseReports({ claims }: ExpenseReportsProps) {
                           <td className="px-4 py-2 text-sm font-medium text-gray-900">{claim.claim_number || claim.id.slice(0, 8)}</td>
                           {groupBy !== 'employee' && (
                             <td className="px-4 py-2 text-sm text-gray-700">
-                              {claim.employee.first_name_en} {claim.employee.last_name_en}
+                              {claim.employee?.first_name_en} {claim.employee?.last_name_en}
                             </td>
                           )}
                           <td className="px-4 py-2 text-sm text-gray-700">{new Date(claim.expense_date).toLocaleDateString()}</td>

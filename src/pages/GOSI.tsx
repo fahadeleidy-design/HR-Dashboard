@@ -240,9 +240,9 @@ export function GOSI() {
 
   const handleExportGOSI = () => {
     const exportData = gosiContributions.map((contrib) => ({
-      'Employee Number': contrib.employee.employee_number,
-      'Employee Name': `${contrib.employee.first_name_en} ${contrib.employee.last_name_en}`,
-      'Nationality': contrib.employee.is_saudi ? 'Saudi' : 'Non-Saudi',
+      'Employee Number': contrib.employee?.employee_number || '',
+      'Employee Name': `${contrib.employee?.first_name_en || ''} ${contrib.employee?.last_name_en || ''}`.trim(),
+      'Nationality': contrib.employee?.is_saudi ? 'Saudi' : 'Non-Saudi',
       Month: contrib.month,
       'Employee Contribution': contrib.employee_contribution,
       'Employer Contribution': contrib.employer_contribution,
@@ -524,9 +524,9 @@ export function GOSI() {
                   <tr key={contrib.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {contrib.employee.first_name_en} {contrib.employee.last_name_en}
+                        {contrib.employee?.first_name_en} {contrib.employee?.last_name_en}
                       </div>
-                      <div className="text-sm text-gray-500">{contrib.employee.employee_number}</div>
+                      <div className="text-sm text-gray-500">{contrib.employee?.employee_number}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${

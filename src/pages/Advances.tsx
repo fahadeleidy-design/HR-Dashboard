@@ -330,8 +330,8 @@ export function Advances() {
 
   const handleExport = () => {
     const exportData = advances.map(adv => ({
-      [language === 'ar' ? 'رقم الموظف' : 'Employee Number']: adv.employee.employee_number,
-      [language === 'ar' ? 'اسم الموظف' : 'Employee Name']: `${adv.employee.first_name_en} ${adv.employee.last_name_en}`,
+      [language === 'ar' ? 'رقم الموظف' : 'Employee Number']: adv.employee?.employee_number || '',
+      [language === 'ar' ? 'اسم الموظف' : 'Employee Name']: `${adv.employee?.first_name_en || ''} ${adv.employee?.last_name_en || ''}`.trim(),
       [language === 'ar' ? 'المبلغ' : 'Amount']: adv.amount,
       [language === 'ar' ? 'المتبقي' : 'Remaining']: adv.remaining_amount,
       [language === 'ar' ? 'الخصم الشهري' : 'Monthly Deduction']: adv.deduction_amount,
@@ -567,14 +567,14 @@ export function Advances() {
                 </tr>
               ) : (
                 pagination.paginatedData.map((advance) => {
-                  const progress = ((advance.amount - advance.remaining_amount) / advance.amount) * 100;
+                  const progress = advance.amount > 0 ? ((advance.amount - advance.remaining_amount) / advance.amount) * 100 : 0;
                   return (
                     <tr key={advance.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
-                          {advance.employee.first_name_en} {advance.employee.last_name_en}
+                          {advance.employee?.first_name_en} {advance.employee?.last_name_en}
                         </div>
-                        <div className="text-sm text-gray-500">{advance.employee.employee_number}</div>
+                        <div className="text-sm text-gray-500">{advance.employee?.employee_number}</div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         SAR {Number(advance.amount || 0).toLocaleString()}

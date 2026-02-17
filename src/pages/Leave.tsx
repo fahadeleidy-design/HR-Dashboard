@@ -348,6 +348,7 @@ export function Leave() {
       const { data: overlapping, error: overlapError } = await supabase
         .from('leave_requests')
         .select('id')
+        .eq('company_id', currentCompany.id)
         .eq('employee_id', requestForm.employee_id)
         .neq('status', 'rejected')
         .lte('start_date', effectiveEnd)
@@ -411,6 +412,7 @@ export function Leave() {
       });
 
       if (amountError) throw amountError;
+      if (amountData === null || amountData === undefined) throw new Error('Failed to calculate encashment amount');
 
       const { error } = await supabase.from('leave_encashment_requests').insert([{
         company_id: currentCompany.id,
@@ -616,7 +618,7 @@ export function Leave() {
                     leaveBalances.map((balance) => (
                       <tr key={balance.id} className="hover:bg-gray-50">
                         <td className="px-4 py-3 text-sm text-gray-900">
-                          {balance.employee.first_name_en} {balance.employee.last_name_en}
+                          {balance.employee?.first_name_en} {balance.employee?.last_name_en}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-900">
                           {balance.leave_type.name_en}
@@ -793,9 +795,9 @@ export function Leave() {
                   <tr key={request.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {request.employee.first_name_en} {request.employee.last_name_en}
+                        {request.employee?.first_name_en} {request.employee?.last_name_en}
                       </div>
-                      <div className="text-sm text-gray-500">{request.employee.employee_number}</div>
+                      <div className="text-sm text-gray-500">{request.employee?.employee_number}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{request.leave_type.name_en}</div>

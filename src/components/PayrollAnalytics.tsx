@@ -232,7 +232,7 @@ export function PayrollAnalytics({ companyId, batches }: PayrollAnalyticsProps) 
                     <div
                       className="h-full bg-red-500"
                       style={{
-                        width: `${(Number(currentAnalytics.total_deductions) / Number(currentAnalytics.total_gross)) * 100}%`
+                        width: `${Number(currentAnalytics.total_gross) > 0 ? (Number(currentAnalytics.total_deductions) / Number(currentAnalytics.total_gross)) * 100 : 0}%`
                       }}
                     ></div>
                   </div>
@@ -249,7 +249,7 @@ export function PayrollAnalytics({ companyId, batches }: PayrollAnalyticsProps) 
                     <div
                       className="h-full bg-orange-500"
                       style={{
-                        width: `${(Number(currentAnalytics.total_gosi_employee) / Number(currentAnalytics.total_gross)) * 100}%`
+                        width: `${Number(currentAnalytics.total_gross) > 0 ? (Number(currentAnalytics.total_gosi_employee) / Number(currentAnalytics.total_gross)) * 100 : 0}%`
                       }}
                     ></div>
                   </div>
@@ -266,7 +266,7 @@ export function PayrollAnalytics({ companyId, batches }: PayrollAnalyticsProps) 
                     <div
                       className="h-full bg-purple-500"
                       style={{
-                        width: `${(Number(currentAnalytics.total_gosi_employer) / Number(currentAnalytics.total_gross)) * 100}%`
+                        width: `${Number(currentAnalytics.total_gross) > 0 ? (Number(currentAnalytics.total_gosi_employer) / Number(currentAnalytics.total_gross)) * 100 : 0}%`
                       }}
                     ></div>
                   </div>

@@ -1405,7 +1405,7 @@ export function Employees() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-semibold shadow-sm">
-                              {employee.first_name_en.charAt(0)}{employee.last_name_en.charAt(0)}
+                              {employee.first_name_en?.charAt(0) || ''}{employee.last_name_en?.charAt(0) || ''}
                             </div>
                             <div>
                               <div className="text-sm font-medium text-gray-900">
@@ -1582,7 +1582,7 @@ export function Employees() {
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
                         <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
-                          {employee.first_name_en.charAt(0)}{employee.last_name_en.charAt(0)}
+                          {employee.first_name_en?.charAt(0) || ''}{employee.last_name_en?.charAt(0) || ''}
                         </div>
                         <div>
                           <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors">

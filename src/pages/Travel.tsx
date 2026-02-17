@@ -294,7 +294,7 @@ export function Travel() {
         r.request_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
         r.destination.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (r.employees &&
-          `${r.employees.first_name_en} ${r.employees.last_name_en}`.toLowerCase().includes(searchTerm.toLowerCase()))
+          `${r.employees.first_name_en || ''} ${r.employees.last_name_en || ''}`.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 

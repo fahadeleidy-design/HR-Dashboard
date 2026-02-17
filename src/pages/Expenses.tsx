@@ -269,8 +269,8 @@ export function Expenses() {
         setSubmitting(false);
         return;
       }
-      const vatAmount = amount * (VAT_RATE / 100);
-      const totalAmount = amount + vatAmount;
+      const vatAmount = Math.round(amount * (VAT_RATE / 100) * 100) / 100;
+      const totalAmount = Math.round((amount + vatAmount) * 100) / 100;
       const claimNumber = `EXP-${Date.now().toString().slice(-8)}`;
 
       const { data: claimData, error: claimError } = await supabase.from('expense_claims').insert({
@@ -337,8 +337,8 @@ export function Expenses() {
   const handleExport = () => {
     const exportData = filteredClaims.map((claim) => ({
       'Claim Number': claim.claim_number,
-      'Employee': `${claim.employee.first_name_en} ${claim.employee.last_name_en}`,
-      'Employee Number': claim.employee.employee_number,
+      'Employee': `${claim.employee?.first_name_en || ''} ${claim.employee?.last_name_en || ''}`.trim(),
+      'Employee Number': claim.employee?.employee_number || '',
       'Date': claim.expense_date,
       'Category': claim.expense_category,
       'Subcategory': claim.subcategory || '',
@@ -619,9 +619,9 @@ export function Expenses() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
-                              {claim.employee.first_name_en} {claim.employee.last_name_en}
+                              {claim.employee?.first_name_en} {claim.employee?.last_name_en}
                             </div>
-                            <div className="text-sm text-gray-500">{claim.employee.employee_number}</div>
+                            <div className="text-sm text-gray-500">{claim.employee?.employee_number}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {new Date(claim.expense_date).toLocaleDateString()}

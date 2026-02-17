@@ -175,8 +175,8 @@ export function Attendance() {
 
   const handleExport = () => {
     const exportData = attendanceRecords.map((record) => ({
-      'Employee Number': record.employee.employee_number,
-      'Employee Name': `${record.employee.first_name_en} ${record.employee.last_name_en}`,
+      'Employee Number': record.employee?.employee_number || '',
+      'Employee Name': `${record.employee?.first_name_en || ''} ${record.employee?.last_name_en || ''}`.trim(),
       Date: record.date,
       'Check In': record.check_in,
       'Check Out': record.check_out || 'N/A',
@@ -404,9 +404,9 @@ export function Attendance() {
                         <tr key={record.id} className="hover:bg-gray-50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="text-sm font-medium text-gray-900">
-                              {record.employee.first_name_en} {record.employee.last_name_en}
+                              {record.employee?.first_name_en} {record.employee?.last_name_en}
                             </div>
-                            <div className="text-sm text-gray-500">{record.employee.employee_number}</div>
+                            <div className="text-sm text-gray-500">{record.employee?.employee_number}</div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                             {new Date(record.date).toLocaleDateString()}

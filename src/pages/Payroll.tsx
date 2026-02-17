@@ -347,9 +347,9 @@ export function Payroll() {
 
   const exportBatch = (batch: PayrollBatch) => {
     const exportData = payrollItems.map((item) => ({
-      'Employee Number': item.employee.employee_number,
-      'IQAMA Number': item.employee.iqama_number,
-      'Employee Name': `${item.employee.first_name_en} ${item.employee.last_name_en}`,
+      'Employee Number': item.employee?.employee_number || '',
+      'IQAMA Number': item.employee?.iqama_number || '',
+      'Employee Name': `${item.employee?.first_name_en || ''} ${item.employee?.last_name_en || ''}`.trim(),
       'Basic Salary': item.basic_salary,
       'Housing Allowance': item.housing_allowance,
       'Transportation Allowance': item.transportation_allowance,
@@ -779,9 +779,9 @@ export function Payroll() {
                       <tr key={item.id} className="hover:bg-gray-50">
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="text-sm font-medium text-gray-900">
-                            {item.employee.first_name_en} {item.employee.last_name_en}
+                            {item.employee?.first_name_en} {item.employee?.last_name_en}
                           </div>
-                          <div className="text-xs text-gray-500">{item.employee.employee_number}</div>
+                          <div className="text-xs text-gray-500">{item.employee?.employee_number}</div>
                         </td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
                           {Number(item.basic_salary || 0).toLocaleString()}

@@ -64,11 +64,11 @@ export function ExpenseAnalytics({ claims }: ExpenseAnalyticsProps) {
     const byEmployee: Record<string, { name: string; number: string; total: number; count: number }> = {};
 
     approvedClaims.forEach(claim => {
-      const empKey = claim.employee.employee_number;
+      const empKey = claim.employee?.employee_number || 'unknown';
       if (!byEmployee[empKey]) {
         byEmployee[empKey] = {
-          name: `${claim.employee.first_name_en} ${claim.employee.last_name_en}`,
-          number: claim.employee.employee_number,
+          name: `${claim.employee?.first_name_en || ''} ${claim.employee?.last_name_en || ''}`.trim(),
+          number: claim.employee?.employee_number || '',
           total: 0,
           count: 0,
         };
