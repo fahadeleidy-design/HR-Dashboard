@@ -56,6 +56,7 @@ const FinanceReports = lazy(() => import('./pages/FinanceReports').then(m => ({ 
 const BudgetManagement = lazy(() => import('./pages/BudgetManagement').then(m => ({ default: m.BudgetManagement })));
 const PaymentReconciliation = lazy(() => import('./pages/PaymentReconciliation').then(m => ({ default: m.PaymentReconciliation })));
 const PeriodClose = lazy(() => import('./pages/PeriodClose').then(m => ({ default: m.PeriodClose })));
+const GovernanceReporting = lazy(() => import('./pages/GovernanceReporting'));
 
 function ProtectedPage({ children, allowedRoles }: { children: ReactNode; allowedRoles?: string[] }) {
   return (
@@ -127,6 +128,7 @@ function App() {
                     <Route path="/budgets" element={<ProtectedPage allowedRoles={['finance', 'hr', 'super_admin']}><BudgetManagement /></ProtectedPage>} />
                     <Route path="/payment-reconciliation" element={<ProtectedPage allowedRoles={['finance', 'hr', 'super_admin']}><PaymentReconciliation /></ProtectedPage>} />
                     <Route path="/period-close" element={<ProtectedPage allowedRoles={['finance', 'hr', 'super_admin']}><PeriodClose /></ProtectedPage>} />
+                    <Route path="/governance-reports" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr', 'finance', 'compliance']}><GovernanceReporting /></ProtectedPage>} />
                     <Route path="/settings" element={<ProtectedPage allowedRoles={['super_admin', 'hr', 'finance']}><Settings /></ProtectedPage>} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
