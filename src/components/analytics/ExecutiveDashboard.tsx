@@ -24,18 +24,19 @@ interface DepartmentMetric {
 }
 
 export function ExecutiveDashboard() {
-  const { currentCompany, isConsolidatedView } = useCompany();
+  const { currentCompany, isConsolidatedView, loading: companyLoading, companies } = useCompany();
   const [employees, setEmployees] = useState<any[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentCompany?.id || isConsolidatedView) loadData();
-  }, [currentCompany, isConsolidatedView]);
+    if (companyLoading) return;
+    if (currentCompany?.id || isConsolidatedView || companies.length > 0) loadData();
+  }, [currentCompany, isConsolidatedView, companyLoading, companies]);
 
   async function loadData() {
+    setLoading(true);
     try {
-      setLoading(true);
       let empQuery = supabase
         .from('employees')
         .select('id, first_name_en, last_name_en, department:departments(name_en), nationality, is_saudi, gender, status, hire_date, basic_salary, job_title_en, employment_type');
@@ -49,9 +50,14 @@ export function ExecutiveDashboard() {
       }
 
       const [empRes, leaveRes] = await Promise.all([empQuery, leaveQuery]);
+
+      if (empRes.error) console.error('Employees query error:', empRes.error);
+      if (leaveRes.error) console.error('Leave requests query error:', leaveRes.error);
+
       setEmployees(empRes.data || []);
       setLeaveRequests(leaveRes.data || []);
-    } catch {
+    } catch (err) {
+      console.error('loadData error:', err);
     } finally {
       setLoading(false);
     }
