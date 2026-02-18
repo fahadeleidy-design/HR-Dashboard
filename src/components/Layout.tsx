@@ -143,6 +143,11 @@ export function Layout({ children }: LayoutProps) {
         { path: '/performance', icon: TrendingUp, label: t.nav.performance },
         { path: '/training', icon: GraduationCap, label: t.nav.training },
         { path: '/documents', icon: FileText, label: t.nav.documents },
+        { path: '/workforce-analytics', icon: BarChart3, label: language === 'ar' ? 'تحليلات القوى العاملة' : 'Workforce Analytics' },
+        ...(hasFullAccess || !isEmployee ? [
+          { path: '/talent-management', icon: TrendingUp, label: language === 'ar' ? 'إدارة المواهب' : 'Talent Management' },
+          { path: '/org-management', icon: Building2, label: language === 'ar' ? 'الإدارة التنظيمية' : 'Org Management' },
+        ] : []),
       ]
     },
     ...(hasFullAccess || !isEmployee ? [
