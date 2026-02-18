@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   User, Target, Award, Calendar, Clock, FileText, TrendingUp,
-  BookOpen, CheckCircle, AlertTriangle, Star, Shield, Bell
+  BookOpen, CheckCircle, AlertTriangle, Star, Shield, Bell, Search
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
@@ -23,8 +23,10 @@ interface PersonalMetrics {
   upcoming_reviews: number;
 }
 
+const PRIVILEGED_ROLES = ['super_admin', 'admin', 'hr', 'finance'];
+
 export function EmployeePersonalDashboard() {
-  const { userRole } = useAuth();
+  const { userRole, loading: authLoading } = useAuth();
   const { currentCompany } = useCompany();
   const [employee, setEmployee] = useState<any>(null);
   const [metrics, setMetrics] = useState<PersonalMetrics>({
@@ -45,11 +47,53 @@ export function EmployeePersonalDashboard() {
   const [recentGoals, setRecentGoals] = useState<any[]>([]);
   const [upcomingTrainings, setUpcomingTrainings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [employeeList, setEmployeeList] = useState<any[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  const isPrivileged = userRole?.role && PRIVILEGED_ROLES.includes(userRole.role);
 
   useEffect(() => {
-    if (currentCompany?.id && userRole?.employee_id) loadPersonalData();
-    else if (currentCompany?.id) setLoading(false);
-  }, [currentCompany, userRole]);
+    if (authLoading) return;
+    if (currentCompany?.id && userRole?.employee_id) {
+      loadPersonalData();
+    } else if (currentCompany?.id) {
+      setLoading(false);
+    } else if (!currentCompany) {
+      setLoading(false);
+    }
+  }, [currentCompany, userRole, authLoading]);
+
+  async function searchEmployees(query: string) {
+    if (!currentCompany?.id || query.length < 2) { setEmployeeList([]); return; }
+    setSearchLoading(true);
+    const { data } = await supabase
+      .from('employees')
+      .select('id, first_name_en, last_name_en, employee_number, job_title_en, department:departments(name_en)')
+      .eq('company_id', currentCompany.id)
+      .eq('employment_status', 'active')
+      .or(`first_name_en.ilike.%${query}%,last_name_en.ilike.%${query}%,employee_number.ilike.%${query}%`)
+      .limit(8);
+    setSearchLoading(false);
+    setEmployeeList(data || []);
+  }
+
+  async function loadEmployeeById(empId: string) {
+    setLoading(true);
+    setEmployee(null);
+    const { data: empData } = await supabase
+      .from('employees')
+      .select('*, department:departments(name_en)')
+      .eq('id', empId)
+      .maybeSingle();
+    if (empData) {
+      setEmployee(empData);
+      await loadMetrics(empId, empData);
+    }
+    setLoading(false);
+    setEmployeeList([]);
+    setEmployeeSearch('');
+  }
 
   async function loadPersonalData() {
     try {
@@ -65,93 +109,96 @@ export function EmployeePersonalDashboard() {
         return;
       }
       setEmployee(empData);
-
-      const hireDate = new Date(empData.hire_date);
-      const now = new Date();
-      const tenureMonths = (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth());
-      const thisYear = now.getFullYear();
-      const yearStart = new Date(thisYear, 0, 1).toISOString().split('T')[0];
-      const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-      const [leaveRes, goalsRes, reviewRes, docsRes, enrollRes] = await Promise.all([
-        supabase
-          .from('leave_requests')
-          .select('id, status, total_days, start_date, end_date')
-          .eq('employee_id', userRole!.employee_id!)
-          .eq('status', 'approved'),
-        supabase
-          .from('employee_goals')
-          .select('id, status, progress_percentage, goal_title, target_date')
-          .eq('employee_id', userRole!.employee_id!)
-          .order('created_at', { ascending: false })
-          .limit(10),
-        supabase
-          .from('performance_reviews')
-          .select('id, overall_rating, review_period_end, status')
-          .eq('employee_id', userRole!.employee_id!)
-          .eq('status', 'completed')
-          .order('review_period_end', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        supabase
-          .from('documents')
-          .select('id, document_name, expiry_date, document_type')
-          .eq('employee_id', userRole!.employee_id!)
-          .not('expiry_date', 'is', null)
-          .lte('expiry_date', in30Days)
-          .gte('expiry_date', now.toISOString().split('T')[0]),
-        supabase
-          .from('training_enrollments')
-          .select('id, completion_status, completion_date, training_program:training_programs(program_name_en, duration_hours, end_date)')
-          .eq('employee_id', userRole!.employee_id!)
-          .gte('enrollment_date', yearStart),
-      ]);
-
-      const approvedLeaves = leaveRes.data || [];
-      const leaveTaken = approvedLeaves.reduce((sum, l) => sum + (l.total_days || 0), 0);
-
-      const goals = goalsRes.data || [];
-      const goalsCompleted = goals.filter(g => g.status === 'completed').length;
-      const goalsInProgress = goals.filter(g => g.status === 'in_progress').length;
-
-      const enrollments = enrollRes.data || [];
-      const completedTrainings = enrollments.filter(e => e.completion_status === 'completed');
-      const trainingHours = completedTrainings.reduce((sum, e) => {
-        const prog = e.training_program as any;
-        return sum + (prog?.duration_hours || 0);
-      }, 0);
-
-      const pendingTrainings = enrollments
-        .filter(e => e.completion_status !== 'completed')
-        .map(e => ({
-          name: (e.training_program as any)?.program_name_en || 'Training',
-          end_date: (e.training_program as any)?.end_date,
-        }))
-        .slice(0, 3);
-
-      setRecentGoals(goals.slice(0, 4));
-      setUpcomingTrainings(pendingTrainings);
-
-      setMetrics({
-        leave_balance: Math.max(0, 30 - leaveTaken),
-        leave_taken: leaveTaken,
-        total_leave: 30,
-        training_hours: trainingHours,
-        training_completed: completedTrainings.length,
-        goals_completed: goalsCompleted,
-        goals_in_progress: goalsInProgress,
-        goals_total: goals.length,
-        tenure_months: tenureMonths,
-        last_review_rating: (reviewRes.data as any)?.overall_rating ?? null,
-        last_review_date: (reviewRes.data as any)?.review_period_end ?? null,
-        documents_expiring: docsRes.data?.length || 0,
-        upcoming_reviews: 0,
-      });
+      await loadMetrics(userRole!.employee_id!, empData);
     } catch (err) {
       console.error('EmployeePersonalDashboard error:', err);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadMetrics(employeeId: string, empData: any) {
+    const hireDate = new Date(empData.hire_date);
+    const now = new Date();
+    const tenureMonths = (now.getFullYear() - hireDate.getFullYear()) * 12 + (now.getMonth() - hireDate.getMonth());
+    const thisYear = now.getFullYear();
+    const yearStart = new Date(thisYear, 0, 1).toISOString().split('T')[0];
+    const in30Days = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+    const [leaveRes, goalsRes, reviewRes, docsRes, enrollRes] = await Promise.all([
+      supabase
+        .from('leave_requests')
+        .select('id, status, total_days, start_date, end_date')
+        .eq('employee_id', employeeId)
+        .eq('status', 'approved'),
+      supabase
+        .from('employee_goals')
+        .select('id, status, progress_percentage, goal_title, target_date')
+        .eq('employee_id', employeeId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('performance_reviews')
+        .select('id, overall_rating, review_period_end, status')
+        .eq('employee_id', employeeId)
+        .eq('status', 'completed')
+        .order('review_period_end', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from('documents')
+        .select('id, document_name, expiry_date, document_type')
+        .eq('employee_id', employeeId)
+        .not('expiry_date', 'is', null)
+        .lte('expiry_date', in30Days)
+        .gte('expiry_date', now.toISOString().split('T')[0]),
+      supabase
+        .from('training_enrollments')
+        .select('id, completion_status, completion_date, training_program:training_programs(program_name_en, duration_hours, end_date)')
+        .eq('employee_id', employeeId)
+        .gte('enrollment_date', yearStart),
+    ]);
+
+    const approvedLeaves = leaveRes.data || [];
+    const leaveTaken = approvedLeaves.reduce((sum, l) => sum + (l.total_days || 0), 0);
+
+    const goals = goalsRes.data || [];
+    const goalsCompleted = goals.filter(g => g.status === 'completed').length;
+    const goalsInProgress = goals.filter(g => g.status === 'in_progress').length;
+
+    const enrollments = enrollRes.data || [];
+    const completedTrainings = enrollments.filter(e => e.completion_status === 'completed');
+    const trainingHours = completedTrainings.reduce((sum, e) => {
+      const prog = e.training_program as any;
+      return sum + (prog?.duration_hours || 0);
+    }, 0);
+
+    const pendingTrainings = enrollments
+      .filter(e => e.completion_status !== 'completed')
+      .map(e => ({
+        name: (e.training_program as any)?.program_name_en || 'Training',
+        end_date: (e.training_program as any)?.end_date,
+      }))
+      .slice(0, 3);
+
+    setRecentGoals(goals.slice(0, 4));
+    setUpcomingTrainings(pendingTrainings);
+
+    setMetrics({
+      leave_balance: Math.max(0, 30 - leaveTaken),
+      leave_taken: leaveTaken,
+      total_leave: 30,
+      training_hours: trainingHours,
+      training_completed: completedTrainings.length,
+      goals_completed: goalsCompleted,
+      goals_in_progress: goalsInProgress,
+      goals_total: goals.length,
+      tenure_months: tenureMonths,
+      last_review_rating: (reviewRes.data as any)?.overall_rating ?? null,
+      last_review_date: (reviewRes.data as any)?.review_period_end ?? null,
+      documents_expiring: docsRes.data?.length || 0,
+      upcoming_reviews: 0,
+    });
   }
 
   const getTenureLabel = (months: number) => {
@@ -182,6 +229,58 @@ export function EmployeePersonalDashboard() {
   }
 
   if (!employee) {
+    if (isPrivileged) {
+      return (
+        <div className="space-y-6">
+          <div className="bg-white rounded-xl border border-gray-200 p-8">
+            <div className="max-w-md mx-auto text-center">
+              <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mx-auto mb-4">
+                <Search className="w-7 h-7 text-slate-500" />
+              </div>
+              <h3 className="text-base font-semibold text-gray-900 mb-1">View Employee Dashboard</h3>
+              <p className="text-sm text-gray-500 mb-5">Search for an employee to view their personal dashboard.</p>
+              <div className="relative text-left">
+                <input
+                  type="text"
+                  placeholder="Search by name or employee number..."
+                  value={employeeSearch}
+                  onChange={e => {
+                    setEmployeeSearch(e.target.value);
+                    searchEmployees(e.target.value);
+                  }}
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-400 focus:border-transparent"
+                />
+                {searchLoading && (
+                  <div className="absolute right-3 top-3">
+                    <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                )}
+                {employeeList.length > 0 && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 overflow-hidden">
+                    {employeeList.map(emp => (
+                      <button
+                        key={emp.id}
+                        onClick={() => loadEmployeeById(emp.id)}
+                        className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors text-left border-b border-gray-100 last:border-0"
+                      >
+                        <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-xs font-bold text-slate-600 shrink-0">
+                          {emp.first_name_en?.[0]}{emp.last_name_en?.[0]}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{emp.first_name_en} {emp.last_name_en}</p>
+                          <p className="text-xs text-gray-400">{emp.employee_number} · {emp.job_title_en || (emp.department as any)?.name_en || 'Employee'}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
         <User className="w-16 h-16 text-gray-300 mx-auto mb-3" />
@@ -210,6 +309,15 @@ export function EmployeePersonalDashboard() {
               <span>{getTenureLabel(metrics.tenure_months)} tenure</span>
             </div>
           </div>
+          {isPrivileged && (
+            <button
+              onClick={() => setEmployee(null)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs text-white/80 transition-colors"
+            >
+              <Search className="w-3.5 h-3.5" />
+              Change
+            </button>
+          )}
           {metrics.documents_expiring > 0 && (
             <div className="flex items-center gap-2 bg-amber-500/20 border border-amber-400/30 rounded-lg px-3 py-2">
               <AlertTriangle className="w-4 h-4 text-amber-300" />
