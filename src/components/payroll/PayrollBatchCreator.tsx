@@ -5,6 +5,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/contexts/ToastContext';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { supabase } from '@/lib/supabase';
+import { Company } from '@/types/database';
 import {
   Calculator,
   Users,
@@ -92,13 +93,14 @@ interface PayrollBatchCreatorProps {
 }
 
 export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCreatorProps) {
-  const { currentCompany } = useCompany();
+  const { currentCompany, companies } = useCompany();
   const { language, isRTL } = useLanguage();
   const { userRole } = useAuth();
   const { showToast } = useToast();
   const { logError, logActivity } = useErrorHandler();
 
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(currentCompany);
   const [step, setStep] = useState<'config' | 'preview' | 'creating'>('config');
   const [calculating, setCalculating] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -107,23 +109,34 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
   const [expandedEmployee, setExpandedEmployee] = useState<string | null>(null);
   const [existingBatch, setExistingBatch] = useState(false);
 
+  useEffect(() => {
+    if (!selectedCompany && currentCompany) {
+      setSelectedCompany(currentCompany);
+    }
+  }, [currentCompany]);
+
+  const activeCompany = selectedCompany || currentCompany;
+
   const checkExistingBatch = useCallback(async () => {
-    if (!currentCompany) return;
+    if (!activeCompany) return;
     const { data } = await supabase
       .from('payroll_batches')
       .select('id')
-      .eq('company_id', currentCompany.id)
+      .eq('company_id', activeCompany.id)
       .eq('month', selectedMonth)
       .maybeSingle();
     setExistingBatch(!!data);
-  }, [currentCompany, selectedMonth]);
+  }, [activeCompany, selectedMonth]);
 
   useEffect(() => {
     checkExistingBatch();
   }, [checkExistingBatch]);
 
   const calculatePayroll = async () => {
-    if (!currentCompany) return;
+    if (!activeCompany) {
+      showToast({ type: 'warning', title: language === 'ar' ? 'يرجى اختيار شركة' : 'Please select a company first' });
+      return;
+    }
     setCalculating(true);
     setStep('preview');
 
@@ -131,7 +144,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const { data: employees } = await supabase
         .from('employees')
         .select('id, employee_number, first_name_en, last_name_en, first_name_ar, last_name_ar, is_saudi, department_id, department:departments(name_en, name_ar)')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', activeCompany.id)
         .eq('status', 'active')
         .order('employee_number');
 
@@ -145,7 +158,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const { data: latestPayroll } = await supabase
         .from('payroll')
         .select('*')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', activeCompany.id)
         .order('effective_from', { ascending: false });
 
       const salaryMap = new Map<string, EmployeeSalaryInfo>();
@@ -171,7 +184,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const { data: approvedLeaves } = await supabase
         .from('leave_requests')
         .select('employee_id, total_days, leave_type:leave_types!leave_requests_leave_type_id_fkey(is_paid)')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', activeCompany.id)
         .eq('status', 'approved')
         .gte('start_date', periodStartStr)
         .lte('end_date', periodEndStr);
@@ -186,7 +199,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const { data: activeLoans } = await supabase
         .from('loans')
         .select('employee_id, loan_type, monthly_installment, remaining_amount, status')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', activeCompany.id)
         .eq('status', 'active');
 
       const loanMap: Record<string, { type: string; installment: number; remaining: number }[]> = {};
@@ -202,7 +215,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const { data: approvedAdvances } = await supabase
         .from('advances')
         .select('employee_id, amount, remaining_amount, deduction_amount, status')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', activeCompany.id)
         .in('status', ['approved', 'active']);
 
       const advanceMap: Record<string, { amount: number; remaining: number; deduction: number }[]> = {};
@@ -220,7 +233,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const { data: approvedPenalties } = await supabase
         .from('employee_penalties')
         .select('employee_id, amount, reason')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', activeCompany.id)
         .eq('status', 'approved')
         .eq('payroll_applied', false);
 
@@ -236,7 +249,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const { data: customEarnings } = await supabase
         .from('employee_earnings')
         .select('employee_id, amount, earning_type:earnings_types(name_en, name_ar)')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', activeCompany.id)
         .lte('effective_date', periodEndStr)
         .or(`end_date.is.null,end_date.gte.${periodStartStr}`);
 
@@ -252,7 +265,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const { data: customDeductions } = await supabase
         .from('employee_deductions')
         .select('employee_id, amount, deduction_type:deduction_types(name_en, name_ar)')
-        .eq('company_id', currentCompany.id)
+        .eq('company_id', activeCompany.id)
         .lte('effective_date', periodEndStr)
         .or(`end_date.is.null,end_date.gte.${periodStartStr}`);
 
@@ -286,7 +299,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
         try {
           const { data: ratesData } = await supabase.rpc('get_employee_gosi_rates', {
             p_employee_id: emp.id,
-            p_company_id: currentCompany.id,
+            p_company_id: activeCompany.id,
           });
           if (ratesData && ratesData.length > 0) {
             const rates = ratesData[0];
@@ -372,7 +385,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
   };
 
   const confirmAndCreate = async () => {
-    if (!currentCompany || !summary || calculatedItems.length === 0) return;
+    if (!activeCompany || !summary || calculatedItems.length === 0) return;
     setCreating(true);
 
     try {
@@ -384,7 +397,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const { data: batch, error: batchError } = await supabase
         .from('payroll_batches')
         .insert([{
-          company_id: currentCompany.id,
+          company_id: activeCompany.id,
           month: selectedMonth,
           period_start: periodStart.toISOString().split('T')[0],
           period_end: periodEnd.toISOString().split('T')[0],
@@ -402,7 +415,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
       const payrollItemsToInsert = calculatedItems.map(item => ({
         batch_id: batch.id,
         employee_id: item.employee.id,
-        company_id: currentCompany.id,
+        company_id: activeCompany.id,
         basic_salary: item.basicSalary,
         housing_allowance: item.housingAllowance,
         transportation_allowance: item.transportationAllowance,
@@ -433,7 +446,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
         .filter(item => item.gosiEmployee > 0 || item.gosiEmployer > 0)
         .map(item => ({
           employee_id: item.employee.id,
-          company_id: currentCompany.id,
+          company_id: activeCompany.id,
           month: gosiMonth,
           wage_subject_to_gosi: item.gosiBase,
           employee_contribution: item.gosiEmployee,
@@ -459,7 +472,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
         await supabase
           .from('employee_penalties')
           .update({ payroll_applied: true, payroll_applied_at: new Date().toISOString() })
-          .eq('company_id', currentCompany.id)
+          .eq('company_id', activeCompany.id)
           .eq('status', 'approved')
           .eq('payroll_applied', false);
       }
@@ -509,6 +522,33 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 max-w-2xl">
           <div className="space-y-6">
+            {!currentCompany && companies.length > 0 && (
+              <div>
+                <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : ''}`}>
+                  <Building2 className="inline h-4 w-4 mr-1" />
+                  {language === 'ar' ? 'اختر الشركة' : 'Select Company'}
+                </label>
+                <select
+                  value={selectedCompany?.id || ''}
+                  onChange={(e) => {
+                    const company = companies.find(c => c.id === e.target.value) || null;
+                    setSelectedCompany(company);
+                    setExistingBatch(false);
+                  }}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base bg-white"
+                >
+                  <option value="">{language === 'ar' ? '-- اختر شركة --' : '-- Select a company --'}</option>
+                  {companies.map(c => (
+                    <option key={c.id} value={c.id}>{c.name_en}</option>
+                  ))}
+                </select>
+                {!selectedCompany && (
+                  <p className="mt-1 text-xs text-amber-600">
+                    {language === 'ar' ? 'يجب اختيار شركة لإنشاء دفعة الرواتب' : 'A company must be selected to create a payroll batch'}
+                  </p>
+                )}
+              </div>
+            )}
             <div>
               <label className={`block text-sm font-semibold text-gray-700 mb-2 ${isRTL ? 'text-right' : ''}`}>
                 {language === 'ar' ? 'اختر الشهر' : 'Select Payroll Month'}
@@ -569,7 +609,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
               </button>
               <button
                 onClick={calculatePayroll}
-                disabled={existingBatch}
+                disabled={existingBatch || !activeCompany}
                 className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
               >
                 <Calculator className="h-5 w-5" />
@@ -608,7 +648,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
               {language === 'ar' ? 'معاينة دفعة الرواتب' : 'Payroll Batch Preview'}
             </h2>
             <p className="text-sm text-gray-500 mt-0.5">
-              {monthLabel} - {summary?.totalEmployees} {language === 'ar' ? 'موظف' : 'employees'}
+              {activeCompany?.name_en} · {monthLabel} · {summary?.totalEmployees} {language === 'ar' ? 'موظف' : 'employees'}
             </p>
           </div>
         </div>
