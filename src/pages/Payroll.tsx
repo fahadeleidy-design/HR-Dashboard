@@ -1,9 +1,20 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { DollarSign, FileText, Settings, BarChart3, Download } from 'lucide-react';
 import ComprehensivePayrollDashboard from '../components/payroll/ComprehensivePayrollDashboard';
 import WPSFileGenerator from '../components/payroll/WPSFileGenerator';
-import { PayrollBatchCreator } from '@/components/payroll/PayrollBatchCreator';
+import { PayrollBatchCreator } from '../components/payroll/PayrollBatchCreator';
 import { Tabs } from '../components/ui/Tabs';
+import { useCompany } from '../contexts/CompanyContext';
+import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
+import { useErrorHandler } from '../hooks/useErrorHandler';
+import { usePagination } from '../hooks/usePagination';
+import { supabase } from '../lib/supabase';
+import { PayslipViewer } from '../components/PayslipViewer';
+import { ConfirmationModal } from '../components/ui/ConfirmationModal';
+import { Pagination } from '../components/ui/Pagination';
 
 interface PayrollBatch {
   id: string;
