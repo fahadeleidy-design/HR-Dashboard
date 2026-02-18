@@ -7,10 +7,10 @@ import { useCompany } from '../contexts/CompanyContext';
 interface TalentAssessment {
   id: string;
   employee: {
-    first_name: string;
-    last_name: string;
-    job_title: string;
-    department: string;
+    first_name_en: string;
+    last_name_en: string;
+    job_title_en: string;
+    department: { name_en: string } | null;
   };
   performance_level: string;
   potential_level: string;
@@ -25,8 +25,8 @@ interface SuccessionPlan {
   department: string;
   criticality_level: string;
   current_incumbent: {
-    first_name: string;
-    last_name: string;
+    first_name_en: string;
+    last_name_en: string;
   };
   current_succession_depth: number;
   succession_depth_target: number;
@@ -63,7 +63,7 @@ export default function TalentManagement() {
         .from('talent_assessments')
         .select(`
           *,
-          employee:employees(first_name, last_name, job_title, department)
+          employee:employees!talent_assessments_employee_id_fkey(first_name_en, last_name_en, job_title_en, department:departments!employees_department_id_fkey(name_en))
         `)
         .eq('company_id', currentCompany!.id)
         .order('assessment_date', { ascending: false });
@@ -85,7 +85,7 @@ export default function TalentManagement() {
         .from('succession_planning_v2')
         .select(`
           *,
-          current_incumbent:employees(first_name, last_name)
+          current_incumbent:employees(first_name_en, last_name_en)
         `)
         .eq('company_id', currentCompany!.id);
 
@@ -246,7 +246,7 @@ export default function TalentManagement() {
                         <div className="text-lg font-bold mb-1">{employees.length}</div>
                         {employees.slice(0, 2).map(emp => (
                           <div key={emp.id} className="text-xs text-gray-600 truncate">
-                            {emp.employee?.first_name} {emp.employee?.last_name}
+                            {emp.employee?.first_name_en} {emp.employee?.last_name_en}
                           </div>
                         ))}
                         {employees.length > 2 && (
@@ -300,7 +300,7 @@ export default function TalentManagement() {
                         <p className="text-sm text-gray-600">{plan.department}</p>
                         {plan.current_incumbent && (
                           <p className="text-sm text-gray-500">
-                            Current: {plan.current_incumbent.first_name} {plan.current_incumbent.last_name}
+                            Current: {plan.current_incumbent.first_name_en} {plan.current_incumbent.last_name_en}
                           </p>
                         )}
                       </div>
@@ -369,10 +369,10 @@ export default function TalentManagement() {
                     <div className="flex items-center justify-between">
                       <div>
                         <h4 className="font-semibold text-gray-900">
-                          {assessment.employee?.first_name} {assessment.employee?.last_name}
+                          {assessment.employee?.first_name_en} {assessment.employee?.last_name_en}
                         </h4>
                         <p className="text-sm text-gray-600">
-                          {assessment.employee?.job_title} • {assessment.employee?.department}
+                          {assessment.employee?.job_title_en} • {assessment.employee?.department?.name_en}
                         </p>
                       </div>
                       <div className="flex items-center gap-3">
