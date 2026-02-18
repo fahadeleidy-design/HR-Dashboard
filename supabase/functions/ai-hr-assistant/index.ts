@@ -136,6 +136,23 @@ function extractEntity(text: string, options: string[]): string | null {
   return null;
 }
 
+function buildCompanySummary(allEmps: any[], companyMap: Record<string, string>): { total: number; breakdown: { company: string; count: number }[] } {
+  const byCompany: Record<string, number> = {};
+  allEmps.forEach((e: any) => {
+    const name = companyMap[e.company_id] || "Unknown";
+    byCompany[name] = (byCompany[name] || 0) + 1;
+  });
+  const breakdown = Object.entries(byCompany)
+    .map(([company, count]) => ({ company, count }))
+    .sort((a, b) => b.count - a.count);
+  return { total: allEmps.length, breakdown };
+}
+
+function companyBreakdownSuffix(breakdown: { company: string; count: number }[]): string {
+  if (breakdown.length <= 1) return "";
+  return ` Breakdown by company: ${breakdown.map((c) => `${c.company}: ${c.count}`).join(", ")}.`;
+}
+
 async function executeNLQuery(serviceClient: any, companyId: string, queryText: string, userId: string) {
   const startTime = Date.now();
   const interpretation = interpretNLQuery(queryText);
@@ -145,21 +162,26 @@ async function executeNLQuery(serviceClient: any, companyId: string, queryText: 
   let confidence = 0.75;
 
   try {
-    const { data: employees } = await serviceClient
-      .from("employees")
-      .select(`
-        id, company_id, department_id, basic_salary, status, hire_date, nationality, gender,
-        first_name_en, last_name_en, first_name_ar, last_name_ar,
-        job_title_en, job_title_ar,
-        department:departments!employees_department_id_fkey(name_en, name_ar)
-      `)
-      .eq("company_id", companyId)
-      .eq("status", "active");
+    const [{ data: allCompaniesRaw }, { data: allEmployeesRaw }] = await Promise.all([
+      serviceClient.from("companies").select("id, name_en"),
+      serviceClient
+        .from("employees")
+        .select(`
+          id, company_id, department_id, basic_salary, status, hire_date, nationality, gender,
+          first_name_en, last_name_en, job_title_en, job_title_ar,
+          department:departments!employees_department_id_fkey(name_en)
+        `)
+        .eq("status", "active"),
+    ]);
 
-    const emps = (employees || []).map((e: any) => ({
+    const companyMap: Record<string, string> = {};
+    (allCompaniesRaw || []).forEach((c: any) => { companyMap[c.id] = c.name_en; });
+
+    const allEmps = (allEmployeesRaw || []).map((e: any) => ({
       ...e,
       full_name: `${e.first_name_en || ""} ${e.last_name_en || ""}`.trim(),
       department_name: e.department?.name_en || "Unknown",
+      company_name: companyMap[e.company_id] || "Unknown",
       job_title: e.job_title_en || e.job_title_ar || "",
     }));
 
@@ -167,41 +189,20 @@ async function executeNLQuery(serviceClient: any, companyId: string, queryText: 
       case "count_employees": {
         const dept = interpretation.entities.department;
         const filtered = dept
-          ? emps.filter((e: any) => e.department_name?.toLowerCase().includes(dept))
-          : emps;
+          ? allEmps.filter((e: any) => e.department_name?.toLowerCase().includes(dept))
+          : allEmps;
 
-        const { data: allCompanies } = await serviceClient
-          .from("companies")
-          .select("id, name_en");
-
-        const { data: allEmps } = await serviceClient
-          .from("employees")
-          .select("id, company_id")
-          .eq("status", "active");
-
-        const byCompany: Record<string, { name: string; count: number }> = {};
-        (allCompanies || []).forEach((c: any) => {
-          byCompany[c.id] = { name: c.name_en, count: 0 };
-        });
-        (allEmps || []).forEach((e: any) => {
-          if (byCompany[e.company_id]) byCompany[e.company_id].count++;
-        });
-
-        const totalAll = (allEmps || []).length;
-        const companyBreakdown = Object.values(byCompany).filter((c) => c.count > 0);
+        const { total, breakdown } = buildCompanySummary(filtered, companyMap);
 
         resultData = [
-          { total_count: totalAll, department: dept || "All" },
-          ...companyBreakdown.map((c) => ({ company: c.name, count: c.count })),
+          { total_count: total },
+          ...breakdown.map((c) => ({ company: c.company, count: c.count })),
         ];
 
         if (dept) {
-          resultSummary = `There are ${filtered.length} active employees in the ${dept} department.`;
-        } else if (companyBreakdown.length > 1) {
-          const breakdown = companyBreakdown.map((c) => `${c.name}: ${c.count}`).join(", ");
-          resultSummary = `There are ${totalAll} active employees in total. Breakdown by company: ${breakdown}.`;
+          resultSummary = `There are ${total} active employees in the ${dept} department.${companyBreakdownSuffix(breakdown)}`;
         } else {
-          resultSummary = `There are ${totalAll} active employees in total.`;
+          resultSummary = `There are ${total} active employees in total.${companyBreakdownSuffix(breakdown)}`;
         }
         confidence = 0.95;
         break;
@@ -209,94 +210,102 @@ async function executeNLQuery(serviceClient: any, companyId: string, queryText: 
       case "average_salary": {
         const dept = interpretation.entities.department;
         const filtered = dept
-          ? emps.filter((e: any) => e.department_name?.toLowerCase().includes(dept))
-          : emps;
-        const salaries = filtered.filter((e: any) => e.basic_salary > 0);
-        const avg = salaries.length > 0
-          ? salaries.reduce((s: number, e: any) => s + e.basic_salary, 0) / salaries.length
+          ? allEmps.filter((e: any) => e.department_name?.toLowerCase().includes(dept))
+          : allEmps;
+        const withSalary = filtered.filter((e: any) => e.basic_salary > 0);
+        const totalAvg = withSalary.length > 0
+          ? withSalary.reduce((s: number, e: any) => s + e.basic_salary, 0) / withSalary.length
           : 0;
-        const byDept: Record<string, number[]> = {};
-        filtered.forEach((e: any) => {
-          if (e.basic_salary > 0) {
-            const d = e.department_name;
-            if (!byDept[d]) byDept[d] = [];
-            byDept[d].push(e.basic_salary);
-          }
+
+        const byCompanySalary: Record<string, number[]> = {};
+        withSalary.forEach((e: any) => {
+          if (!byCompanySalary[e.company_name]) byCompanySalary[e.company_name] = [];
+          byCompanySalary[e.company_name].push(e.basic_salary);
         });
-        resultData = Object.entries(byDept).map(([d, sals]) => ({
-          department: d,
+
+        resultData = Object.entries(byCompanySalary).map(([company, sals]) => ({
+          company,
           avg_salary: Math.round(sals.reduce((a, b) => a + b, 0) / sals.length),
           employee_count: sals.length,
         }));
-        resultSummary = `The average salary${dept ? ` in ${dept}` : ""} is ${Math.round(avg).toLocaleString()} SAR across ${salaries.length} employees.`;
+
+        const { total, breakdown } = buildCompanySummary(withSalary, companyMap);
+        resultSummary = `The overall average salary${dept ? ` in ${dept}` : ""} is ${Math.round(totalAvg).toLocaleString()} SAR across ${total} employees.${companyBreakdownSuffix(breakdown)}`;
         confidence = 0.92;
         break;
       }
       case "headcount_breakdown": {
         const byDept: Record<string, number> = {};
-        emps.forEach((e: any) => {
-          const d = e.department_name;
-          byDept[d] = (byDept[d] || 0) + 1;
+        allEmps.forEach((e: any) => {
+          byDept[e.department_name] = (byDept[e.department_name] || 0) + 1;
         });
         resultData = Object.entries(byDept)
           .map(([dept, count]) => ({ department: dept, headcount: count }))
           .sort((a, b) => b.headcount - a.headcount);
-        resultSummary = `Headcount breakdown: ${resultData.slice(0, 5).map(d => `${d.department}: ${d.headcount}`).join(", ")}${resultData.length > 5 ? ` and ${resultData.length - 5} more departments` : ""}.`;
+
+        const { total, breakdown } = buildCompanySummary(allEmps, companyMap);
+        resultSummary = `Total headcount: ${total} active employees.${companyBreakdownSuffix(breakdown)} Department breakdown: ${resultData.slice(0, 5).map(d => `${d.department}: ${d.headcount}`).join(", ")}${resultData.length > 5 ? ` and ${resultData.length - 5} more` : ""}.`;
         confidence = 0.95;
         break;
       }
       case "diversity_metrics": {
         const byNationality: Record<string, number> = {};
         const byGender: Record<string, number> = {};
-        emps.forEach((e: any) => {
+        allEmps.forEach((e: any) => {
           byNationality[e.nationality || "Unknown"] = (byNationality[e.nationality || "Unknown"] || 0) + 1;
           byGender[e.gender || "Unknown"] = (byGender[e.gender || "Unknown"] || 0) + 1;
         });
+        const { total, breakdown } = buildCompanySummary(allEmps, companyMap);
         resultData = [
           { metric: "by_nationality", data: Object.entries(byNationality).map(([n, c]) => ({ nationality: n, count: c })).sort((a, b) => b.count - a.count) },
           { metric: "by_gender", data: Object.entries(byGender).map(([g, c]) => ({ gender: g, count: c })) },
         ];
         const topNat = Object.entries(byNationality).sort((a, b) => b[1] - a[1]).slice(0, 3);
-        resultSummary = `Diversity overview: ${Object.keys(byGender).map(g => `${g}: ${byGender[g]}`).join(", ")}. Top nationalities: ${topNat.map(([n, c]) => `${n}: ${c}`).join(", ")}.`;
+        resultSummary = `Diversity overview across ${total} employees: ${Object.keys(byGender).map(g => `${g}: ${byGender[g]}`).join(", ")}. Top nationalities: ${topNat.map(([n, c]) => `${n}: ${c}`).join(", ")}.${companyBreakdownSuffix(breakdown)}`;
         confidence = 0.90;
         break;
       }
       case "recent_hires": {
-        const sorted = [...emps].sort((a: any, b: any) => new Date(b.hire_date || 0).getTime() - new Date(a.hire_date || 0).getTime()).slice(0, 20);
+        const sorted = [...allEmps].sort((a: any, b: any) => new Date(b.hire_date || 0).getTime() - new Date(a.hire_date || 0).getTime()).slice(0, 20);
         resultData = sorted.map((e: any) => ({
           name: e.full_name,
+          company: e.company_name,
           department: e.department_name,
           hire_date: e.hire_date,
           job_title: e.job_title,
         }));
-        resultSummary = `Most recent ${resultData.length} hires. Latest: ${resultData[0]?.name || "N/A"} joined ${resultData[0]?.department || "N/A"} on ${resultData[0]?.hire_date || "N/A"}.`;
+        const { total, breakdown } = buildCompanySummary(allEmps, companyMap);
+        resultSummary = `Most recent ${resultData.length} hires across ${total} total employees.${companyBreakdownSuffix(breakdown)} Latest: ${resultData[0]?.name || "N/A"} (${resultData[0]?.company || ""}) joined ${resultData[0]?.department || "N/A"} on ${resultData[0]?.hire_date || "N/A"}.`;
         confidence = 0.88;
         break;
       }
       case "top_performers": {
-        resultData = emps.slice(0, 10).map((e: any) => ({
+        resultData = allEmps.slice(0, 10).map((e: any) => ({
           name: e.full_name,
+          company: e.company_name,
           department: e.department_name,
           job_title: e.job_title,
         }));
-        resultSummary = `Showing top employees. For detailed performance scores, check the Performance Management module.`;
+        const { total, breakdown } = buildCompanySummary(allEmps, companyMap);
+        resultSummary = `Showing top employees from ${total} total active employees.${companyBreakdownSuffix(breakdown)} For detailed performance scores, check the Performance Management module.`;
         confidence = 0.70;
         break;
       }
       default: {
-        const byDept: Record<string, { count: number; totalSalary: number }> = {};
-        emps.forEach((e: any) => {
-          const d = e.department_name;
-          if (!byDept[d]) byDept[d] = { count: 0, totalSalary: 0 };
-          byDept[d].count++;
-          byDept[d].totalSalary += e.basic_salary || 0;
+        const byCompanyDept: Record<string, { count: number; totalSalary: number }> = {};
+        allEmps.forEach((e: any) => {
+          const key = e.company_name;
+          if (!byCompanyDept[key]) byCompanyDept[key] = { count: 0, totalSalary: 0 };
+          byCompanyDept[key].count++;
+          byCompanyDept[key].totalSalary += e.basic_salary || 0;
         });
-        resultData = Object.entries(byDept).map(([d, v]) => ({
-          department: d,
+        resultData = Object.entries(byCompanyDept).map(([company, v]) => ({
+          company,
           headcount: v.count,
           avg_salary: v.count > 0 ? Math.round(v.totalSalary / v.count) : 0,
         }));
-        resultSummary = `Here's an overview of your workforce: ${emps.length} total active employees across ${Object.keys(byDept).length} departments.`;
+        const { total, breakdown } = buildCompanySummary(allEmps, companyMap);
+        resultSummary = `Workforce overview: ${total} total active employees.${companyBreakdownSuffix(breakdown)}`;
         confidence = 0.60;
       }
     }
