@@ -176,7 +176,7 @@ export function GoalsManagement() {
         .from('performance_goals')
         .select(`
           *,
-          employee:employees(first_name_en, last_name_en, employee_number),
+          employee:employees!performance_goals_employee_id_fkey(first_name_en, last_name_en, employee_number),
           category:goal_categories(category_name, color_code)
         `)
         .eq('company_id', currentCompany.id);

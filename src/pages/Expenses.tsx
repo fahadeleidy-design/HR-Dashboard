@@ -118,7 +118,7 @@ export function Expenses() {
         .from('expense_claims')
         .select(`
           *,
-          employee:employees(employee_number, first_name_en, last_name_en)
+          employee:employees!expense_claims_employee_id_fkey(employee_number, first_name_en, last_name_en)
         `)
         .eq('company_id', currentCompany.id)
         .gte('expense_date', dateFilter.start)
