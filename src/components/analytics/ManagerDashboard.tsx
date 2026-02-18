@@ -11,7 +11,7 @@ interface TeamMember {
   first_name_ar: string;
   last_name_ar: string;
   job_title_en: string;
-  employment_status: string;
+  status: string;
   hire_date: string;
 }
 
@@ -41,10 +41,10 @@ export function ManagerDashboard() {
       const [teamRes, leavesRes, expenseRes] = await Promise.all([
         supabase
           .from('employees')
-          .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, job_title_en, employment_status, hire_date')
+          .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, job_title_en, status, hire_date')
           .eq('company_id', currentCompany!.id)
           .eq('manager_id', userRole!.employee_id!)
-          .eq('employment_status', 'active'),
+          .eq('status', 'active'),
         supabase
           .from('leave_requests')
           .select('id, employee_id, start_date, end_date, status, created_at, employee:employees!leave_requests_employee_id_fkey(first_name_en, last_name_en)')
@@ -66,7 +66,7 @@ export function ManagerDashboard() {
   }
 
   const stats = useMemo(() => {
-    const activeTeam = team.filter(t => t.employment_status === 'active');
+    const activeTeam = team.filter(t => t.status === 'active');
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const recentJoins = activeTeam.filter(t => new Date(t.hire_date) >= thirtyDaysAgo).length;

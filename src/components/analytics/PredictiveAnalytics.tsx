@@ -38,9 +38,9 @@ export function PredictiveAnalytics() {
       const [empRes, predRes] = await Promise.all([
         supabase
           .from('employees')
-          .select('id, first_name, last_name, department, job_title, hire_date, basic_salary, employment_status, gender, nationality')
+          .select('id, first_name_en, last_name_en, department:departments(name_en), job_title_en, hire_date, basic_salary, status, gender, nationality, is_saudi')
           .eq('company_id', currentCompany!.id)
-          .eq('employment_status', 'active'),
+          .eq('status', 'active'),
         supabase
           .from('turnover_predictions')
           .select('*')
@@ -62,9 +62,9 @@ export function PredictiveAnalytics() {
         const tenure = emp ? (new Date().getFullYear() - new Date(emp.hire_date).getFullYear()) : 0;
         return {
           id: p.id,
-          name: emp ? `${emp.first_name} ${emp.last_name}` : 'Unknown',
-          department: emp?.department || '',
-          job_title: emp?.job_title || '',
+          name: emp ? `${emp.first_name_en} ${emp.last_name_en}` : 'Unknown',
+          department: emp?.department?.name_en || '',
+          job_title: emp?.job_title_en || '',
           risk_score: p.turnover_risk_score,
           risk_level: p.risk_category,
           factors: Array.isArray(p.contributing_factors) ? p.contributing_factors : [],
@@ -86,9 +86,9 @@ export function PredictiveAnalytics() {
 
       return {
         id: emp.id,
-        name: `${emp.first_name} ${emp.last_name}`,
-        department: emp.department || 'Unassigned',
-        job_title: emp.job_title || '',
+        name: `${emp.first_name_en} ${emp.last_name_en}`,
+        department: emp.department?.name_en || 'Unassigned',
+        job_title: emp.job_title_en || '',
         risk_score: Math.round(riskScore),
         risk_level: riskLevel,
         factors,
