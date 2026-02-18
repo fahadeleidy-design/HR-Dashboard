@@ -66,17 +66,15 @@ export function Layout({ children }: LayoutProps) {
     if (cIds.length === 0) return;
 
     const fetchBadges = async () => {
-      const [loansRes, advancesRes, eosRes, expensesRes, penaltiesRes] = await Promise.all([
+      const [loansRes, advancesRes, expensesRes, penaltiesRes] = await Promise.all([
         supabase.from('loans').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'hr_approved'),
         supabase.from('salary_advances').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'hr_approved'),
-        supabase.from('eos_calculations').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'draft'),
-        supabase.from('expense_claims').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'submitted'),
+        supabase.from('expense_claims').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('approval_status', 'submitted'),
         supabase.from('penalties').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'pending_finance'),
       ]);
       setBadgeCounts({
         '/loans': loansRes.count || 0,
         '/advances': advancesRes.count || 0,
-        '/end-of-service': eosRes.count || 0,
         '/expenses': expensesRes.count || 0,
         '/penalties': penaltiesRes.count || 0,
       });

@@ -61,26 +61,34 @@ export function MyDashboard() {
           role,
           employee:employees(
             id,
-            full_name,
+            first_name_en,
+            last_name_en,
+            first_name_ar,
+            last_name_ar,
             email,
             phone,
-            job_title,
-            department:departments(name_en, name_ar)
+            job_title_en,
+            job_title_ar,
+            department:departments!employees_department_id_fkey(name_en, name_ar)
           )
         `)
         .eq('user_id', user.id)
         .eq('company_id', currentCompany.id)
-        .single();
+        .maybeSingle();
 
       if (userRoleData) {
         const employee = userRoleData.employee as any;
+        const fullName = language === 'ar'
+          ? `${employee?.first_name_ar || ''} ${employee?.last_name_ar || ''}`.trim()
+          : `${employee?.first_name_en || ''} ${employee?.last_name_en || ''}`.trim();
+        const jobTitle = language === 'ar' ? employee?.job_title_ar : employee?.job_title_en;
         setProfile({
-          full_name: employee?.full_name || user.email?.split('@')[0] || 'User',
+          full_name: fullName || user.email?.split('@')[0] || 'User',
           email: employee?.email || user.email || '',
           phone: employee?.phone,
           role: userRoleData.role,
           department: language === 'ar' ? employee?.department?.name_ar : employee?.department?.name_en,
-          job_title: employee?.job_title,
+          job_title: jobTitle,
           employee_id: employee?.id
         });
 
@@ -206,17 +214,21 @@ export function MyDashboard() {
       if (role === 'manager' || role === 'hr' || role === 'admin' || role === 'super_admin') {
         const { data: pendingRequests } = await supabase
           .from('leave_requests')
-          .select('id, employee:employees(full_name), leave_type, created_at')
+          .select('id, employee:employees(first_name_en, last_name_en, first_name_ar, last_name_ar), leave_type, created_at')
           .eq('company_id', currentCompany.id)
           .eq('status', 'pending')
           .order('created_at', { ascending: false })
           .limit(3);
 
         pendingRequests?.forEach(req => {
+          const emp = req.employee as any;
+          const empName = language === 'ar'
+            ? `${emp?.first_name_ar || ''} ${emp?.last_name_ar || ''}`.trim()
+            : `${emp?.first_name_en || ''} ${emp?.last_name_en || ''}`.trim();
           activities.push({
             type: 'approval',
             title: language === 'ar' ? 'موافقة مطلوبة' : 'Approval Required',
-            description: `${(req.employee as any)?.full_name} - ${req.leave_type}`,
+            description: `${empName} - ${req.leave_type}`,
             date: new Date(req.created_at),
             status: 'pending'
           });
