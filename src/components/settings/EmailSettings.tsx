@@ -17,6 +17,7 @@ interface SmtpConfig {
   smtp_pass_encrypted: string;
   default_from_email: string;
   default_from_name: string;
+  test_email: string | null;
   is_active: boolean;
   last_tested_at: string | null;
   last_test_result: string | null;
@@ -49,6 +50,7 @@ export function EmailSettings() {
     smtp_pass_encrypted: '',
     default_from_email: '',
     default_from_name: '',
+    test_email: '',
     is_active: false,
   });
   const { logError } = useErrorHandler();
@@ -82,6 +84,7 @@ export function EmailSettings() {
           smtp_pass_encrypted: data.smtp_pass_encrypted,
           default_from_email: data.default_from_email,
           default_from_name: data.default_from_name,
+          test_email: data.test_email || '',
           is_active: data.is_active,
         });
       }
@@ -349,6 +352,23 @@ export function EmailSettings() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
                 placeholder="HR Department"
               />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Test Email Address
+                <span className="text-gray-500 font-normal ml-1">(Optional)</span>
+              </label>
+              <input
+                type="email"
+                value={form.test_email}
+                onChange={(e) => setForm({ ...form, test_email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-colors"
+                placeholder="test@yourdomain.com"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                If specified, test emails will be sent to this address instead of the default from email
+              </p>
             </div>
 
             <div className="md:col-span-2 flex items-center gap-6">

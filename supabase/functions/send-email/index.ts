@@ -256,15 +256,15 @@ async function handleTestSmtp(supabase: any, payload: SendEmailRequest) {
 
   try {
     const config = await getSmtpConfig(supabase, company_id);
-    const testEmail = config.default_from_email;
+    const testEmail = config.test_email || config.default_from_email;
 
     await sendViaSmtp(
       config,
       testEmail,
       "",
       "SMTP Test - HR System",
-      "<h2>SMTP Configuration Test</h2><p>This is a test email to verify your SMTP settings are working correctly.</p>",
-      "SMTP Configuration Test\n\nThis is a test email to verify your SMTP settings are working correctly."
+      "<h2>SMTP Configuration Test</h2><p>This is a test email to verify your SMTP settings are working correctly.</p><p><strong>Sent to:</strong> " + testEmail + "</p>",
+      "SMTP Configuration Test\n\nThis is a test email to verify your SMTP settings are working correctly.\n\nSent to: " + testEmail
     );
 
     await supabase
