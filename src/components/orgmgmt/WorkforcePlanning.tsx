@@ -109,7 +109,7 @@ export function WorkforcePlanning() {
         supabase.from('workforce_plans').select('*').eq('company_id', currentCompany!.id).order('fiscal_year', { ascending: false }),
         supabase.from('workforce_demand_forecasts').select('*').eq('company_id', currentCompany!.id),
         supabase.from('workforce_scenarios').select('*').eq('company_id', currentCompany!.id),
-        supabase.from('employees').select('id, department, hire_date, employment_status, gender, nationality, basic_salary').eq('company_id', currentCompany!.id).eq('employment_status', 'active'),
+        supabase.from('employees').select('id, hire_date, status, gender, nationality, basic_salary, department:departments!employees_department_id_fkey(name_en)').eq('company_id', currentCompany!.id).eq('status', 'active'),
       ]);
       setPlans(planRes.data || []);
       setForecasts(forecastRes.data || []);
@@ -138,7 +138,7 @@ export function WorkforcePlanning() {
 
     const deptCounts: Record<string, number> = {};
     employees.forEach(e => {
-      const dept = e.department || 'Unassigned';
+      const dept = e.department?.name_en || 'Unassigned';
       deptCounts[dept] = (deptCounts[dept] || 0) + 1;
     });
     const deptData = Object.entries(deptCounts)
@@ -168,7 +168,7 @@ export function WorkforcePlanning() {
 
     const deptCounts: Record<string, number> = {};
     employees.forEach(e => {
-      const dept = e.department || 'Unassigned';
+      const dept = e.department?.name_en || 'Unassigned';
       deptCounts[dept] = (deptCounts[dept] || 0) + 1;
     });
 

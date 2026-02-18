@@ -61,7 +61,7 @@ export function OrgChartDrillDown() {
       setLoading(true);
       const [orgRes, empRes, posRes] = await Promise.all([
         supabase.from('org_structure').select('*').eq('company_id', currentCompany!.id).eq('is_active', true).order('org_level'),
-        supabase.from('employees').select('id, first_name, last_name, job_title, department, manager_id, employment_status').eq('company_id', currentCompany!.id).eq('employment_status', 'active'),
+        supabase.from('employees').select('id, first_name_en, last_name_en, job_title_en, department_id, manager_id, status, department:departments!employees_department_id_fkey(name_en)').eq('company_id', currentCompany!.id).eq('status', 'active'),
         supabase.from('positions').select('id, position_title, position_number, department, status, fte, current_incumbent_id').eq('company_id', currentCompany!.id),
       ]);
       setOrgUnits(orgRes.data || []);
@@ -91,8 +91,8 @@ export function OrgChartDrillDown() {
           const head = employees.find(e => e.id === u.head_of_unit_id);
           return {
             ...u,
-            head_name: head ? `${head.first_name} ${head.last_name}` : null,
-            head_title: head?.job_title || null,
+            head_name: head ? `${head.first_name_en} ${head.last_name_en}` : null,
+            head_title: head?.job_title_en || null,
             children: buildTree(u.id),
           };
         });
@@ -105,7 +105,7 @@ export function OrgChartDrillDown() {
 
     const deptMap: Record<string, any[]> = {};
     employees.forEach(e => {
-      const dept = e.department || 'Unassigned';
+      const dept = e.department?.name_en || 'Unassigned';
       if (!deptMap[dept]) deptMap[dept] = [];
       deptMap[dept].push(e);
     });
@@ -122,10 +122,10 @@ export function OrgChartDrillDown() {
       budgeted_headcount: employees.length,
       cost_center: null,
       is_active: true,
-      head_name: topManagers[0] ? `${topManagers[0].first_name} ${topManagers[0].last_name}` : 'CEO',
-      head_title: topManagers[0]?.job_title || 'Chief Executive',
+      head_name: topManagers[0] ? `${topManagers[0].first_name_en} ${topManagers[0].last_name_en}` : 'CEO',
+      head_title: topManagers[0]?.job_title_en || 'Chief Executive',
       children: Object.entries(deptMap).map(([dept, emps]) => {
-        const deptHead = emps.find(e => (e.job_title || '').toLowerCase().includes('manager') || (e.job_title || '').toLowerCase().includes('director'));
+        const deptHead = emps.find(e => (e.job_title_en || '').toLowerCase().includes('manager') || (e.job_title_en || '').toLowerCase().includes('director'));
         return {
           id: `dept-${dept}`,
           org_unit_name: dept,
@@ -137,8 +137,8 @@ export function OrgChartDrillDown() {
           budgeted_headcount: emps.length,
           cost_center: null,
           is_active: true,
-          head_name: deptHead ? `${deptHead.first_name} ${deptHead.last_name}` : null,
-          head_title: deptHead?.job_title || null,
+          head_name: deptHead ? `${deptHead.first_name_en} ${deptHead.last_name_en}` : null,
+          head_title: deptHead?.job_title_en || null,
           children: [],
         };
       }),

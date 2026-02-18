@@ -29,9 +29,9 @@ interface MatrixAssignment {
   project_role: string | null;
   allocation_percentage: number;
   is_active: boolean;
-  employee?: { first_name: string; last_name: string };
-  primary_manager?: { first_name: string; last_name: string };
-  secondary_manager?: { first_name: string; last_name: string };
+  employee?: { first_name_en: string; last_name_en: string };
+  primary_manager?: { first_name_en: string; last_name_en: string };
+  secondary_manager?: { first_name_en: string; last_name_en: string };
 }
 
 interface JobProfile {
@@ -120,9 +120,9 @@ export function OrgChangeManagement() {
       setLoading(true);
       const [changeRes, matrixRes, profileRes, empRes] = await Promise.all([
         supabase.from('org_change_requests').select('*').eq('company_id', currentCompany!.id).order('created_at', { ascending: false }),
-        supabase.from('matrix_assignments').select('*, employee:employees!matrix_assignments_employee_id_fkey(first_name, last_name), primary_manager:employees!matrix_assignments_primary_manager_id_fkey(first_name, last_name), secondary_manager:employees!matrix_assignments_secondary_manager_id_fkey(first_name, last_name)').eq('company_id', currentCompany!.id).eq('is_active', true),
+        supabase.from('matrix_assignments').select('*, employee:employees!matrix_assignments_employee_id_fkey(first_name_en, last_name_en), primary_manager:employees!matrix_assignments_primary_manager_id_fkey(first_name_en, last_name_en), secondary_manager:employees!matrix_assignments_secondary_manager_id_fkey(first_name_en, last_name_en)').eq('company_id', currentCompany!.id).eq('is_active', true),
         supabase.from('job_profiles').select('*').eq('company_id', currentCompany!.id).order('job_family'),
-        supabase.from('employees').select('id, first_name, last_name, job_title').eq('company_id', currentCompany!.id).eq('employment_status', 'active'),
+        supabase.from('employees').select('id, first_name_en, last_name_en, job_title_en').eq('company_id', currentCompany!.id).eq('status', 'active'),
       ]);
       setChanges(changeRes.data || []);
       setMatrixAssignments(matrixRes.data || []);
@@ -313,13 +313,13 @@ export function OrgChangeManagement() {
                   matrixAssignments.map(ma => (
                     <tr key={ma.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                        {ma.employee ? `${ma.employee.first_name} ${ma.employee.last_name}` : '-'}
+                        {ma.employee ? `${ma.employee.first_name_en} ${ma.employee.last_name_en}` : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {ma.primary_manager ? `${ma.primary_manager.first_name} ${ma.primary_manager.last_name}` : '-'}
+                        {ma.primary_manager ? `${ma.primary_manager.first_name_en} ${ma.primary_manager.last_name_en}` : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
-                        {ma.secondary_manager ? `${ma.secondary_manager.first_name} ${ma.secondary_manager.last_name}` : '-'}
+                        {ma.secondary_manager ? `${ma.secondary_manager.first_name_en} ${ma.secondary_manager.last_name_en}` : '-'}
                       </td>
                       <td className="px-4 py-3 text-sm text-gray-600">
                         {ma.project_name || '-'}
@@ -461,7 +461,7 @@ export function OrgChangeManagement() {
                 <label className="block text-xs font-medium text-gray-700 mb-1">Employee</label>
                 <select value={matrixForm.employee_id} onChange={e => setMatrixForm(f => ({ ...f, employee_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
                   <option value="">Select employee</option>
-                  {employees.map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>)}
+                  {employees.map(e => <option key={e.id} value={e.id}>{e.first_name_en} {e.last_name_en}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -469,14 +469,14 @@ export function OrgChangeManagement() {
                   <label className="block text-xs font-medium text-gray-700 mb-1">Primary Manager</label>
                   <select value={matrixForm.primary_manager_id} onChange={e => setMatrixForm(f => ({ ...f, primary_manager_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
                     <option value="">Select</option>
-                    {employees.map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>)}
+                    {employees.map(e => <option key={e.id} value={e.id}>{e.first_name_en} {e.last_name_en}</option>)}
                   </select>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-1">Secondary Manager</label>
                   <select value={matrixForm.secondary_manager_id} onChange={e => setMatrixForm(f => ({ ...f, secondary_manager_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
                     <option value="">Select</option>
-                    {employees.map(e => <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>)}
+                    {employees.map(e => <option key={e.id} value={e.id}>{e.first_name_en} {e.last_name_en}</option>)}
                   </select>
                 </div>
               </div>

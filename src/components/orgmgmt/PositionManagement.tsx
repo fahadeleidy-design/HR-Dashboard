@@ -26,7 +26,7 @@ interface Position {
   reports_to_position_id: string | null;
   effective_date: string;
   end_date: string | null;
-  current_incumbent: { first_name: string; last_name: string } | null;
+  current_incumbent: { first_name_en: string; last_name_en: string } | null;
   reports_to: { position_title: string } | null;
 }
 
@@ -82,11 +82,11 @@ export function PositionManagement() {
       const [posRes, deptRes, empRes] = await Promise.all([
         supabase
           .from('positions')
-          .select('*, current_incumbent:employees(first_name, last_name), reports_to:positions!reports_to_position_id(position_title)')
+          .select('*, current_incumbent:employees(first_name_en, last_name_en), reports_to:positions!reports_to_position_id(position_title)')
           .eq('company_id', currentCompany!.id)
           .order('position_number'),
         supabase.from('departments').select('id, name_en').eq('company_id', currentCompany!.id),
-        supabase.from('employees').select('id, first_name, last_name').eq('company_id', currentCompany!.id).eq('employment_status', 'active'),
+        supabase.from('employees').select('id, first_name_en, last_name_en').eq('company_id', currentCompany!.id).eq('status', 'active'),
       ]);
       setPositions(posRes.data || []);
       setDepartments(deptRes.data || []);
@@ -313,7 +313,7 @@ export function PositionManagement() {
                     <td className="px-4 py-3 text-sm text-gray-600">{pos.department}</td>
                     <td className="px-4 py-3 text-sm">
                       {pos.current_incumbent ? (
-                        <span className="text-gray-900">{pos.current_incumbent.first_name} {pos.current_incumbent.last_name}</span>
+                        <span className="text-gray-900">{pos.current_incumbent.first_name_en} {pos.current_incumbent.last_name_en}</span>
                       ) : (
                         <span className="text-amber-600 flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Vacant</span>
                       )}
@@ -470,7 +470,7 @@ export function PositionManagement() {
                 <div>
                   <span className="text-gray-500">Incumbent:</span>{' '}
                   {selectedPosition.current_incumbent
-                    ? <span className="font-medium">{selectedPosition.current_incumbent.first_name} {selectedPosition.current_incumbent.last_name}</span>
+                    ? <span className="font-medium">{selectedPosition.current_incumbent.first_name_en} {selectedPosition.current_incumbent.last_name_en}</span>
                     : <span className="text-amber-600 font-medium">Vacant</span>
                   }
                 </div>
