@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { DollarSign, FileText, Settings, BarChart3, Download, TrendingUp, Plus, AlertCircle, Check, Eye, Send, Users } from 'lucide-react';
+import { DollarSign, FileText, Settings, BarChart3, Download, TrendingUp, Plus, AlertCircle, Check, Eye, Send, Users, Calculator } from 'lucide-react';
 import ComprehensivePayrollDashboard from '../components/payroll/ComprehensivePayrollDashboard';
 import WPSFileGenerator from '../components/payroll/WPSFileGenerator';
 import { PayrollBatchCreator } from '../components/payroll/PayrollBatchCreator';
