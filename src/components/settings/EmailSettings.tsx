@@ -5,8 +5,9 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
 import {
   Mail, Send, CheckCircle, AlertCircle, RefreshCw,
-  Eye, EyeOff, Loader2
+  Eye, EyeOff, Loader2, FileText
 } from 'lucide-react';
+import EmailTemplatesManager from './EmailTemplatesManager';
 
 interface SmtpConfig {
   id: string;
@@ -485,6 +486,10 @@ export function EmailSettings() {
           </div>
         </div>
       )}
+
+      <div className="mt-8">
+        <EmailTemplatesManager />
+      </div>
     </div>
   );
 }
