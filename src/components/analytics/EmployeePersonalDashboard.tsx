@@ -120,11 +120,11 @@ export function EmployeePersonalDashboard() {
       <div className="bg-gradient-to-r from-slate-700 to-slate-900 rounded-xl p-6 text-white">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-2xl font-bold">
-            {employee.first_name?.[0]}{employee.last_name?.[0]}
+            {employee.first_name_en?.[0]}{employee.last_name_en?.[0]}
           </div>
           <div>
-            <h2 className="text-xl font-bold">{employee.first_name} {employee.last_name}</h2>
-            <p className="text-slate-300">{employee.job_title || 'Employee'} | {employee.department}</p>
+            <h2 className="text-xl font-bold">{employee.first_name_en} {employee.last_name_en}</h2>
+            <p className="text-slate-300">{employee.job_title_en || 'Employee'}</p>
             <div className="flex items-center gap-4 mt-1 text-xs text-slate-400">
               <span>{employee.employee_number}</span>
               <span>{getTenureLabel(metrics.tenure_months)} tenure</span>

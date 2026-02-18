@@ -18,7 +18,7 @@ export function TurnoverAnalysis() {
       setLoading(true);
       const { data } = await supabase
         .from('employees')
-        .select('id, department, employment_status, hire_date, termination_date, termination_reason, gender, nationality')
+        .select('id, department:departments(name_en), status, hire_date, termination_date, termination_reason, gender, nationality, is_saudi')
         .eq('company_id', currentCompany!.id);
       setEmployees(data || []);
     } finally {
@@ -27,8 +27,8 @@ export function TurnoverAnalysis() {
   }
 
   const analysis = useMemo(() => {
-    const active = employees.filter(e => e.employment_status === 'active');
-    const terminated = employees.filter(e => e.employment_status === 'terminated');
+    const active = employees.filter(e => e.status === 'active');
+    const terminated = employees.filter(e => e.status === 'terminated');
     const total = active.length + terminated.length;
 
     const voluntary = terminated.filter(e => e.termination_reason === 'resignation' || e.termination_reason === 'voluntary');
@@ -46,10 +46,10 @@ export function TurnoverAnalysis() {
 
     const deptTurnover: Record<string, { total: number; terminated: number }> = {};
     employees.forEach(e => {
-      const dept = e.department || 'Unassigned';
+      const dept = e.department?.name_en || 'Unassigned';
       if (!deptTurnover[dept]) deptTurnover[dept] = { total: 0, terminated: 0 };
       deptTurnover[dept].total++;
-      if (e.employment_status === 'terminated') deptTurnover[dept].terminated++;
+      if (e.status === 'terminated') deptTurnover[dept].terminated++;
     });
 
     const deptData = Object.entries(deptTurnover)

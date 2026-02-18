@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import {
-  Users, TrendingUp, TrendingDown, DollarSign, Clock, UserPlus, UserMinus,
+  Users, TrendingUp, TrendingDown, DollarSign, UserPlus,
   ArrowUpRight, ArrowDownRight, AlertTriangle, Award, Briefcase, Target
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
@@ -20,9 +20,7 @@ interface ExecutiveKPI {
 interface DepartmentMetric {
   department: string;
   headcount: number;
-  turnover_rate: number;
   avg_salary: number;
-  open_positions: number;
 }
 
 export function ExecutiveDashboard() {
@@ -41,7 +39,7 @@ export function ExecutiveDashboard() {
       const [empRes, leaveRes] = await Promise.all([
         supabase
           .from('employees')
-          .select('id, first_name, last_name, department, nationality, gender, employment_status, hire_date, basic_salary, job_title, employment_type')
+          .select('id, first_name_en, last_name_en, department:departments(name_en), nationality, is_saudi, gender, status, hire_date, basic_salary, job_title_en, employment_type')
           .eq('company_id', currentCompany!.id),
         supabase
           .from('leave_requests')
@@ -57,7 +55,7 @@ export function ExecutiveDashboard() {
   }
 
   const stats = useMemo(() => {
-    const active = employees.filter(e => e.employment_status === 'active');
+    const active = employees.filter(e => e.status === 'active');
     const total = active.length;
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
@@ -69,7 +67,7 @@ export function ExecutiveDashboard() {
       return d >= sixtyDaysAgo && d < thirtyDaysAgo;
     }).length;
 
-    const terminated = employees.filter(e => e.employment_status === 'terminated');
+    const terminated = employees.filter(e => e.status === 'terminated');
     const terminatedThisMonth = terminated.filter(e => new Date(e.hire_date) >= thirtyDaysAgo).length;
 
     const totalSalary = active.reduce((sum, e) => sum + (e.basic_salary || 0), 0);
@@ -78,7 +76,7 @@ export function ExecutiveDashboard() {
 
     const turnoverRate = total > 0 ? (terminatedThisMonth / total) * 100 : 0;
 
-    const saudiCount = active.filter(e => e.nationality === 'Saudi').length;
+    const saudiCount = active.filter(e => e.is_saudi === true).length;
     const saudizationPct = total > 0 ? (saudiCount / total) * 100 : 0;
 
     const maleCount = active.filter(e => e.gender === 'male').length;
@@ -86,7 +84,7 @@ export function ExecutiveDashboard() {
 
     const deptMap: Record<string, any[]> = {};
     active.forEach(e => {
-      const dept = e.department || 'Unassigned';
+      const dept = (e.department as any)?.name_en || 'Unassigned';
       if (!deptMap[dept]) deptMap[dept] = [];
       deptMap[dept].push(e);
     });
@@ -94,9 +92,7 @@ export function ExecutiveDashboard() {
     const departmentData: DepartmentMetric[] = Object.entries(deptMap).map(([dept, emps]) => ({
       department: dept.length > 15 ? dept.substring(0, 15) + '...' : dept,
       headcount: emps.length,
-      turnover_rate: 0,
       avg_salary: emps.reduce((s, e) => s + (e.basic_salary || 0), 0) / emps.length,
-      open_positions: 0,
     }));
 
     const monthlyHires: Record<string, number> = {};

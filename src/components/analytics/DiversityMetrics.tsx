@@ -21,9 +21,9 @@ export function DiversityMetrics() {
       setLoading(true);
       const { data } = await supabase
         .from('employees')
-        .select('id, gender, nationality, department, job_title, basic_salary, hire_date, employment_status, disability')
+        .select('id, gender, nationality, is_saudi, department:departments(name_en), job_title_en, basic_salary, hire_date, status, has_disability')
         .eq('company_id', currentCompany!.id)
-        .eq('employment_status', 'active');
+        .eq('status', 'active');
       setEmployees(data || []);
     } finally {
       setLoading(false);
@@ -53,7 +53,7 @@ export function DiversityMetrics() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 7);
 
-    const saudiCount = natMap['Saudi'] || 0;
+    const saudiCount = employees.filter(e => e.is_saudi === true).length;
     const saudizationPct = (saudiCount / total) * 100;
 
     const now = new Date();
@@ -71,7 +71,7 @@ export function DiversityMetrics() {
 
     const seniorTitles = ['director', 'vp', 'chief', 'head', 'manager', 'lead', 'senior manager'];
     const leadership = employees.filter(e => {
-      const title = (e.job_title || '').toLowerCase();
+      const title = (e.job_title_en || '').toLowerCase();
       return seniorTitles.some(t => title.includes(t));
     });
     const femaleLeadership = leadership.filter(e => e.gender === 'female');
@@ -83,12 +83,12 @@ export function DiversityMetrics() {
     const avgFemaleSalary = femaleSalaries.length > 0 ? femaleSalaries.reduce((a, b) => a + b, 0) / femaleSalaries.length : 0;
     const payEquityRatio = avgMaleSalary > 0 ? avgFemaleSalary / avgMaleSalary : 1;
 
-    const disabilityCount = employees.filter(e => e.disability === true).length;
+    const disabilityCount = employees.filter(e => e.has_disability === true).length;
     const disabilityPct = (disabilityCount / total) * 100;
 
     const deptGender: Record<string, { male: number; female: number }> = {};
     employees.forEach(e => {
-      const dept = e.department || 'Unassigned';
+      const dept = e.department?.name_en || 'Unassigned';
       if (!deptGender[dept]) deptGender[dept] = { male: 0, female: 0 };
       if (e.gender === 'male') deptGender[dept].male++;
       else deptGender[dept].female++;

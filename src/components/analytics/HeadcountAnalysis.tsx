@@ -21,9 +21,9 @@ export function HeadcountAnalysis() {
       setLoading(true);
       const { data } = await supabase
         .from('employees')
-        .select('id, department, nationality, gender, employment_type, employment_status, job_title, location')
+        .select('id, department:departments(name_en), nationality, gender, employment_type, status, job_title_en, city, work_region')
         .eq('company_id', currentCompany!.id)
-        .eq('employment_status', 'active');
+        .eq('status', 'active');
       setEmployees(data || []);
     } finally {
       setLoading(false);
@@ -31,10 +31,10 @@ export function HeadcountAnalysis() {
   }
 
   const chartData = useMemo(() => {
-    const groupBy = (key: string) => {
+    const groupBy = (getter: (e: any) => string) => {
       const map: Record<string, number> = {};
       employees.forEach(e => {
-        const val = (e as any)[key] || 'Unspecified';
+        const val = getter(e) || 'Unspecified';
         map[val] = (map[val] || 0) + 1;
       });
       return Object.entries(map)
@@ -43,10 +43,10 @@ export function HeadcountAnalysis() {
     };
 
     switch (view) {
-      case 'department': return groupBy('department');
-      case 'location': return groupBy('location');
-      case 'job_family': return groupBy('job_title');
-      case 'type': return groupBy('employment_type');
+      case 'department': return groupBy(e => e.department?.name_en);
+      case 'location': return groupBy(e => e.city || e.work_region);
+      case 'job_family': return groupBy(e => e.job_title_en);
+      case 'type': return groupBy(e => e.employment_type);
       default: return [];
     }
   }, [employees, view]);
