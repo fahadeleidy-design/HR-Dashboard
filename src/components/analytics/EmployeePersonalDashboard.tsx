@@ -55,25 +55,24 @@ export function EmployeePersonalDashboard() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (currentCompany?.id && userRole?.employee_id) {
+    if (userRole?.employee_id) {
       loadPersonalData();
-    } else if (currentCompany?.id) {
-      setLoading(false);
-    } else if (!currentCompany) {
+    } else {
       setLoading(false);
     }
-  }, [currentCompany, userRole, authLoading]);
+  }, [userRole, authLoading]);
 
   async function searchEmployees(query: string) {
-    if (!currentCompany?.id || query.length < 2) { setEmployeeList([]); return; }
+    if (query.length < 2) { setEmployeeList([]); return; }
     setSearchLoading(true);
-    const { data } = await supabase
+    let q = supabase
       .from('employees')
       .select('id, first_name_en, last_name_en, employee_number, job_title_en, department:departments(name_en)')
-      .eq('company_id', currentCompany.id)
       .eq('employment_status', 'active')
       .or(`first_name_en.ilike.%${query}%,last_name_en.ilike.%${query}%,employee_number.ilike.%${query}%`)
       .limit(8);
+    if (currentCompany?.id) q = q.eq('company_id', currentCompany.id);
+    const { data } = await q;
     setSearchLoading(false);
     setEmployeeList(data || []);
   }
