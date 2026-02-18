@@ -143,7 +143,7 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
     try {
       const { data: employees, error: empError } = await supabase
         .from('employees')
-        .select('id, employee_number, first_name_en, last_name_en, first_name_ar, last_name_ar, is_saudi, department_id, department:departments(name_en, name_ar)')
+        .select('id, employee_number, first_name_en, last_name_en, first_name_ar, last_name_ar, is_saudi, department_id, department:departments!employees_department_id_fkey(name_en, name_ar)')
         .eq('company_id', activeCompany.id)
         .eq('status', 'active')
         .order('employee_number');
