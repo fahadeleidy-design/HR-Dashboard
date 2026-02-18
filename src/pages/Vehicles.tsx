@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useCompany } from '@/contexts/CompanyContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/lib/supabase';
-import { Car, Plus, AlertTriangle, Wrench, DollarSign } from 'lucide-react';
+import { Car, Plus, AlertTriangle, Wrench, Pencil } from 'lucide-react';
 import { useSortableData, SortableTableHeader } from '@/components/SortableTable';
 import { formatCurrency, formatNumber } from '@/lib/formatters';
 import { useErrorHandler } from '@/hooks/useErrorHandler';
@@ -27,6 +27,25 @@ interface ViolationSummary {
   pending_fines: number;
 }
 
+const EMPTY_FORM = {
+  vehicle_number: '',
+  plate_number: '',
+  make: '',
+  model: '',
+  year: new Date().getFullYear(),
+  vehicle_type: 'sedan',
+  status: 'active',
+  current_mileage: 0,
+  purchase_date: '',
+  purchase_price: 0,
+  insurance_company: '',
+  insurance_policy_number: '',
+  insurance_expiry: '',
+  registration_expiry: '',
+  ownership_type: 'owned',
+  notes: ''
+};
+
 export function Vehicles() {
   const { currentCompany } = useCompany();
   const { t, language, isRTL } = useLanguage();
@@ -35,25 +54,10 @@ export function Vehicles() {
   const [maintenanceDue, setMaintenanceDue] = useState(0);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const { logError } = useErrorHandler();
-  const [formData, setFormData] = useState({
-    vehicle_number: '',
-    plate_number: '',
-    make: '',
-    model: '',
-    year: new Date().getFullYear(),
-    vehicle_type: 'sedan',
-    status: 'active',
-    current_mileage: 0,
-    purchase_date: '',
-    purchase_price: 0,
-    insurance_company: '',
-    insurance_policy_number: '',
-    insurance_expiry: '',
-    registration_expiry: '',
-    ownership_type: 'owned',
-    notes: ''
-  });
+  const [formData, setFormData] = useState({ ...EMPTY_FORM });
 
   useEffect(() => {
     if (currentCompany) {
@@ -101,6 +105,79 @@ export function Vehicles() {
     }
   };
 
+  function openAddForm() {
+    setEditingId(null);
+    setFormData({ ...EMPTY_FORM });
+    setShowForm(true);
+  }
+
+  function openEditForm(vehicle: Vehicle) {
+    setEditingId(vehicle.id);
+    setFormData({
+      vehicle_number: vehicle.vehicle_number || '',
+      plate_number: vehicle.plate_number || '',
+      make: vehicle.make || '',
+      model: vehicle.model || '',
+      year: vehicle.year || new Date().getFullYear(),
+      vehicle_type: vehicle.vehicle_type || 'sedan',
+      status: vehicle.status || 'active',
+      current_mileage: vehicle.current_mileage || 0,
+      purchase_date: (vehicle as any).purchase_date || '',
+      purchase_price: (vehicle as any).purchase_price || 0,
+      insurance_company: (vehicle as any).insurance_company || '',
+      insurance_policy_number: (vehicle as any).insurance_policy_number || '',
+      insurance_expiry: vehicle.insurance_expiry || '',
+      registration_expiry: vehicle.registration_expiry || '',
+      ownership_type: (vehicle as any).ownership_type || 'owned',
+      notes: (vehicle as any).notes || ''
+    });
+    setShowForm(true);
+  }
+
+  function closeForm() {
+    setShowForm(false);
+    setEditingId(null);
+    setFormData({ ...EMPTY_FORM });
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentCompany) return;
+
+    setSubmitting(true);
+    try {
+      const payload = {
+        ...formData,
+        company_id: currentCompany.id,
+        purchase_date: formData.purchase_date || null,
+        insurance_expiry: formData.insurance_expiry || null,
+        registration_expiry: formData.registration_expiry || null,
+        insurance_company: formData.insurance_company || null,
+        insurance_policy_number: formData.insurance_policy_number || null,
+        notes: formData.notes || null
+      };
+
+      let error;
+      if (editingId) {
+        const result = await supabase.from('vehicles').update(payload).eq('id', editingId);
+        error = result.error;
+      } else {
+        const result = await supabase.from('vehicles').insert([payload]);
+        error = result.error;
+      }
+
+      if (error) throw error;
+
+      closeForm();
+      fetchData();
+    } catch (error: any) {
+      logError(error, 'medium', { component: 'Vehicles', action: editingId ? 'editVehicle' : 'addVehicle' });
+      alert((editingId ? 'Failed to update vehicle: ' : 'Failed to add vehicle: ') + error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const activeVehicles = vehicles.filter(v => v.status === 'active').length;
   const expiringInsurance = vehicles.filter(v => {
     if (!v.insurance_expiry) return false;
@@ -126,7 +203,7 @@ export function Vehicles() {
           <p className="text-gray-600 mt-1">{t.vehicles.subtitle}</p>
         </div>
         <button
-          onClick={() => setShowForm(true)}
+          onClick={openAddForm}
           className={`flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors ${isRTL ? 'flex-row-reverse' : ''}`}
         >
           <Plus className="h-4 w-4" />
@@ -251,12 +328,15 @@ export function Vehicles() {
                   currentSort={sortConfig}
                   onSort={requestSort}
                 />
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  {t.common.actions}
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {sortedData.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
                     {t.messages.noResults}. {t.common.clickToAdd} "{t.vehicles.addVehicle}".
                   </td>
                 </tr>
@@ -289,6 +369,15 @@ export function Vehicles() {
                         {t.vehicles.statuses[vehicle.status as keyof typeof t.vehicles.statuses] || vehicle.status}
                       </span>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <button
+                        onClick={() => openEditForm(vehicle)}
+                        className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        {t.common.edit}
+                      </button>
+                    </td>
                   </tr>
                 ))
               )}
@@ -301,55 +390,12 @@ export function Vehicles() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-gray-200">
-              <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>{t.vehicles.addVehicle}</h2>
+              <h2 className={`text-2xl font-bold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                {editingId ? t.common.edit + ' ' + t.vehicles.title.slice(0, -1) : t.vehicles.addVehicle}
+              </h2>
             </div>
 
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              if (!currentCompany) return;
-
-              try {
-                const { error } = await supabase
-                  .from('vehicles')
-                  .insert([{
-                    ...formData,
-                    company_id: currentCompany.id,
-                    purchase_date: formData.purchase_date || null,
-                    insurance_expiry: formData.insurance_expiry || null,
-                    registration_expiry: formData.registration_expiry || null,
-                    insurance_company: formData.insurance_company || null,
-                    insurance_policy_number: formData.insurance_policy_number || null,
-                    notes: formData.notes || null
-                  }]);
-
-                if (error) throw error;
-
-                alert('Vehicle added successfully!');
-                setShowForm(false);
-                setFormData({
-                  vehicle_number: '',
-                  plate_number: '',
-                  make: '',
-                  model: '',
-                  year: new Date().getFullYear(),
-                  vehicle_type: 'sedan',
-                  status: 'active',
-                  current_mileage: 0,
-                  purchase_date: '',
-                  purchase_price: 0,
-                  insurance_company: '',
-                  insurance_policy_number: '',
-                  insurance_expiry: '',
-                  registration_expiry: '',
-                  ownership_type: 'owned',
-                  notes: ''
-                });
-                fetchData();
-              } catch (error: any) {
-                logError(error, 'medium', { component: 'Vehicles', action: 'addVehicle' });
-                alert('Failed to add vehicle: ' + error.message);
-              }
-            }} className="p-6 overflow-y-auto flex-1">
+            <form onSubmit={handleSubmit} className="p-6 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className={`block text-sm font-medium text-gray-700 mb-1 ${isRTL ? 'text-right' : 'text-left'}`}>
@@ -570,31 +616,28 @@ export function Vehicles() {
                   />
                 </div>
               </div>
-            </form>
 
-            <div className="p-6 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={() => setShowForm(false)}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
-              >
-                {t.common.cancel}
-              </button>
-              <button
-                type="submit"
-                form="vehicle-form"
-                onClick={(e) => {
-                  const form = document.querySelector('form') as HTMLFormElement;
-                  if (form) {
-                    const event = new Event('submit', { bubbles: true, cancelable: true });
-                    form.dispatchEvent(event);
-                  }
-                }}
-                className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 transition-colors"
-              >
-                {t.vehicles.addVehicle}
-              </button>
-            </div>
+              <div className="flex justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={closeForm}
+                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  {t.common.cancel}
+                </button>
+                <button
+                  type="submit"
+                  disabled={submitting}
+                  className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 transition-colors"
+                >
+                  {submitting
+                    ? t.common.loading
+                    : editingId
+                    ? t.common.save
+                    : t.vehicles.addVehicle}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
