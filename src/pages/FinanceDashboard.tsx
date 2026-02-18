@@ -82,7 +82,7 @@ export function FinanceDashboard() {
         supabase.from('loans').select('id, loan_amount, employee_id, created_at, status, company_id, employees!inner(first_name_en, last_name_en, employee_number, departments(name_en))').in('company_id', companyIds).eq('status', 'hr_approved'),
         supabase.from('advances').select('id, advance_amount, employee_id, created_at, status, company_id, employees!inner(first_name_en, last_name_en, employee_number, departments(name_en))').in('company_id', companyIds).eq('status', 'hr_approved'),
         supabase.from('expense_claims').select('id, total_amount, employee_id, created_at, status, company_id, employees!inner(first_name_en, last_name_en, employee_number, departments(name_en))').in('company_id', companyIds).eq('status', 'hr_approved'),
-        supabase.from('penalties').select('id, penalty_amount, employee_id, created_at, status, company_id, employees!inner(first_name_en, last_name_en, employee_number, departments(name_en))').in('company_id', companyIds).eq('status', 'pending_finance'),
+        supabase.from('employee_penalties').select('id, amount, employee_id, created_at, status, company_id, employees!inner(first_name_en, last_name_en, employee_number, departments(name_en))').in('company_id', companyIds).eq('status', 'hr_approved'),
       ]);
 
       const totalPayroll = (payrollRes.data || []).reduce((sum, p) => sum + (p.net_salary || 0), 0);
@@ -128,7 +128,7 @@ export function FinanceDashboard() {
           previous_approvals: ['Manager', 'HR'],
         })),
         ...(pendingPenaltiesRes.data || []).map((p: any) => ({
-          id: p.id, type: 'penalty' as const, amount: p.penalty_amount,
+          id: p.id, type: 'penalty' as const, amount: p.amount,
           employee_name: `${p.employees?.first_name_en || ''} ${p.employees?.last_name_en || ''}`,
           department: p.employees?.departments?.name_en || '',
           request_date: p.created_at,

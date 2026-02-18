@@ -38,8 +38,8 @@ export function PenaltyDeductionsReport({ companyIds, language, isRTL, dateRange
   const fetchData = async () => {
     setLoading(true);
     const { data: penalties } = await supabase
-      .from('penalties')
-      .select('id, penalty_amount, penalty_type, status, reason, created_at, employees!inner(first_name_en, last_name_en, employee_number, departments(name_en))')
+      .from('employee_penalties')
+      .select('id, amount, reason, status, created_at, employees!inner(first_name_en, last_name_en, employee_number, departments(name_en))')
       .in('company_id', companyIds)
       .gte('created_at', dateRange.from)
       .lte('created_at', dateRange.to + 'T23:59:59')
@@ -49,8 +49,8 @@ export function PenaltyDeductionsReport({ companyIds, language, isRTL, dateRange
       id: p.id,
       employee_name: `${p.employees?.first_name_en || ''} ${p.employees?.last_name_en || ''}`.trim(),
       department: p.employees?.departments?.name_en || 'Unknown',
-      penalty_type: p.penalty_type || 'other',
-      penalty_amount: p.penalty_amount || 0,
+      penalty_type: 'other',
+      penalty_amount: p.amount || 0,
       status: p.status || 'pending',
       created_at: p.created_at,
       reason: p.reason,

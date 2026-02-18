@@ -3,64 +3,6 @@ import { DollarSign, FileText, Settings, BarChart3, Download, Shield } from 'luc
 import ComprehensivePayrollDashboard from '../components/payroll/ComprehensivePayrollDashboard';
 import WPSFileGenerator from '../components/payroll/WPSFileGenerator';
 
-export default function PayrollV2() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'components' | 'wps' | 'reports' | 'settings'>('dashboard');
-
-  const tabs = [
-    { id: 'dashboard' as const, label: 'Payroll Dashboard', icon: DollarSign },
-    { id: 'wps' as const, label: 'WPS Files', icon: Shield },
-    { id: 'reports' as const, label: 'Reports', icon: BarChart3 },
-    { id: 'settings' as const, label: 'Settings', icon: Settings },
-  ];
-
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-green-800 rounded-lg p-6 text-white">
-        <div className="flex items-center gap-3 mb-2">
-          <DollarSign className="w-8 h-8" />
-          <h1 className="text-3xl font-bold">Comprehensive Payroll System</h1>
-        </div>
-        <p className="text-green-100">
-          Complete payroll processing with GOSI, WPS, tax calculations, and Saudi compliance
-        </p>
-      </div>
-
-      {/* Tab Navigation */}
-      <div className="bg-white rounded-lg shadow">
-        <div className="border-b border-gray-200">
-          <nav className="flex -mb-px">
-            {tabs.map(tab => {
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium text-sm transition-colors ${
-                    activeTab === tab.id
-                      ? 'border-green-600 text-green-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-
-        <div className="p-6">
-          {activeTab === 'dashboard' && <ComprehensivePayrollDashboard />}
-          {activeTab === 'wps' && <WPSFileGenerator />}
-          {activeTab === 'reports' && <PayrollReports />}
-          {activeTab === 'settings' && <PayrollSettings />}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function PayrollReports() {
   return (
     <div className="space-y-6">
@@ -297,6 +239,64 @@ function PayrollSettings() {
               <p className="text-xs text-gray-500 mt-1">Hours per day during Ramadan</p>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function PayrollV2() {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'components' | 'wps' | 'reports' | 'settings'>('dashboard');
+
+  const tabs = [
+    { id: 'dashboard' as const, label: 'Payroll Dashboard', icon: DollarSign },
+    { id: 'wps' as const, label: 'WPS Files', icon: Shield },
+    { id: 'reports' as const, label: 'Reports', icon: BarChart3 },
+    { id: 'settings' as const, label: 'Settings', icon: Settings },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-green-600 to-green-800 rounded-lg p-6 text-white">
+        <div className="flex items-center gap-3 mb-2">
+          <DollarSign className="w-8 h-8" />
+          <h1 className="text-3xl font-bold">Comprehensive Payroll System</h1>
+        </div>
+        <p className="text-green-100">
+          Complete payroll processing with GOSI, WPS, tax calculations, and Saudi compliance
+        </p>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="border-b border-gray-200">
+          <nav className="flex -mb-px">
+            {tabs.map(tab => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center gap-2 px-6 py-4 border-b-2 font-medium text-sm transition-colors ${
+                    activeTab === tab.id
+                      ? 'border-green-600 text-green-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="p-6">
+          {activeTab === 'dashboard' && <ComprehensivePayrollDashboard />}
+          {activeTab === 'wps' && <WPSFileGenerator />}
+          {activeTab === 'reports' && <PayrollReports />}
+          {activeTab === 'settings' && <PayrollSettings />}
         </div>
       </div>
     </div>
