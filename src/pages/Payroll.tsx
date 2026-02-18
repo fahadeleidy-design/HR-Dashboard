@@ -1,33 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useCompany } from '@/contexts/CompanyContext';
-import { useLanguage } from '@/contexts/LanguageContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/contexts/ToastContext';
-import { useErrorHandler } from '@/hooks/useErrorHandler';
-import { supabase } from '@/lib/supabase';
-import { formatCurrency, formatInteger, formatDate } from '@/lib/formatters';
-import {
-  Plus,
-  DollarSign,
-  Calculator,
-  Download,
-  FileText,
-  TrendingUp,
-  Users,
-  Check,
-  X,
-  Eye,
-  AlertCircle,
-  Send,
-  Trash2
-} from 'lucide-react';
-import * as XLSX from 'xlsx';
-import { PayslipViewer } from '@/components/PayslipViewer';
-import { ConfirmationModal } from '@/components/ui/ConfirmationModal';
+import { useState } from 'react';
+import { DollarSign, FileText, Settings, BarChart3, Download } from 'lucide-react';
+import ComprehensivePayrollDashboard from '../components/payroll/ComprehensivePayrollDashboard';
+import WPSFileGenerator from '../components/payroll/WPSFileGenerator';
 import { PayrollBatchCreator } from '@/components/payroll/PayrollBatchCreator';
-import { usePagination } from '@/hooks/usePagination';
-import { Pagination } from '@/components/ui/Pagination';
+import { Tabs } from '../components/ui/Tabs';
 
 interface PayrollBatch {
   id: string;

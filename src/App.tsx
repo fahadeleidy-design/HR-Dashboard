@@ -57,6 +57,7 @@ const BudgetManagement = lazy(() => import('./pages/BudgetManagement').then(m =>
 const PaymentReconciliation = lazy(() => import('./pages/PaymentReconciliation').then(m => ({ default: m.PaymentReconciliation })));
 const PeriodClose = lazy(() => import('./pages/PeriodClose').then(m => ({ default: m.PeriodClose })));
 const GovernanceReporting = lazy(() => import('./pages/GovernanceReporting'));
+const PayrollV2 = lazy(() => import('./pages/PayrollV2'));
 
 function ProtectedPage({ children, allowedRoles }: { children: ReactNode; allowedRoles?: string[] }) {
   return (
@@ -89,6 +90,7 @@ function App() {
                     <Route path="/org-chart" element={<ProtectedPage><OrgChart /></ProtectedPage>} />
                     <Route path="/handbook" element={<ProtectedPage><EmployeeHandbook /></ProtectedPage>} />
                     <Route path="/payroll" element={<ProtectedPage><Payroll /></ProtectedPage>} />
+                    <Route path="/payroll-v2" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr', 'finance']}><PayrollV2 /></ProtectedPage>} />
                     <Route path="/leave" element={<ProtectedPage><Leave /></ProtectedPage>} />
                     <Route path="/pending-requests" element={<ProtectedPage><PendingRequests /></ProtectedPage>} />
                     <Route path="/attendance" element={<ProtectedPage><Attendance /></ProtectedPage>} />
