@@ -68,7 +68,7 @@ export function Layout({ children }: LayoutProps) {
     const fetchBadges = async () => {
       const [loansRes, advancesRes, expensesRes, penaltiesRes] = await Promise.all([
         supabase.from('loans').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'hr_approved'),
-        supabase.from('salary_advances').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'hr_approved'),
+        supabase.from('advances').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'hr_approved'),
         supabase.from('expense_claims').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('approval_status', 'submitted'),
         supabase.from('penalties').select('id', { count: 'exact', head: true }).in('company_id', cIds).eq('status', 'pending_finance'),
       ]);

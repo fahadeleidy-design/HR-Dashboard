@@ -172,10 +172,10 @@ export function MyDashboard() {
             .eq('company_id', currentCompany.id)
             .eq('status', 'pending'),
           supabase
-            .from('expenses')
+            .from('expense_claims')
             .select('id', { count: 'exact' })
             .eq('company_id', currentCompany.id)
-            .eq('status', 'pending')
+            .eq('approval_status', 'submitted')
         ]);
 
         newMetrics.pendingApprovals = (leaveResult.count || 0) + (expensesResult.count || 0);
@@ -184,10 +184,10 @@ export function MyDashboard() {
       if (role === 'finance') {
         const [paymentsResult, advancesResult] = await Promise.all([
           supabase
-            .from('expenses')
+            .from('expense_claims')
             .select('id', { count: 'exact' })
             .eq('company_id', currentCompany.id)
-            .eq('status', 'approved')
+            .eq('approval_status', 'approved')
             .is('paid_date', null),
           supabase
             .from('advances')
@@ -266,16 +266,18 @@ export function MyDashboard() {
       if (employeeId) {
         const { data: leaveRequests } = await supabase
           .from('leave_requests')
-          .select('id, leave_type, status, start_date, created_at')
+          .select('id, leave_type:leave_types!leave_requests_leave_type_id_fkey(name_en, name_ar), status, start_date, created_at')
           .eq('employee_id', employeeId)
           .order('created_at', { ascending: false })
           .limit(3);
 
         leaveRequests?.forEach(req => {
+          const lt = req.leave_type as any;
+          const typeName = lt ? (language === 'ar' ? lt.name_ar || lt.name_en : lt.name_en) : '';
           activities.push({
             type: 'leave',
             title: language === 'ar' ? 'طلب إجازة' : 'Leave Request',
-            description: `${req.leave_type} - ${req.status}`,
+            description: `${typeName} - ${req.status}`,
             date: new Date(req.created_at),
             status: req.status
           });
@@ -285,7 +287,7 @@ export function MyDashboard() {
       if (role === 'manager' || role === 'hr' || role === 'admin' || role === 'super_admin') {
         const { data: pendingRequests } = await supabase
           .from('leave_requests')
-          .select('id, employee:employees(first_name_en, last_name_en, first_name_ar, last_name_ar), leave_type, created_at')
+          .select('id, employee:employees!leave_requests_employee_id_fkey(first_name_en, last_name_en, first_name_ar, last_name_ar), leave_type:leave_types!leave_requests_leave_type_id_fkey(name_en, name_ar), created_at')
           .eq('company_id', currentCompany.id)
           .eq('status', 'pending')
           .order('created_at', { ascending: false })
@@ -293,13 +295,15 @@ export function MyDashboard() {
 
         pendingRequests?.forEach(req => {
           const emp = req.employee as any;
+          const lt = req.leave_type as any;
           const empName = language === 'ar'
             ? `${emp?.first_name_ar || ''} ${emp?.last_name_ar || ''}`.trim()
             : `${emp?.first_name_en || ''} ${emp?.last_name_en || ''}`.trim();
+          const typeName = lt ? (language === 'ar' ? lt.name_ar || lt.name_en : lt.name_en) : '';
           activities.push({
             type: 'approval',
             title: language === 'ar' ? 'موافقة مطلوبة' : 'Approval Required',
-            description: `${empName} - ${req.leave_type}`,
+            description: `${empName} - ${typeName}`,
             date: new Date(req.created_at),
             status: 'pending'
           });

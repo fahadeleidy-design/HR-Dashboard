@@ -6,10 +6,11 @@ import { useCompany } from '../../contexts/CompanyContext';
 
 interface TeamMember {
   id: string;
-  first_name: string;
-  last_name: string;
-  job_title: string;
-  department: string;
+  first_name_en: string;
+  last_name_en: string;
+  first_name_ar: string;
+  last_name_ar: string;
+  job_title_en: string;
   employment_status: string;
   hire_date: string;
 }
@@ -40,20 +41,20 @@ export function ManagerDashboard() {
       const [teamRes, leavesRes, expenseRes] = await Promise.all([
         supabase
           .from('employees')
-          .select('id, first_name, last_name, job_title, department, employment_status, hire_date')
+          .select('id, first_name_en, last_name_en, first_name_ar, last_name_ar, job_title_en, employment_status, hire_date')
           .eq('company_id', currentCompany!.id)
           .eq('manager_id', userRole!.employee_id!)
           .eq('employment_status', 'active'),
         supabase
           .from('leave_requests')
-          .select('id, employee_id, start_date, end_date, status, created_at, employees!inner(first_name, last_name)')
+          .select('id, employee_id, start_date, end_date, status, created_at, employee:employees!leave_requests_employee_id_fkey(first_name_en, last_name_en)')
           .eq('company_id', currentCompany!.id)
           .eq('status', 'pending'),
         supabase
-          .from('expense_reports')
-          .select('id, employee_id, total_amount, status, created_at, employees!inner(first_name, last_name)')
+          .from('expense_claims')
+          .select('id, employee_id, total_amount, approval_status, created_at, employee:employees!expense_claims_employee_id_fkey(first_name_en, last_name_en)')
           .eq('company_id', currentCompany!.id)
-          .eq('status', 'submitted'),
+          .eq('approval_status', 'submitted'),
       ]);
       setTeam(teamRes.data || []);
       setPendingLeaves(leavesRes.data || []);
@@ -167,15 +168,15 @@ export function ManagerDashboard() {
                   <div className="flex items-center gap-3">
                     <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
                       <span className="text-xs font-semibold text-blue-600">
-                        {member.first_name?.[0]}{member.last_name?.[0]}
+                        {member.first_name_en?.[0]}{member.last_name_en?.[0]}
                       </span>
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-gray-900">{member.first_name} {member.last_name}</p>
-                      <p className="text-xs text-gray-500">{member.job_title}</p>
+                      <p className="text-sm font-medium text-gray-900">{member.first_name_en} {member.last_name_en}</p>
+                      <p className="text-xs text-gray-500">{member.job_title_en}</p>
                     </div>
                   </div>
-                  <span className="text-xs text-gray-400">{member.department}</span>
+                  <span className="text-xs text-gray-400"></span>
                 </div>
               ))
             )}
