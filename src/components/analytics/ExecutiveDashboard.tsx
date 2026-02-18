@@ -233,41 +233,52 @@ export function ExecutiveDashboard() {
         <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Headcount by Department</h3>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.departmentData} layout="vertical" margin={{ left: 0, right: 16 }}>
-                <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} />
-                <YAxis type="category" dataKey="department" width={120} fontSize={11} tickLine={false} axisLine={false} />
-                <Tooltip
-                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: 12 }}
-                  formatter={(value: number) => [value, 'Employees']}
-                />
-                <Bar dataKey="headcount" fill="#0ea5e9" radius={[0, 4, 4, 0]} barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
+            {stats.departmentData.length === 0 ? (
+              <div className="h-full flex items-center justify-center text-sm text-gray-400">No department data available</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={stats.departmentData} layout="vertical" margin={{ left: 0, right: 16 }}>
+                  <XAxis type="number" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis type="category" dataKey="department" width={120} fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: 12 }}
+                    formatter={(value: number) => [value, 'Employees']}
+                  />
+                  <Bar dataKey="headcount" fill="#0ea5e9" radius={[0, 4, 4, 0]} barSize={20} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
 
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Gender Distribution</h3>
           <div className="h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={genderData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={90}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  <Cell fill="#0ea5e9" />
-                  <Cell fill="#ec4899" />
-                </Pie>
-                <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: 12 }} />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value) => <span className="text-xs text-gray-600">{value}</span>} />
-              </PieChart>
-            </ResponsiveContainer>
+            {stats.maleCount === 0 && stats.femaleCount === 0 ? (
+              <div className="h-full flex items-center justify-center text-sm text-gray-400">No gender data available</div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={genderData.filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={90}
+                    paddingAngle={4}
+                    dataKey="value"
+                    label={({ name, value }) => `${name}: ${value}`}
+                    labelLine={false}
+                  >
+                    {genderData.filter(d => d.value > 0).map((_, index) => (
+                      <Cell key={index} fill={index === 0 ? '#0ea5e9' : '#ec4899'} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb', fontSize: 12 }} />
+                  <Legend verticalAlign="bottom" height={36} iconType="circle" formatter={(value) => <span className="text-xs text-gray-600">{value}</span>} />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
