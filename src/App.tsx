@@ -61,6 +61,9 @@ const PayrollV2 = lazy(() => import('./pages/PayrollV2'));
 const RecruitmentV2 = lazy(() => import('./pages/RecruitmentV2'));
 const PerformanceV2 = lazy(() => import('./pages/PerformanceV2'));
 const CompensationBenefits = lazy(() => import('./pages/CompensationBenefits'));
+const TalentManagement = lazy(() => import('./pages/TalentManagement'));
+const WorkforceAnalytics = lazy(() => import('./pages/WorkforceAnalytics'));
+const OrganizationalManagement = lazy(() => import('./pages/OrganizationalManagement'));
 
 function ProtectedPage({ children, allowedRoles }: { children: ReactNode; allowedRoles?: string[] }) {
   return (
@@ -101,6 +104,9 @@ function App() {
                     <Route path="/performance-v2" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr', 'manager']}><PerformanceV2 /></ProtectedPage>} />
                     <Route path="/recruitment-v2" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr']}><RecruitmentV2 /></ProtectedPage>} />
                     <Route path="/compensation" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr', 'finance']}><CompensationBenefits /></ProtectedPage>} />
+                    <Route path="/talent-management" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr', 'manager']}><TalentManagement /></ProtectedPage>} />
+                    <Route path="/workforce-analytics" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr', 'finance']}><WorkforceAnalytics /></ProtectedPage>} />
+                    <Route path="/org-management" element={<ProtectedPage allowedRoles={['super_admin', 'admin', 'hr']}><OrganizationalManagement /></ProtectedPage>} />
                     <Route path="/training" element={<ProtectedPage><Training /></ProtectedPage>} />
                     <Route path="/documents" element={<ProtectedPage><Documents /></ProtectedPage>} />
                     <Route path="/nitaqat" element={<ProtectedPage allowedRoles={['hr', 'finance', 'super_admin']}><Nitaqat /></ProtectedPage>} />
