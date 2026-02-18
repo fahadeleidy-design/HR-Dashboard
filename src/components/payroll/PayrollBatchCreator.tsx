@@ -141,15 +141,24 @@ export function PayrollBatchCreator({ onBack, onBatchCreated }: PayrollBatchCrea
     setStep('preview');
 
     try {
-      const { data: employees } = await supabase
+      const { data: employees, error: empError } = await supabase
         .from('employees')
         .select('id, employee_number, first_name_en, last_name_en, first_name_ar, last_name_ar, is_saudi, department_id, department:departments(name_en, name_ar)')
         .eq('company_id', activeCompany.id)
         .eq('status', 'active')
         .order('employee_number');
 
+      console.log('[PayrollBatch] company:', activeCompany.id, 'employees:', employees?.length, 'error:', empError);
+
+      if (empError) {
+        showToast({ type: 'error', title: 'Error loading employees', message: empError.message });
+        setStep('config');
+        setCalculating(false);
+        return;
+      }
+
       if (!employees || employees.length === 0) {
-        showToast({ type: 'warning', title: 'No active employees found' });
+        showToast({ type: 'warning', title: 'No active employees found', message: `Company: ${activeCompany.name_en} (${activeCompany.id})` });
         setStep('config');
         setCalculating(false);
         return;
