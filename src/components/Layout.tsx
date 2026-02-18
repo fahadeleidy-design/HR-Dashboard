@@ -40,6 +40,7 @@ import {
   PieChart,
   Lock,
   Wallet,
+  Brain,
 } from 'lucide-react';
 import { NotificationCenter } from './NotificationCenter';
 
@@ -147,6 +148,7 @@ export function Layout({ children }: LayoutProps) {
         ...(hasFullAccess || !isEmployee ? [
           { path: '/talent-management', icon: TrendingUp, label: language === 'ar' ? 'إدارة المواهب' : 'Talent Management' },
           { path: '/org-management', icon: Building2, label: language === 'ar' ? 'الإدارة التنظيمية' : 'Org Management' },
+          { path: '/ai-features', icon: Brain, label: language === 'ar' ? 'الذكاء الاصطناعي' : 'AI Intelligence' },
         ] : []),
       ]
     },
