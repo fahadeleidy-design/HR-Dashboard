@@ -147,29 +147,69 @@ async function executeNLQuery(serviceClient: any, companyId: string, queryText: 
   try {
     const { data: employees } = await serviceClient
       .from("employees")
-      .select("id, first_name, last_name, department, basic_salary, status, hire_date, nationality, gender, employment_type, job_title")
+      .select(`
+        id, company_id, department_id, basic_salary, status, hire_date, nationality, gender,
+        first_name_en, last_name_en, first_name_ar, last_name_ar,
+        job_title_en, job_title_ar,
+        department:departments!employees_department_id_fkey(name_en, name_ar)
+      `)
       .eq("company_id", companyId)
       .eq("status", "active");
 
-    const emps = employees || [];
+    const emps = (employees || []).map((e: any) => ({
+      ...e,
+      full_name: `${e.first_name_en || ""} ${e.last_name_en || ""}`.trim(),
+      department_name: e.department?.name_en || "Unknown",
+      job_title: e.job_title_en || e.job_title_ar || "",
+    }));
 
     switch (interpretation.intent) {
       case "count_employees": {
         const dept = interpretation.entities.department;
         const filtered = dept
-          ? emps.filter((e: any) => e.department?.toLowerCase().includes(dept))
+          ? emps.filter((e: any) => e.department_name?.toLowerCase().includes(dept))
           : emps;
-        resultData = [{ total_count: filtered.length, department: dept || "All" }];
-        resultSummary = dept
-          ? `There are ${filtered.length} active employees in the ${dept} department.`
-          : `There are ${filtered.length} total active employees across all departments.`;
+
+        const { data: allCompanies } = await serviceClient
+          .from("companies")
+          .select("id, name_en");
+
+        const { data: allEmps } = await serviceClient
+          .from("employees")
+          .select("id, company_id")
+          .eq("status", "active");
+
+        const byCompany: Record<string, { name: string; count: number }> = {};
+        (allCompanies || []).forEach((c: any) => {
+          byCompany[c.id] = { name: c.name_en, count: 0 };
+        });
+        (allEmps || []).forEach((e: any) => {
+          if (byCompany[e.company_id]) byCompany[e.company_id].count++;
+        });
+
+        const totalAll = (allEmps || []).length;
+        const companyBreakdown = Object.values(byCompany).filter((c) => c.count > 0);
+
+        resultData = [
+          { total_count: totalAll, department: dept || "All" },
+          ...companyBreakdown.map((c) => ({ company: c.name, count: c.count })),
+        ];
+
+        if (dept) {
+          resultSummary = `There are ${filtered.length} active employees in the ${dept} department.`;
+        } else if (companyBreakdown.length > 1) {
+          const breakdown = companyBreakdown.map((c) => `${c.name}: ${c.count}`).join(", ");
+          resultSummary = `There are ${totalAll} active employees in total. Breakdown by company: ${breakdown}.`;
+        } else {
+          resultSummary = `There are ${totalAll} active employees in total.`;
+        }
         confidence = 0.95;
         break;
       }
       case "average_salary": {
         const dept = interpretation.entities.department;
         const filtered = dept
-          ? emps.filter((e: any) => e.department?.toLowerCase().includes(dept))
+          ? emps.filter((e: any) => e.department_name?.toLowerCase().includes(dept))
           : emps;
         const salaries = filtered.filter((e: any) => e.basic_salary > 0);
         const avg = salaries.length > 0
@@ -178,7 +218,7 @@ async function executeNLQuery(serviceClient: any, companyId: string, queryText: 
         const byDept: Record<string, number[]> = {};
         filtered.forEach((e: any) => {
           if (e.basic_salary > 0) {
-            const d = e.department || "Unknown";
+            const d = e.department_name;
             if (!byDept[d]) byDept[d] = [];
             byDept[d].push(e.basic_salary);
           }
@@ -195,7 +235,7 @@ async function executeNLQuery(serviceClient: any, companyId: string, queryText: 
       case "headcount_breakdown": {
         const byDept: Record<string, number> = {};
         emps.forEach((e: any) => {
-          const d = e.department || "Unknown";
+          const d = e.department_name;
           byDept[d] = (byDept[d] || 0) + 1;
         });
         resultData = Object.entries(byDept)
@@ -224,8 +264,8 @@ async function executeNLQuery(serviceClient: any, companyId: string, queryText: 
       case "recent_hires": {
         const sorted = [...emps].sort((a: any, b: any) => new Date(b.hire_date || 0).getTime() - new Date(a.hire_date || 0).getTime()).slice(0, 20);
         resultData = sorted.map((e: any) => ({
-          name: `${e.first_name} ${e.last_name}`,
-          department: e.department,
+          name: e.full_name,
+          department: e.department_name,
           hire_date: e.hire_date,
           job_title: e.job_title,
         }));
@@ -235,8 +275,8 @@ async function executeNLQuery(serviceClient: any, companyId: string, queryText: 
       }
       case "top_performers": {
         resultData = emps.slice(0, 10).map((e: any) => ({
-          name: `${e.first_name} ${e.last_name}`,
-          department: e.department,
+          name: e.full_name,
+          department: e.department_name,
           job_title: e.job_title,
         }));
         resultSummary = `Showing top employees. For detailed performance scores, check the Performance Management module.`;
@@ -246,7 +286,7 @@ async function executeNLQuery(serviceClient: any, companyId: string, queryText: 
       default: {
         const byDept: Record<string, { count: number; totalSalary: number }> = {};
         emps.forEach((e: any) => {
-          const d = e.department || "Unknown";
+          const d = e.department_name;
           if (!byDept[d]) byDept[d] = { count: 0, totalSalary: 0 };
           byDept[d].count++;
           byDept[d].totalSalary += e.basic_salary || 0;
@@ -325,9 +365,9 @@ function generateFlightRiskPredictions(employees: any[]) {
 
     return {
       employee_id: emp.id,
-      employee_name: `${emp.first_name} ${emp.last_name}`,
-      department: emp.department,
-      job_title: emp.job_title,
+      employee_name: `${emp.first_name_en || ""} ${emp.last_name_en || ""}`.trim(),
+      department: emp.department?.name_en || "Unknown",
+      job_title: emp.job_title_en || "",
       risk_score: riskScore,
       risk_level: riskScore >= 75 ? "critical" : riskScore >= 50 ? "high" : riskScore >= 25 ? "medium" : "low",
       contributing_factors: factors,
@@ -345,8 +385,8 @@ function generatePerformancePredictions(employees: any[]) {
 
     return {
       employee_id: emp.id,
-      employee_name: `${emp.first_name} ${emp.last_name}`,
-      department: emp.department,
+      employee_name: `${emp.first_name_en || ""} ${emp.last_name_en || ""}`.trim(),
+      department: emp.department?.name_en || "Unknown",
       predicted_rating: Math.round(predicted * 10) / 10,
       trend,
       confidence: 65 + (hash % 25),
@@ -382,19 +422,24 @@ function generateSkillsDemandForecast() {
 async function generateRecommendations(serviceClient: any, companyId: string, type: string) {
   const { data: employees } = await serviceClient
     .from("employees")
-    .select("id, first_name, last_name, department, job_title, basic_salary, hire_date, employment_type")
+    .select("id, first_name_en, last_name_en, job_title_en, basic_salary, hire_date, department:departments!employees_department_id_fkey(name_en)")
     .eq("company_id", companyId)
     .eq("status", "active")
     .limit(100);
 
-  const emps = employees || [];
+  const emps = (employees || []).map((e: any) => ({
+    ...e,
+    full_name: `${e.first_name_en || ""} ${e.last_name_en || ""}`.trim(),
+    department_name: e.department?.name_en || "Unknown",
+    job_title: e.job_title_en || "",
+  }));
   const recommendations: any[] = [];
 
   if (type === "all" || type === "compensation") {
     const byDept: Record<string, number[]> = {};
     emps.forEach((e: any) => {
       if (e.basic_salary > 0) {
-        const d = e.department || "Unknown";
+        const d = e.department_name;
         if (!byDept[d]) byDept[d] = [];
         byDept[d].push(e.basic_salary);
       }
@@ -402,7 +447,7 @@ async function generateRecommendations(serviceClient: any, companyId: string, ty
 
     Object.entries(byDept).forEach(([dept, salaries]) => {
       const avg = salaries.reduce((a, b) => a + b, 0) / salaries.length;
-      const underpaid = emps.filter((e: any) => e.department === dept && e.basic_salary > 0 && e.basic_salary < avg * 0.8);
+      const underpaid = emps.filter((e: any) => e.department_name === dept && e.basic_salary > 0 && e.basic_salary < avg * 0.8);
       if (underpaid.length > 0) {
         recommendations.push({
           recommendation_type: "compensation",
@@ -412,7 +457,7 @@ async function generateRecommendations(serviceClient: any, companyId: string, ty
           confidence_score: 85,
           priority: underpaid.length > 3 ? "high" : "medium",
           reasoning: underpaid.map((e: any) => ({
-            employee: `${e.first_name} ${e.last_name}`,
+            employee: e.full_name,
             current_salary: e.basic_salary,
             gap_percentage: Math.round((1 - e.basic_salary / avg) * 100),
           })),
@@ -435,7 +480,7 @@ async function generateRecommendations(serviceClient: any, companyId: string, ty
           recommendation_type: "career",
           target_entity_type: "employee",
           target_entity_id: emp.id,
-          title: `Career Development: ${emp.first_name} ${emp.last_name}`,
+          title: `Career Development: ${emp.full_name}`,
           description: `This employee has been in ${emp.job_title || "their role"} for over 3 years. Consider a development plan, lateral move, or promotion pathway to maintain engagement.`,
           confidence_score: 78,
           priority: "medium",
@@ -448,7 +493,7 @@ async function generateRecommendations(serviceClient: any, companyId: string, ty
   if (type === "all" || type === "team_composition") {
     const byDept: Record<string, any[]> = {};
     emps.forEach((e: any) => {
-      const d = e.department || "Unknown";
+      const d = e.department_name;
       if (!byDept[d]) byDept[d] = [];
       byDept[d].push(e);
     });
@@ -682,7 +727,7 @@ Deno.serve(async (req: Request) => {
       case "generate_predictions": {
         const { data: employees } = await serviceClient
           .from("employees")
-          .select("id, first_name, last_name, department, job_title, basic_salary, hire_date, status")
+          .select("id, first_name_en, last_name_en, department:departments!employees_department_id_fkey(name_en), job_title_en, basic_salary, hire_date, status")
           .eq("company_id", company_id)
           .eq("status", "active")
           .limit(200);
