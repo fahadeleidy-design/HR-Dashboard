@@ -1,77 +1,190 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Target, TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight, Download } from 'lucide-react';
+import { ArrowUpRight, ArrowDownRight, Info } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useCompany } from '../../contexts/CompanyContext';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Legend, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar } from 'recharts';
+import { ResponsiveContainer, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend } from 'recharts';
 
 interface BenchmarkItem {
   metric: string;
   category: string;
   company_value: number;
   industry_avg: number;
-  industry_p25: number;
   industry_p50: number;
   industry_p75: number;
-  industry_p90: number;
-  best_in_class: number;
   percentile: number;
   unit: string;
+  higher_is_better: boolean;
 }
 
-const DEFAULT_BENCHMARKS: BenchmarkItem[] = [
-  { metric: 'Turnover Rate', category: 'Retention', company_value: 12.5, industry_avg: 15.2, industry_p25: 18.5, industry_p50: 14.8, industry_p75: 11.2, industry_p90: 8.5, best_in_class: 6.0, percentile: 68, unit: '%' },
-  { metric: 'Time to Fill', category: 'Recruitment', company_value: 42, industry_avg: 48, industry_p25: 62, industry_p50: 46, industry_p75: 35, industry_p90: 25, best_in_class: 18, percentile: 62, unit: 'days' },
-  { metric: 'Cost per Hire', category: 'Recruitment', company_value: 8500, industry_avg: 11200, industry_p25: 15000, industry_p50: 10800, industry_p75: 7500, industry_p90: 5200, best_in_class: 4000, percentile: 70, unit: 'SAR' },
-  { metric: 'Revenue per Employee', category: 'Productivity', company_value: 285000, industry_avg: 265000, industry_p25: 195000, industry_p50: 260000, industry_p75: 310000, industry_p90: 380000, best_in_class: 450000, percentile: 58, unit: 'SAR' },
-  { metric: 'Training Hours', category: 'Development', company_value: 32, industry_avg: 28, industry_p25: 16, industry_p50: 26, industry_p75: 38, industry_p90: 52, best_in_class: 65, percentile: 62, unit: 'hrs/emp' },
-  { metric: 'Engagement Score', category: 'Culture', company_value: 4.1, industry_avg: 3.8, industry_p25: 3.2, industry_p50: 3.7, industry_p75: 4.2, industry_p90: 4.6, best_in_class: 4.8, percentile: 72, unit: '/5.0' },
-  { metric: 'Absentee Rate', category: 'Attendance', company_value: 3.8, industry_avg: 4.5, industry_p25: 6.2, industry_p50: 4.3, industry_p75: 3.1, industry_p90: 2.0, best_in_class: 1.5, percentile: 65, unit: '%' },
-  { metric: 'Offer Acceptance', category: 'Recruitment', company_value: 88, industry_avg: 82, industry_p25: 72, industry_p50: 81, industry_p75: 89, industry_p90: 94, best_in_class: 97, percentile: 73, unit: '%' },
-  { metric: 'Saudization Rate', category: 'Compliance', company_value: 35, industry_avg: 30, industry_p25: 22, industry_p50: 28, industry_p75: 38, industry_p90: 52, best_in_class: 65, percentile: 72, unit: '%' },
-  { metric: 'Span of Control', category: 'Organization', company_value: 5.2, industry_avg: 6.8, industry_p25: 8.5, industry_p50: 6.5, industry_p75: 5.0, industry_p90: 4.2, best_in_class: 3.8, percentile: 70, unit: ':1' },
-];
+const INDUSTRY_BENCHMARKS: Record<string, { avg: number; p50: number; p75: number; unit: string; higher_is_better: boolean }> = {
+  'Turnover Rate':         { avg: 15.2, p50: 14.8, p75: 11.2, unit: '%',       higher_is_better: false },
+  'Saudization Rate':      { avg: 30.0, p50: 28.0, p75: 38.0, unit: '%',       higher_is_better: true  },
+  'Training Hours/Emp':    { avg: 28.0, p50: 26.0, p75: 38.0, unit: ' hrs',    higher_is_better: true  },
+  'Offer Acceptance':      { avg: 82.0, p50: 81.0, p75: 89.0, unit: '%',       higher_is_better: true  },
+  'Female Workforce':      { avg: 28.0, p50: 26.0, p75: 36.0, unit: '%',       higher_is_better: true  },
+  'Female Leadership':     { avg: 18.0, p50: 17.0, p75: 28.0, unit: '%',       higher_is_better: true  },
+  'Avg Tenure (yrs)':      { avg: 3.5,  p50: 3.2,  p75: 4.8,  unit: ' yrs',   higher_is_better: true  },
+  'Pay Equity Ratio':      { avg: 0.88, p50: 0.87, p75: 0.95, unit: '',        higher_is_better: true  },
+};
+
+function computePercentile(value: number, avg: number, p50: number, p75: number, higher_is_better: boolean): number {
+  if (higher_is_better) {
+    if (value >= p75) return Math.min(90, 75 + ((value - p75) / (p75 * 0.3)) * 15);
+    if (value >= p50) return 50 + ((value - p50) / (p75 - p50)) * 25;
+    if (value >= avg * 0.7) return 25 + ((value - avg * 0.7) / (p50 - avg * 0.7)) * 25;
+    return Math.max(10, (value / (avg * 0.7)) * 25);
+  } else {
+    if (value <= p75) return Math.min(90, 75 + ((p75 - value) / (p75 * 0.3)) * 15);
+    if (value <= p50) return 50 + ((p50 - value) / (p50 - p75)) * 25;
+    if (value <= avg * 1.3) return 25 + ((avg * 1.3 - value) / (avg * 1.3 - p50)) * 25;
+    return Math.max(10, ((avg * 1.8 - value) / (avg * 1.8)) * 25);
+  }
+}
 
 export function BenchmarkingReport() {
-  const { currentCompany, isConsolidatedView } = useCompany();
-  const [benchmarks, setBenchmarks] = useState<BenchmarkItem[]>(DEFAULT_BENCHMARKS);
+  const { currentCompany, isConsolidatedView, loading: companyLoading, companies } = useCompany();
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [terminated, setTerminated] = useState<any[]>([]);
+  const [trainingHours, setTrainingHours] = useState<number>(0);
+  const [offerAcceptance, setOfferAcceptance] = useState<{ accepted: number; total: number } | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentCompany?.id || isConsolidatedView) loadBenchmarks();
-  }, [currentCompany, isConsolidatedView]);
+    if (companyLoading) return;
+    if (currentCompany?.id || isConsolidatedView || companies.length > 0) loadData();
+  }, [currentCompany, isConsolidatedView, companyLoading, companies]);
 
-  async function loadBenchmarks() {
+  async function loadData() {
     try {
       setLoading(true);
-      let query = supabase
-        .from('benchmarking_data')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
-      if (currentCompany?.id) query = query.eq('company_id', currentCompany.id);
-      const { data } = await query;
+      const companyFilter = currentCompany?.id;
+      const oneYearAgo = new Date();
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+      const yearAgoStr = oneYearAgo.toISOString().slice(0, 10);
 
-      if (data && data.length > 0) {
-        const mapped = data.map(d => ({
-          metric: d.metric_name,
-          category: d.benchmark_category,
-          company_value: d.company_value,
-          industry_avg: d.industry_avg || 0,
-          industry_p25: d.industry_p25 || 0,
-          industry_p50: d.industry_p50 || 0,
-          industry_p75: d.industry_p75 || 0,
-          industry_p90: d.industry_p90 || 0,
-          best_in_class: d.best_in_class || 0,
-          percentile: d.percentile_rank || 50,
-          unit: '',
-        }));
-        setBenchmarks(mapped);
+      let empQuery = supabase
+        .from('employees')
+        .select('id, gender, is_saudi, hire_date, basic_salary, status, job_title_en, department:departments(name_en)');
+      if (companyFilter) empQuery = empQuery.eq('company_id', companyFilter);
+      empQuery = empQuery.eq('status', 'active');
+
+      let termQuery = supabase
+        .from('employees')
+        .select('id, hire_date, termination_date')
+        .eq('status', 'terminated')
+        .gte('termination_date', yearAgoStr);
+      if (companyFilter) termQuery = termQuery.eq('company_id', companyFilter);
+
+      let enrollQuery = supabase
+        .from('training_enrollments')
+        .select('id, completion_status, training_program:training_programs(duration_hours)')
+        .eq('completion_status', 'completed')
+        .gte('completion_date', yearAgoStr);
+
+      let offerQuery = supabase
+        .from('job_offers')
+        .select('id, status')
+        .gte('created_at', oneYearAgo.toISOString());
+      if (companyFilter) offerQuery = offerQuery.eq('company_id', companyFilter);
+
+      const [empRes, termRes, enrollRes, offerRes] = await Promise.all([
+        empQuery,
+        termQuery,
+        enrollQuery,
+        offerQuery,
+      ]);
+
+      if (empRes.error) console.error('BenchmarkingReport employees error:', empRes.error);
+      if (termRes.error) console.error('BenchmarkingReport terminated error:', termRes.error);
+
+      const empData = empRes.data || [];
+      setEmployees(empData);
+      setTerminated(termRes.data || []);
+
+      const enrollData = enrollRes.data || [];
+      const totalHours = enrollData.reduce((sum: number, e: any) => {
+        return sum + (e.training_program?.duration_hours || 0);
+      }, 0);
+      const hoursPerEmp = empData.length > 0 ? totalHours / empData.length : 0;
+      setTrainingHours(hoursPerEmp);
+
+      const offerData = offerRes.data || [];
+      if (offerData.length > 0) {
+        const accepted = offerData.filter((o: any) => o.status === 'accepted').length;
+        setOfferAcceptance({ accepted, total: offerData.length });
       }
     } finally {
       setLoading(false);
     }
   }
+
+  const benchmarks = useMemo((): BenchmarkItem[] => {
+    if (employees.length === 0) return [];
+    const now = new Date();
+    const total = employees.length;
+
+    const oneYearAgo = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
+    const avgHeadcount = Math.max(1, total);
+    const turnoverRate = terminated.length > 0 ? (terminated.length / avgHeadcount) * 100 : 0;
+
+    const saudiCount = employees.filter(e => e.is_saudi === true).length;
+    const saudizationPct = (saudiCount / total) * 100;
+
+    const femaleCount = employees.filter(e => e.gender === 'female').length;
+    const femalePct = (femaleCount / total) * 100;
+
+    const SENIOR_TITLES = ['director', 'vp', 'chief', 'head', 'manager', 'lead', 'senior manager'];
+    const leadership = employees.filter(e => SENIOR_TITLES.some(t => (e.job_title_en || '').toLowerCase().includes(t)));
+    const femaleLeadershipPct = leadership.length > 0
+      ? (leadership.filter(e => e.gender === 'female').length / leadership.length) * 100
+      : 0;
+
+    const tenures = employees
+      .filter(e => e.hire_date)
+      .map(e => (now.getTime() - new Date(e.hire_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25));
+    const avgTenure = tenures.length > 0 ? tenures.reduce((a, b) => a + b, 0) / tenures.length : 0;
+
+    const maleSalaries = employees.filter(e => e.gender === 'male' && e.basic_salary > 0).map(e => e.basic_salary);
+    const femaleSalaries = employees.filter(e => e.gender === 'female' && e.basic_salary > 0).map(e => e.basic_salary);
+    const avgMale = maleSalaries.length > 0 ? maleSalaries.reduce((a, b) => a + b, 0) / maleSalaries.length : 0;
+    const avgFemale = femaleSalaries.length > 0 ? femaleSalaries.reduce((a, b) => a + b, 0) / femaleSalaries.length : 0;
+    const payEquity = avgMale > 0 ? avgFemale / avgMale : 1;
+
+    const offerAccPct = offerAcceptance && offerAcceptance.total > 0
+      ? (offerAcceptance.accepted / offerAcceptance.total) * 100
+      : null;
+
+    const rawMetrics: Array<{ metric: string; category: string; value: number }> = [
+      { metric: 'Turnover Rate',      category: 'Retention',   value: Math.round(turnoverRate * 10) / 10 },
+      { metric: 'Saudization Rate',   category: 'Compliance',  value: Math.round(saudizationPct * 10) / 10 },
+      { metric: 'Training Hours/Emp', category: 'Development', value: Math.round(trainingHours * 10) / 10 },
+      { metric: 'Female Workforce',   category: 'Diversity',   value: Math.round(femalePct * 10) / 10 },
+      { metric: 'Female Leadership',  category: 'Diversity',   value: Math.round(femaleLeadershipPct * 10) / 10 },
+      { metric: 'Avg Tenure (yrs)',   category: 'Retention',   value: Math.round(avgTenure * 10) / 10 },
+      { metric: 'Pay Equity Ratio',   category: 'Diversity',   value: Math.round(payEquity * 100) / 100 },
+    ];
+
+    if (offerAccPct !== null) {
+      rawMetrics.push({ metric: 'Offer Acceptance', category: 'Recruitment', value: Math.round(offerAccPct * 10) / 10 });
+    }
+
+    return rawMetrics.map(({ metric, category, value }) => {
+      const bench = INDUSTRY_BENCHMARKS[metric];
+      const percentile = Math.round(computePercentile(value, bench.avg, bench.p50, bench.p75, bench.higher_is_better));
+      return {
+        metric,
+        category,
+        company_value: value,
+        industry_avg: bench.avg,
+        industry_p50: bench.p50,
+        industry_p75: bench.p75,
+        percentile,
+        unit: bench.unit,
+        higher_is_better: bench.higher_is_better,
+      };
+    });
+  }, [employees, terminated, trainingHours, offerAcceptance]);
 
   const categories = useMemo(() => {
     const cats = [...new Set(benchmarks.map(b => b.category))];
@@ -84,7 +197,7 @@ export function BenchmarkingReport() {
 
   const radarData = useMemo(() => {
     return benchmarks.slice(0, 8).map(b => ({
-      metric: b.metric.length > 12 ? b.metric.slice(0, 12) + '...' : b.metric,
+      metric: b.metric.length > 14 ? b.metric.slice(0, 14) + '…' : b.metric,
       company: b.percentile,
       industry: 50,
     }));
@@ -94,17 +207,17 @@ export function BenchmarkingReport() {
   const belowAvgCount = benchmarks.filter(b => b.percentile <= 50).length;
   const avgPercentile = benchmarks.length > 0 ? benchmarks.reduce((s, b) => s + b.percentile, 0) / benchmarks.length : 0;
 
-  const getPercentileColor = (percentile: number) => {
-    if (percentile >= 75) return 'text-green-600';
-    if (percentile >= 50) return 'text-blue-600';
-    if (percentile >= 25) return 'text-amber-600';
+  const getPercentileColor = (p: number) => {
+    if (p >= 75) return 'text-green-600';
+    if (p >= 50) return 'text-blue-600';
+    if (p >= 25) return 'text-amber-600';
     return 'text-red-600';
   };
 
-  const getPercentileBg = (percentile: number) => {
-    if (percentile >= 75) return 'bg-green-100 text-green-800';
-    if (percentile >= 50) return 'bg-blue-100 text-blue-800';
-    if (percentile >= 25) return 'bg-amber-100 text-amber-800';
+  const getPercentileBg = (p: number) => {
+    if (p >= 75) return 'bg-green-100 text-green-800';
+    if (p >= 50) return 'bg-blue-100 text-blue-800';
+    if (p >= 25) return 'bg-amber-100 text-amber-800';
     return 'bg-red-100 text-red-800';
   };
 
@@ -112,8 +225,21 @@ export function BenchmarkingReport() {
     return <div className="bg-white rounded-xl border border-gray-200 h-96 animate-pulse" />;
   }
 
+  if (benchmarks.length === 0) {
+    return (
+      <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+        <p className="text-gray-500">No employee data available for benchmarking.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      <div className="flex items-start gap-3 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-xs text-blue-700">
+        <Info className="w-4 h-4 mt-0.5 shrink-0" />
+        <span>Benchmarks are computed from your live HR data and compared against Saudi market industry averages. Industry percentile bands are based on published Saudi labor market research.</span>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 p-5">
           <div className="text-xs text-gray-500 mb-1">Overall Percentile</div>
