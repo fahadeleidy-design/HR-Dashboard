@@ -262,7 +262,7 @@ async function handleTestSmtp(supabase: any, payload: SendEmailRequest) {
       config,
       testEmail,
       "",
-      "SMTP Test - HR System",
+      "SMTP Test - Special Offices HRMS",
       "<h2>SMTP Configuration Test</h2><p>This is a test email to verify your SMTP settings are working correctly.</p><p><strong>Sent to:</strong> " + testEmail + "</p>",
       "SMTP Configuration Test\n\nThis is a test email to verify your SMTP settings are working correctly.\n\nSent to: " + testEmail
     );
