@@ -5,21 +5,22 @@ import { useCompany } from '../../contexts/CompanyContext';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export function TurnoverAnalysis() {
-  const { currentCompany } = useCompany();
+  const { currentCompany, isConsolidatedView } = useCompany();
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentCompany?.id) loadData();
-  }, [currentCompany]);
+    if (currentCompany?.id || isConsolidatedView) loadData();
+  }, [currentCompany, isConsolidatedView]);
 
   async function loadData() {
     try {
       setLoading(true);
-      const { data } = await supabase
+      let query = supabase
         .from('employees')
-        .select('id, department:departments(name_en), status, hire_date, termination_date, termination_reason, gender, nationality, is_saudi')
-        .eq('company_id', currentCompany!.id);
+        .select('id, department:departments(name_en), status, hire_date, termination_date, termination_reason, gender, nationality, is_saudi');
+      if (currentCompany?.id) query = query.eq('company_id', currentCompany.id);
+      const { data } = await query;
       setEmployees(data || []);
     } finally {
       setLoading(false);

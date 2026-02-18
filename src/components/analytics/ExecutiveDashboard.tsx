@@ -24,28 +24,31 @@ interface DepartmentMetric {
 }
 
 export function ExecutiveDashboard() {
-  const { currentCompany } = useCompany();
+  const { currentCompany, isConsolidatedView } = useCompany();
   const [employees, setEmployees] = useState<any[]>([]);
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentCompany?.id) loadData();
-  }, [currentCompany]);
+    if (currentCompany?.id || isConsolidatedView) loadData();
+  }, [currentCompany, isConsolidatedView]);
 
   async function loadData() {
     try {
       setLoading(true);
-      const [empRes, leaveRes] = await Promise.all([
-        supabase
-          .from('employees')
-          .select('id, first_name_en, last_name_en, department:departments(name_en), nationality, is_saudi, gender, status, hire_date, basic_salary, job_title_en, employment_type')
-          .eq('company_id', currentCompany!.id),
-        supabase
-          .from('leave_requests')
-          .select('id, status, created_at')
-          .eq('company_id', currentCompany!.id)
-      ]);
+      let empQuery = supabase
+        .from('employees')
+        .select('id, first_name_en, last_name_en, department:departments(name_en), nationality, is_saudi, gender, status, hire_date, basic_salary, job_title_en, employment_type');
+      let leaveQuery = supabase
+        .from('leave_requests')
+        .select('id, status, created_at');
+
+      if (currentCompany?.id) {
+        empQuery = empQuery.eq('company_id', currentCompany.id);
+        leaveQuery = leaveQuery.eq('company_id', currentCompany.id);
+      }
+
+      const [empRes, leaveRes] = await Promise.all([empQuery, leaveQuery]);
       setEmployees(empRes.data || []);
       setLeaveRequests(leaveRes.data || []);
     } catch {

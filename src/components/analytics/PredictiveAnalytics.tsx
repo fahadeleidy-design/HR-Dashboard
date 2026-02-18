@@ -23,31 +23,34 @@ interface FlightRiskEmployee {
 }
 
 export function PredictiveAnalytics() {
-  const { currentCompany } = useCompany();
+  const { currentCompany, isConsolidatedView } = useCompany();
   const [employees, setEmployees] = useState<any[]>([]);
   const [predictions, setPredictions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentCompany?.id) loadData();
-  }, [currentCompany]);
+    if (currentCompany?.id || isConsolidatedView) loadData();
+  }, [currentCompany, isConsolidatedView]);
 
   async function loadData() {
     try {
       setLoading(true);
-      const [empRes, predRes] = await Promise.all([
-        supabase
-          .from('employees')
-          .select('id, first_name_en, last_name_en, department:departments(name_en), job_title_en, hire_date, basic_salary, status, gender, nationality, is_saudi')
-          .eq('company_id', currentCompany!.id)
-          .eq('status', 'active'),
-        supabase
-          .from('turnover_predictions')
-          .select('*')
-          .eq('company_id', currentCompany!.id)
-          .order('turnover_risk_score', { ascending: false })
-          .limit(100),
-      ]);
+      let empQuery = supabase
+        .from('employees')
+        .select('id, first_name_en, last_name_en, department:departments(name_en), job_title_en, hire_date, basic_salary, status, gender, nationality, is_saudi')
+        .eq('status', 'active');
+      let predQuery = supabase
+        .from('turnover_predictions')
+        .select('*')
+        .order('turnover_risk_score', { ascending: false })
+        .limit(100);
+
+      if (currentCompany?.id) {
+        empQuery = empQuery.eq('company_id', currentCompany.id);
+        predQuery = predQuery.eq('company_id', currentCompany.id);
+      }
+
+      const [empRes, predRes] = await Promise.all([empQuery, predQuery]);
       setEmployees(empRes.data || []);
       setPredictions(predRes.data || []);
     } finally {

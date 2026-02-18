@@ -8,22 +8,23 @@ const GENDER_COLORS = ['#0ea5e9', '#ec4899'];
 const NATIONALITY_COLORS = ['#10b981', '#0ea5e9', '#f59e0b', '#8b5cf6', '#ef4444', '#06b6d4', '#84cc16'];
 
 export function DiversityMetrics() {
-  const { currentCompany } = useCompany();
+  const { currentCompany, isConsolidatedView } = useCompany();
   const [employees, setEmployees] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentCompany?.id) loadData();
-  }, [currentCompany]);
+    if (currentCompany?.id || isConsolidatedView) loadData();
+  }, [currentCompany, isConsolidatedView]);
 
   async function loadData() {
     try {
       setLoading(true);
-      const { data } = await supabase
+      let query = supabase
         .from('employees')
         .select('id, gender, nationality, is_saudi, department:departments(name_en), job_title_en, basic_salary, hire_date, status, has_disability')
-        .eq('company_id', currentCompany!.id)
         .eq('status', 'active');
+      if (currentCompany?.id) query = query.eq('company_id', currentCompany.id);
+      const { data } = await query;
       setEmployees(data || []);
     } finally {
       setLoading(false);

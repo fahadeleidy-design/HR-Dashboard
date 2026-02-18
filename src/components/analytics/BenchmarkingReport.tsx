@@ -32,24 +32,25 @@ const DEFAULT_BENCHMARKS: BenchmarkItem[] = [
 ];
 
 export function BenchmarkingReport() {
-  const { currentCompany } = useCompany();
+  const { currentCompany, isConsolidatedView } = useCompany();
   const [benchmarks, setBenchmarks] = useState<BenchmarkItem[]>(DEFAULT_BENCHMARKS);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (currentCompany?.id) loadBenchmarks();
-  }, [currentCompany]);
+    if (currentCompany?.id || isConsolidatedView) loadBenchmarks();
+  }, [currentCompany, isConsolidatedView]);
 
   async function loadBenchmarks() {
     try {
       setLoading(true);
-      const { data } = await supabase
+      let query = supabase
         .from('benchmarking_data')
         .select('*')
-        .eq('company_id', currentCompany!.id)
         .order('created_at', { ascending: false })
         .limit(20);
+      if (currentCompany?.id) query = query.eq('company_id', currentCompany.id);
+      const { data } = await query;
 
       if (data && data.length > 0) {
         const mapped = data.map(d => ({
