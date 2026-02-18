@@ -9,7 +9,7 @@ import { formatCurrency, formatNumber } from '@/lib/formatters';
 import {
   User, Mail, Phone, Building2, Calendar, CheckCircle, Clock,
   AlertCircle, TrendingUp, Users, FileText, DollarSign, Briefcase,
-  Target, Award, Bell, ClipboardCheck, UserCheck
+  Target, Award, Bell, ClipboardCheck, UserCheck, CreditCard, Wallet
 } from 'lucide-react';
 import { EmployeeDashboard } from '@/components/EmployeeDashboard';
 
@@ -32,6 +32,36 @@ interface RoleMetrics {
   urgentItems?: number;
 }
 
+interface LeaveBalance {
+  id: string;
+  total_entitlement: number;
+  used_days: number;
+  pending_days: number;
+  remaining_days: number;
+  leave_type: {
+    name_en: string;
+    name_ar: string;
+  } | null;
+}
+
+interface ActiveLoan {
+  id: string;
+  loan_type: string;
+  loan_amount: number;
+  remaining_amount: number;
+  monthly_installment: number;
+  status: string;
+}
+
+interface ActiveAdvance {
+  id: string;
+  amount: number;
+  remaining_amount: number;
+  deduction_amount: number;
+  status: string;
+  request_date: string;
+}
+
 export function MyDashboard() {
   const { user, userRole } = useAuth();
   const { currentCompany } = useCompany();
@@ -43,6 +73,9 @@ export function MyDashboard() {
   const [metrics, setMetrics] = useState<RoleMetrics>({});
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [quickActions, setQuickActions] = useState<any[]>([]);
+  const [leaveBalances, setLeaveBalances] = useState<LeaveBalance[]>([]);
+  const [activeLoans, setActiveLoans] = useState<ActiveLoan[]>([]);
+  const [activeAdvances, setActiveAdvances] = useState<ActiveAdvance[]>([]);
 
   useEffect(() => {
     if (user && currentCompany) {
@@ -95,6 +128,9 @@ export function MyDashboard() {
         await fetchRoleSpecificMetrics(userRoleData.role, employee?.id);
         await fetchRecentActivity(userRoleData.role, employee?.id);
         setQuickActionsForRole(userRoleData.role);
+        if (employee?.id) {
+          await fetchEmployeeFinancials(employee.id);
+        }
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -184,6 +220,41 @@ export function MyDashboard() {
     } catch (error) {
       console.error('Error fetching role metrics:', error);
     }
+  };
+
+  const fetchEmployeeFinancials = async (employeeId: string) => {
+    const currentYear = new Date().getFullYear();
+
+    const [balancesResult, loansResult, advancesResult] = await Promise.all([
+      supabase
+        .from('leave_balances')
+        .select(`
+          id,
+          total_entitlement,
+          used_days,
+          pending_days,
+          remaining_days,
+          leave_type:leave_types(name_en, name_ar)
+        `)
+        .eq('employee_id', employeeId)
+        .eq('year', currentYear),
+      supabase
+        .from('loans')
+        .select('id, loan_type, loan_amount, remaining_amount, monthly_installment, status')
+        .eq('employee_id', employeeId)
+        .in('status', ['approved', 'active', 'disbursed'])
+        .gt('remaining_amount', 0),
+      supabase
+        .from('advances')
+        .select('id, amount, remaining_amount, deduction_amount, status, request_date')
+        .eq('employee_id', employeeId)
+        .in('status', ['approved', 'active'])
+        .gt('remaining_amount', 0)
+    ]);
+
+    setLeaveBalances((balancesResult.data || []) as LeaveBalance[]);
+    setActiveLoans((loansResult.data || []) as ActiveLoan[]);
+    setActiveAdvances((advancesResult.data || []) as ActiveAdvance[]);
   };
 
   const fetchRecentActivity = async (role: string, employeeId?: string) => {
@@ -498,6 +569,150 @@ export function MyDashboard() {
           </div>
         </div>
       </div>
+
+      {leaveBalances.length > 0 && (
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <h3 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
+            {language === 'ar' ? 'أرصدة الإجازات' : 'Leave Balances'} — {new Date().getFullYear()}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {leaveBalances.map(balance => {
+              const typeName = language === 'ar'
+                ? balance.leave_type?.name_ar || balance.leave_type?.name_en || '—'
+                : balance.leave_type?.name_en || '—';
+              const usedPct = balance.total_entitlement > 0
+                ? Math.min(100, Math.round(((Number(balance.used_days) + Number(balance.pending_days)) / balance.total_entitlement) * 100))
+                : 0;
+              const remaining = Number(balance.remaining_days);
+              const barColor = remaining <= 0 ? 'bg-red-500' : remaining <= balance.total_entitlement * 0.25 ? 'bg-yellow-500' : 'bg-green-500';
+              return (
+                <div key={balance.id} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                  <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                      <Calendar className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                      <span className="text-sm font-semibold text-gray-900">{typeName}</span>
+                    </div>
+                    <span className="text-xs text-gray-500">{balance.total_entitlement} {language === 'ar' ? 'يوم' : 'days'}</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2">
+                    <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${usedPct}%` }} />
+                  </div>
+                  <div className={`grid grid-cols-3 gap-2 text-center text-xs ${isRTL ? 'direction-rtl' : ''}`}>
+                    <div>
+                      <p className="font-bold text-gray-900">{Number(balance.used_days)}</p>
+                      <p className="text-gray-500">{language === 'ar' ? 'مستخدم' : 'Used'}</p>
+                    </div>
+                    <div>
+                      <p className="font-bold text-yellow-600">{Number(balance.pending_days)}</p>
+                      <p className="text-gray-500">{language === 'ar' ? 'معلق' : 'Pending'}</p>
+                    </div>
+                    <div>
+                      <p className={`font-bold ${remaining <= 0 ? 'text-red-600' : 'text-green-600'}`}>{remaining}</p>
+                      <p className="text-gray-500">{language === 'ar' ? 'متبقي' : 'Remaining'}</p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {(activeLoans.length > 0 || activeAdvances.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {activeLoans.length > 0 && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className={`flex items-center gap-2 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <CreditCard className="h-5 w-5 text-blue-600" />
+                <h3 className={`text-lg font-semibold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {language === 'ar' ? 'القروض النشطة' : 'Active Loans'}
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {activeLoans.map(loan => {
+                  const paidPct = loan.loan_amount > 0
+                    ? Math.min(100, Math.round(((loan.loan_amount - loan.remaining_amount) / loan.loan_amount) * 100))
+                    : 0;
+                  return (
+                    <div key={loan.id} className="border border-gray-200 rounded-lg p-4 space-y-2">
+                      <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <span className="text-sm font-semibold text-gray-900 capitalize">{loan.loan_type}</span>
+                        <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+                          {language === 'ar' ? 'نشط' : 'Active'}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div className="h-2 rounded-full bg-blue-500 transition-all" style={{ width: `${paidPct}%` }} />
+                      </div>
+                      <div className={`grid grid-cols-3 gap-2 text-center text-xs ${isRTL ? 'direction-rtl' : ''}`}>
+                        <div>
+                          <p className="font-bold text-gray-900">{formatCurrency(loan.loan_amount, language)}</p>
+                          <p className="text-gray-500">{language === 'ar' ? 'الإجمالي' : 'Total'}</p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-red-600">{formatCurrency(loan.remaining_amount, language)}</p>
+                          <p className="text-gray-500">{language === 'ar' ? 'المتبقي' : 'Remaining'}</p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-blue-600">{formatCurrency(loan.monthly_installment, language)}</p>
+                          <p className="text-gray-500">{language === 'ar' ? 'القسط' : 'Installment'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {activeAdvances.length > 0 && (
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className={`flex items-center gap-2 mb-4 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                <Wallet className="h-5 w-5 text-green-600" />
+                <h3 className={`text-lg font-semibold text-gray-900 ${isRTL ? 'text-right' : 'text-left'}`}>
+                  {language === 'ar' ? 'السلف النشطة' : 'Active Advances'}
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {activeAdvances.map(adv => {
+                  const paidPct = adv.amount > 0
+                    ? Math.min(100, Math.round(((adv.amount - adv.remaining_amount) / adv.amount) * 100))
+                    : 0;
+                  return (
+                    <div key={adv.id} className="border border-gray-200 rounded-lg p-4 space-y-2">
+                      <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {language === 'ar' ? 'سلفة راتب' : 'Salary Advance'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(adv.request_date).toLocaleDateString(language === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', year: 'numeric' })}
+                        </span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${paidPct}%` }} />
+                      </div>
+                      <div className={`grid grid-cols-3 gap-2 text-center text-xs ${isRTL ? 'direction-rtl' : ''}`}>
+                        <div>
+                          <p className="font-bold text-gray-900">{formatCurrency(adv.amount, language)}</p>
+                          <p className="text-gray-500">{language === 'ar' ? 'الإجمالي' : 'Total'}</p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-red-600">{formatCurrency(adv.remaining_amount, language)}</p>
+                          <p className="text-gray-500">{language === 'ar' ? 'المتبقي' : 'Remaining'}</p>
+                        </div>
+                        <div>
+                          <p className="font-bold text-green-600">{formatCurrency(adv.deduction_amount, language)}</p>
+                          <p className="text-gray-500">{language === 'ar' ? 'الخصم' : 'Deduction'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className={`text-lg font-semibold text-gray-900 mb-4 ${isRTL ? 'text-right' : 'text-left'}`}>
