@@ -54,7 +54,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [fetchUserRole]);
 
   useEffect(() => {
+    let mounted = true;
+
+    const initialize = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!mounted) return;
+
+        if (session?.user) {
+          currentUserIdRef.current = session.user.id;
+          setUser(session.user);
+          setSession(session);
+          const role = await fetchUserRole(session.user.id);
+          if (mounted) setUserRole(role);
+        }
+      } catch {
+        // ignore
+      } finally {
+        if (mounted && !initializedRef.current) {
+          initializedRef.current = true;
+          setLoading(false);
+        }
+      }
+    };
+
+    initialize();
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!initializedRef.current) return;
+
       const newUserId = session?.user?.id ?? null;
 
       if (event === 'TOKEN_REFRESHED' && newUserId === currentUserIdRef.current) {
@@ -65,39 +93,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const userChanged = newUserId !== currentUserIdRef.current;
       currentUserIdRef.current = newUserId;
       setSession(session);
+      setUser(session?.user ?? null);
 
-      if (userChanged) {
-        setUser(session?.user ?? null);
+      if (!session?.user) {
+        setUserRole(null);
+        return;
+      }
 
-        if (session?.user && !fetchingRoleRef.current) {
-          fetchingRoleRef.current = true;
-          fetchUserRole(session.user.id).then((role) => {
-            setUserRole(role);
-            fetchingRoleRef.current = false;
-            if (!initializedRef.current) {
-              initializedRef.current = true;
-              setLoading(false);
-            }
-          });
-        } else if (!session?.user) {
-          setUserRole(null);
-          if (!initializedRef.current) {
-            initializedRef.current = true;
-            setLoading(false);
-          }
-        }
-      } else if (!initializedRef.current) {
-        initializedRef.current = true;
-        setLoading(false);
+      if (userChanged && !fetchingRoleRef.current) {
+        fetchingRoleRef.current = true;
+        fetchUserRole(session.user.id).then((role) => {
+          if (mounted) setUserRole(role);
+          fetchingRoleRef.current = false;
+        });
       }
     });
 
-    supabase.auth.getSession().catch(() => {
-      initializedRef.current = true;
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [fetchUserRole]);
 
   const signIn = async (email: string, password: string) => {
