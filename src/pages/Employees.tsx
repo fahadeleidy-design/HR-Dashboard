@@ -80,7 +80,7 @@ export function Employees() {
 
   const [columns, setColumns] = useState<ColumnConfig[]>([
     { key: 'employee_number', label: 'Employee Number', visible: true },
-    { key: 'company', label: 'Company', visible: isConsolidatedView },
+    { key: 'company', label: 'Company', visible: true },
     { key: 'name', label: 'Name', visible: true },
     { key: 'job_title', label: 'Job Title', visible: true },
     { key: 'department', label: 'Department', visible: true },
@@ -103,13 +103,6 @@ export function Employees() {
     }
   }, [currentCompany, isConsolidatedView, companies]);
 
-  useEffect(() => {
-    setColumns(prev =>
-      prev.map(col =>
-        col.key === 'company' ? { ...col, visible: isConsolidatedView } : col
-      )
-    );
-  }, [isConsolidatedView]);
 
   useEffect(() => {
     filterEmployees();
@@ -1251,7 +1244,7 @@ export function Employees() {
                       onSort={requestSort}
                     />
                   )}
-                  {columns.find(c => c.key === 'company')?.visible && isConsolidatedView && (
+                  {columns.find(c => c.key === 'company')?.visible && (
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Company
                     </th>
@@ -1391,11 +1384,11 @@ export function Employees() {
                           {employee.employee_number}
                         </td>
                       )}
-                      {columns.find(c => c.key === 'company')?.visible && isConsolidatedView && (
+                      {columns.find(c => c.key === 'company')?.visible && (
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-gray-400" />
-                            <span className="text-sm text-gray-900">
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              <Building2 className="h-3 w-3" />
                               {(employee as any).companies?.name_en || 'N/A'}
                             </span>
                           </div>
@@ -1604,6 +1597,14 @@ export function Employees() {
                     </div>
 
                     <div className="space-y-2 text-sm">
+                      {(employee as any).companies && (
+                        <div className="flex items-center gap-2">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            <Building2 className="h-3 w-3" />
+                            {(employee as any).companies.name_en}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center gap-2 text-gray-600">
                         <Briefcase className="h-4 w-4 text-gray-400" />
                         <span>{employee.job_title_en}</span>
