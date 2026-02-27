@@ -121,6 +121,9 @@ export function Layout({ children }: LayoutProps) {
           { path: '/finance-dashboard', icon: Wallet, label: language === 'ar' ? 'لوحة التحكم المالية' : 'Finance Dashboard' },
         ] : []),
         { path: '/payroll', icon: DollarSign, label: t.nav.payroll },
+        ...(hasFullAccess ? [
+          { path: '/employee-payroll-report', icon: FileText, label: language === 'ar' ? 'تقرير رواتب الموظفين' : 'Payroll Report' },
+        ] : []),
         { path: '/loans', icon: CreditCard, label: t.nav.loans },
         { path: '/advances', icon: Receipt, label: t.nav.advances },
         { path: '/expenses', icon: Receipt, label: t.nav.expenses },
