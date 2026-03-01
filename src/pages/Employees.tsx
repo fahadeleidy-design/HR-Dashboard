@@ -199,7 +199,9 @@ export function Employees() {
       const { data: payrollData, error: payrollError } = await buildCompanyFilter(
         supabase
           .from('payroll')
-          .select('employee_id, basic_salary'),
+          .select('employee_id, iban, bank_name, payment_method, basic_salary, housing_allowance, transportation_allowance, other_allowances, gross_salary, gosi_employee, gosi_employer, other_deductions, net_salary, effective_from, created_at')
+          .order('effective_from', { ascending: false })
+          .order('created_at', { ascending: false }),
         isConsolidatedView,
         companies,
         currentCompany
@@ -207,11 +209,17 @@ export function Employees() {
 
       if (payrollError) logError(payrollError, 'medium', { component: 'Employees', action: 'fetchPayroll' });
 
+      const latestPayrollMap = new Map<string, any>();
+      (payrollData || []).forEach((p: any) => {
+        if (!latestPayrollMap.has(p.employee_id)) latestPayrollMap.set(p.employee_id, p);
+      });
+
       const enrichedEmployees = (employeesData || []).map(emp => {
         const payroll = payrollData?.filter(p => p.employee_id === emp.id) || [];
         return {
           ...emp,
-          payroll: payroll
+          payroll: payroll,
+          latestPayroll: latestPayrollMap.get(emp.id) || null,
         };
       });
 
@@ -551,36 +559,229 @@ export function Employees() {
   const hasActiveFilters = filterNationality || filterDepartment || filterIqamaExpiry || filterSalaryMin || filterSalaryMax || filterStatus;
 
   const handleExport = () => {
-    const exportData = filteredEmployees.map((emp) => ({
-      'Employee Number': emp.employee_number,
-      'First Name (EN)': emp.first_name_en,
-      'Last Name (EN)': emp.last_name_en,
-      'First Name (AR)': emp.first_name_ar || '',
-      'Last Name (AR)': emp.last_name_ar || '',
-      Email: emp.email || '',
-      Phone: emp.phone || '',
-      Nationality: emp.nationality,
-      'Is Saudi': emp.is_saudi ? 'Yes' : 'No',
-      Gender: emp.gender,
-      'Date of Birth': emp.date_of_birth || '',
-      'Hire Date': emp.hire_date,
-      'Job Title (EN)': emp.job_title_en,
-      'Job Title (AR)': emp.job_title_ar || '',
-      'Employment Type': emp.employment_type,
-      Status: emp.status,
-      'Iqama Number': emp.iqama_number || '',
-      'Iqama Expiry': emp.iqama_expiry || '',
-      'Passport Number': emp.passport_number || '',
-      'Passport Expiry': emp.passport_expiry || '',
-      Department: emp.department?.name_en || '',
-      'Basic Salary': emp.payroll && emp.payroll.length > 0 ? emp.payroll[0].basic_salary : 0,
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Employees');
-    XLSX.writeFile(wb, `employees_${currentCompany?.name_en}_${new Date().toISOString().split('T')[0]}.xlsx`);
-    logActivity('employees_exported', { component: 'Employees', count: exportData.length });
+    const today = new Date().toLocaleDateString('en-GB');
+    const dateStr = new Date().toISOString().split('T')[0];
+    const companyLabel = isConsolidatedView ? 'All Companies' : (currentCompany?.name_en || '');
+
+    const headers = [
+      '#',
+      'Employee Number', 'Full Name (EN)', 'Full Name (AR)',
+      'Company', 'Department (EN)', 'Department (AR)',
+      'Job Title (EN)', 'Job Title (AR)',
+      'Employment Type', 'Contract Type', 'Status',
+      'Hire Date', 'Contract Start', 'Contract End', 'Probation End Date',
+      'Termination Date', 'Termination Reason',
+      'Email', 'Phone',
+      'Nationality', 'Saudi', 'GCC National', 'Gender',
+      'Date of Birth', 'Marital Status', 'Dependents', 'Blood Type', 'Religion',
+      'City', 'Country', 'Address (EN)', 'Address (AR)',
+      'ID / Iqama No.', 'ID Type', 'Iqama Expiry',
+      'Passport No.', 'Passport Expiry',
+      'Work Permit No.', 'Work Permit Expiry',
+      'Visa No.', 'Visa Expiry',
+      'Sponsor Name', 'Sponsor ID',
+      'Work Region',
+      'Disability', 'Student', 'Part Time', 'Remote Worker',
+      'Former Prisoner', 'Palestinian/Egyptian', 'Displaced Tribe',
+      'IBAN', 'Bank Name', 'Payment Method',
+      'Basic Salary (SAR)', 'Housing Allowance (SAR)', 'Transport Allowance (SAR)',
+      'Food Allowance (SAR)', 'Mobile Allowance (SAR)', 'Other Allowances (SAR)',
+      'Gross Salary (SAR)', 'GOSI Employee (SAR)', 'GOSI Employer (SAR)',
+      'Other Deductions (SAR)', 'Net Salary (SAR)', 'Total Compensation (SAR)',
+      'Salary Currency', 'Salary Effective Date',
+      'Last Salary Review', 'Next Salary Review',
+    ];
+
+    const buildRows = (data: any[]) =>
+      data.map((emp, i) => {
+        const p = emp.latestPayroll;
+        const basicSalary = p?.basic_salary ?? emp.basic_salary ?? '';
+        const housingAllowance = p?.housing_allowance ?? emp.housing_allowance ?? '';
+        const transportAllowance = p?.transportation_allowance ?? emp.transport_allowance ?? '';
+        const foodAllowance = emp.food_allowance ?? '';
+        const mobileAllowance = emp.mobile_allowance ?? '';
+        const otherAllowances = p?.other_allowances ?? emp.other_allowances ?? '';
+        const grossSalary = p?.gross_salary ?? '';
+        const gosiEmployee = p?.gosi_employee ?? '';
+        const gosiEmployer = p?.gosi_employer ?? '';
+        const otherDeductions = p?.other_deductions ?? '';
+        const netSalary = p?.net_salary ?? '';
+        const totalComp = emp.total_compensation ?? '';
+        const iban = (p?.iban ?? '').trim();
+        const bankName = (p?.bank_name ?? '').trim();
+        const paymentMethod = p?.payment_method ?? '';
+        return [
+          i + 1,
+          emp.employee_number,
+          `${emp.first_name_en} ${emp.last_name_en}`,
+          emp.first_name_ar && emp.last_name_ar ? `${emp.first_name_ar} ${emp.last_name_ar}` : '',
+          emp.companies?.name_en || emp.company?.name_en || '',
+          emp.departments?.name_en || emp.department?.name_en || '',
+          emp.departments?.name_ar || emp.department?.name_ar || '',
+          emp.job_title_en || '',
+          emp.job_title_ar || '',
+          emp.employment_type || '',
+          emp.contract_type || '',
+          emp.status,
+          emp.hire_date || '',
+          emp.contract_start_date || '',
+          emp.contract_end_date || '',
+          emp.probation_end_date || '',
+          emp.termination_date || '',
+          emp.termination_reason || '',
+          emp.email || '',
+          emp.phone || '',
+          emp.nationality || '',
+          emp.is_saudi ? 'Yes' : 'No',
+          emp.is_gcc_national ? 'Yes' : 'No',
+          emp.gender || '',
+          emp.date_of_birth || '',
+          emp.marital_status || '',
+          emp.number_of_dependents ?? '',
+          emp.blood_type || '',
+          emp.religion || '',
+          emp.city || '',
+          emp.country || '',
+          emp.address_en || '',
+          emp.address_ar || '',
+          emp.iqama_number || '',
+          emp.is_saudi ? 'National ID' : 'Iqama',
+          emp.iqama_expiry || '',
+          emp.passport_number || '',
+          emp.passport_expiry || '',
+          emp.work_permit_number || '',
+          emp.work_permit_expiry || '',
+          emp.visa_number || '',
+          emp.visa_expiry || '',
+          emp.sponsor_name || '',
+          emp.sponsor_id || '',
+          emp.work_region || '',
+          emp.has_disability ? 'Yes' : 'No',
+          emp.is_student ? 'Yes' : 'No',
+          emp.is_part_time ? 'Yes' : 'No',
+          emp.is_remote_worker ? 'Yes' : 'No',
+          emp.is_former_prisoner ? 'Yes' : 'No',
+          emp.is_palestinian_egyptian ? 'Yes' : 'No',
+          emp.is_displaced_tribe ? 'Yes' : 'No',
+          iban,
+          bankName,
+          paymentMethod,
+          basicSalary,
+          housingAllowance,
+          transportAllowance,
+          foodAllowance,
+          mobileAllowance,
+          otherAllowances,
+          grossSalary,
+          gosiEmployee,
+          gosiEmployer,
+          otherDeductions,
+          netSalary,
+          totalComp,
+          emp.salary_currency || 'SAR',
+          emp.salary_effective_date || '',
+          emp.last_salary_review_date || '',
+          emp.next_salary_review_date || '',
+        ];
+      });
+
+    const salaryColumns = [
+      'Basic Salary (SAR)', 'Housing Allowance (SAR)', 'Transport Allowance (SAR)',
+      'Food Allowance (SAR)', 'Mobile Allowance (SAR)', 'Other Allowances (SAR)',
+      'Gross Salary (SAR)', 'GOSI Employee (SAR)', 'GOSI Employer (SAR)',
+      'Other Deductions (SAR)', 'Net Salary (SAR)', 'Total Compensation (SAR)',
+    ];
+
+    const totalRow = (data: any[]) => {
+      const row: (string | number)[] = new Array(headers.length).fill('');
+      row[0] = 'TOTAL';
+      row[2] = `${data.length} employees`;
+      salaryColumns.forEach(col => {
+        const idx = headers.indexOf(col);
+        if (idx === -1) return;
+        const fieldMap: Record<string, string> = {
+          'Basic Salary (SAR)': 'basic_salary',
+          'Housing Allowance (SAR)': 'housing_allowance',
+          'Transport Allowance (SAR)': 'transport_allowance',
+          'Food Allowance (SAR)': 'food_allowance',
+          'Mobile Allowance (SAR)': 'mobile_allowance',
+          'Other Allowances (SAR)': 'other_allowances',
+          'Gross Salary (SAR)': 'gross_salary',
+          'GOSI Employee (SAR)': 'gosi_employee',
+          'GOSI Employer (SAR)': 'gosi_employer',
+          'Other Deductions (SAR)': 'other_deductions',
+          'Net Salary (SAR)': 'net_salary',
+          'Total Compensation (SAR)': 'total_compensation',
+        };
+        const key = fieldMap[col];
+        row[idx] = data.reduce((sum, emp) => {
+          const p = emp.latestPayroll;
+          let val = 0;
+          if (key === 'gross_salary') val = p?.gross_salary ?? 0;
+          else if (key === 'gosi_employee') val = p?.gosi_employee ?? 0;
+          else if (key === 'gosi_employer') val = p?.gosi_employer ?? 0;
+          else if (key === 'other_deductions') val = p?.other_deductions ?? 0;
+          else if (key === 'net_salary') val = p?.net_salary ?? 0;
+          else if (key === 'basic_salary') val = p?.basic_salary ?? emp.basic_salary ?? 0;
+          else if (key === 'housing_allowance') val = p?.housing_allowance ?? emp.housing_allowance ?? 0;
+          else if (key === 'transport_allowance') val = p?.transportation_allowance ?? emp.transport_allowance ?? 0;
+          else if (key === 'food_allowance') val = emp.food_allowance ?? 0;
+          else if (key === 'mobile_allowance') val = emp.mobile_allowance ?? 0;
+          else if (key === 'other_allowances') val = p?.other_allowances ?? emp.other_allowances ?? 0;
+          else if (key === 'total_compensation') val = emp.total_compensation ?? 0;
+          return sum + (Number(val) || 0);
+        }, 0);
+      });
+      return row;
+    };
+
+    const colWidths = headers.map((h, i) => {
+      if (i === 0) return { wch: 5 };
+      if (['Full Name (EN)', 'Full Name (AR)', 'Address (EN)', 'Address (AR)'].includes(h)) return { wch: 32 };
+      if (['Company', 'Job Title (EN)', 'Job Title (AR)'].includes(h)) return { wch: 28 };
+      if (['Department (EN)', 'Department (AR)'].includes(h)) return { wch: 24 };
+      if (h.includes('Salary') || h.includes('Allowance') || h.includes('Deduction') || h.includes('GOSI') || h.includes('Compensation')) return { wch: 20 };
+      if (h === 'IBAN') return { wch: 34 };
+      if (h === 'Bank Name') return { wch: 26 };
+      if (h === 'Email') return { wch: 30 };
+      return { wch: 16 };
+    });
+
+    const makeSheet = (data: any[], title: string) => {
+      const sheetData: (string | number)[][] = [
+        [title],
+        [`Generated: ${today}   |   Total Employees: ${data.length}`],
+        [],
+        headers,
+        ...buildRows(data),
+        [],
+        totalRow(data),
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+      ws['!cols'] = colWidths;
+      return ws;
+    };
+
+    XLSX.utils.book_append_sheet(wb, makeSheet(filteredEmployees, `Employee Complete Export — ${companyLabel}`), 'All Employees');
+
+    const byCompany = new Map<string, any[]>();
+    filteredEmployees.forEach(emp => {
+      const name = emp.companies?.name_en || emp.company?.name_en || 'Unknown';
+      if (!byCompany.has(name)) byCompany.set(name, []);
+      byCompany.get(name)!.push(emp);
+    });
+
+    if (byCompany.size > 1) {
+      byCompany.forEach((emps, name) => {
+        const safeName = name.replace(/[\\/:*?"<>|]/g, '').substring(0, 31);
+        XLSX.utils.book_append_sheet(wb, makeSheet(emps, name), safeName);
+      });
+    }
+
+    const safeCompany = companyLabel.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_');
+    XLSX.writeFile(wb, `employees_${safeCompany}_${dateStr}.xlsx`);
+    logActivity('employees_exported', { component: 'Employees', count: filteredEmployees.length });
   };
 
   const toggleSelectAll = () => {
