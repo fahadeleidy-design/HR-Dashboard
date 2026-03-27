@@ -8,7 +8,7 @@ import { useErrorHandler } from '@/hooks/useErrorHandler';
 import { supabase } from '@/lib/supabase';
 import { buildCompanyFilter } from '@/lib/queryHelpers';
 import { Employee } from '@/types/database';
-import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X, ChevronDown, Users, Building2, Calendar, DollarSign, RefreshCw, Check, FileText, Mail, Phone, Briefcase, CheckSquare, Settings, Grid, List, AlertTriangle, Clock, MapPin, UserCheck, UserX, Archive, Activity, Bookmark, BarChart3, Zap, Command } from 'lucide-react';
+import { Plus, Upload, Download, Pencil, Trash2, Search, Eye, Filter, X, ChevronDown, Users, Building2, Calendar, DollarSign, RefreshCw, Check, FileText, Mail, Phone, Briefcase, CheckSquare, Settings, Grid2x2 as Grid, List, AlertTriangle, Clock, MapPin, UserCheck, UserX, Archive, Activity, Bookmark, BarChart3, Zap, Command } from 'lucide-react';
 import { EmployeeForm } from '@/components/EmployeeForm';
 import { BulkUpload } from '@/components/BulkUpload';
 import { EmployeeDetail } from '@/components/EmployeeDetail';
@@ -784,6 +784,146 @@ export function Employees() {
     logActivity('employees_exported', { component: 'Employees', count: filteredEmployees.length });
   };
 
+  const handleExportHRReport = () => {
+    const wb = XLSX.utils.book_new();
+    const today = new Date().toLocaleDateString('en-GB');
+    const dateStr = new Date().toISOString().split('T')[0];
+    const companyLabel = isConsolidatedView ? 'All Companies' : (currentCompany?.name_en || '');
+
+    const hrHeaders = [
+      'Employee ID',
+      'Full Name (English)',
+      'Full Name (Arabic)',
+      'National ID / Iqama No.',
+      'Legal Employer (Sponsor)',
+      'Legal Employer Branch',
+      'Sponsorship Type',
+      'Working Company',
+      'Working Branch / Site',
+      'Cross-Entity Assignment?',
+      'Cost Center',
+      'Charge-To Company',
+      'Department',
+      'Job Position / Title',
+      'GOSI Entity',
+      'Qiwa Labor File Ref.',
+      'Payroll Entity',
+      'Salary (SAR)',
+      'Contract Type',
+      'Contract Start Date',
+      'Nationality',
+      'Notes / Remarks',
+    ];
+
+    const hrRows = filteredEmployees.map(emp => {
+      const companyName = (emp as any).companies?.name_en || (emp as any).company?.name_en || '';
+      const deptName = (emp as any).departments?.name_en || (emp as any).department?.name_en || '';
+      const p = (emp as any).latestPayroll;
+      const salary = p?.basic_salary ?? emp.basic_salary ?? '';
+      return [
+        emp.employee_number || '',
+        `${emp.first_name_en || ''} ${emp.last_name_en || ''}`.trim(),
+        emp.first_name_ar && emp.last_name_ar ? `${emp.first_name_ar} ${emp.last_name_ar}` : '',
+        emp.iqama_number || emp.passport_number || '',
+        emp.sponsor_name || companyName,
+        companyName,
+        emp.employment_type || '',
+        companyName,
+        deptName,
+        '',
+        (emp as any).departments?.cost_center || '',
+        '',
+        deptName,
+        emp.job_title_en || '',
+        (emp as any).companies?.gosi_registration || '',
+        '',
+        companyName,
+        salary,
+        emp.contract_type || '',
+        emp.contract_start_date || '',
+        emp.nationality || '',
+        '',
+      ];
+    });
+
+    const colWidths = hrHeaders.map(h => {
+      if (['Full Name (English)', 'Full Name (Arabic)', 'Legal Employer (Sponsor)', 'Legal Employer Branch', 'Working Company'].includes(h)) return { wch: 32 };
+      if (['Job Position / Title', 'Department', 'Working Branch / Site'].includes(h)) return { wch: 28 };
+      if (h === 'Salary (SAR)') return { wch: 16 };
+      return { wch: 20 };
+    });
+
+    const sheetData: (string | number)[][] = [
+      [`HR Employee Report — ${companyLabel}`],
+      [`Generated: ${today}   |   Total Employees: ${filteredEmployees.length}`],
+      [],
+      hrHeaders,
+      ...hrRows,
+    ];
+
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
+    ws['!cols'] = colWidths;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'HR Report');
+
+    const byCompany = new Map<string, any[]>();
+    filteredEmployees.forEach(emp => {
+      const name = (emp as any).companies?.name_en || (emp as any).company?.name_en || 'Unknown';
+      if (!byCompany.has(name)) byCompany.set(name, []);
+      byCompany.get(name)!.push(emp);
+    });
+
+    if (byCompany.size > 1) {
+      byCompany.forEach((emps, name) => {
+        const safeName = name.replace(/[\\/:*?"<>|]/g, '').substring(0, 31);
+        const rows = emps.map(emp => {
+          const companyName = (emp as any).companies?.name_en || (emp as any).company?.name_en || '';
+          const deptName = (emp as any).departments?.name_en || (emp as any).department?.name_en || '';
+          const p = (emp as any).latestPayroll;
+          const salary = p?.basic_salary ?? emp.basic_salary ?? '';
+          return [
+            emp.employee_number || '',
+            `${emp.first_name_en || ''} ${emp.last_name_en || ''}`.trim(),
+            emp.first_name_ar && emp.last_name_ar ? `${emp.first_name_ar} ${emp.last_name_ar}` : '',
+            emp.iqama_number || emp.passport_number || '',
+            emp.sponsor_name || companyName,
+            companyName,
+            emp.employment_type || '',
+            companyName,
+            deptName,
+            '',
+            (emp as any).departments?.cost_center || '',
+            '',
+            deptName,
+            emp.job_title_en || '',
+            (emp as any).companies?.gosi_registration || '',
+            '',
+            companyName,
+            salary,
+            emp.contract_type || '',
+            emp.contract_start_date || '',
+            emp.nationality || '',
+            '',
+          ];
+        });
+        const sheetRows: (string | number)[][] = [
+          [`HR Employee Report — ${name}`],
+          [`Generated: ${today}   |   Total Employees: ${emps.length}`],
+          [],
+          hrHeaders,
+          ...rows,
+        ];
+        const ws2 = XLSX.utils.aoa_to_sheet(sheetRows);
+        ws2['!cols'] = colWidths;
+        XLSX.utils.book_append_sheet(wb, ws2, safeName);
+      });
+    }
+
+    const safeCompany = companyLabel.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_');
+    XLSX.writeFile(wb, `hr_report_${safeCompany}_${dateStr}.xlsx`);
+    logActivity('hr_report_exported', { component: 'Employees', count: filteredEmployees.length });
+  };
+
   const toggleSelectAll = () => {
     if (selectedEmployees.size === filteredEmployees.length) {
       setSelectedEmployees(new Set());
@@ -927,6 +1067,14 @@ export function Employees() {
               >
                 <Download className="h-4 w-4" />
                 <span>Export</span>
+              </button>
+              <button
+                onClick={handleExportHRReport}
+                className="flex items-center gap-2 px-3 py-2 border border-blue-300 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-all shadow-sm hover:shadow text-sm"
+                title="Export HR Report (Employee ID, Names, Sponsor, GOSI, Salary...)"
+              >
+                <FileText className="h-4 w-4" />
+                <span>HR Report</span>
               </button>
               <button
                 onClick={() => setShowBulkUpload(true)}
